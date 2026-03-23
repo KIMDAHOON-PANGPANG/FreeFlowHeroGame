@@ -1,0 +1,435 @@
+{
+    "actorId": "PC_Hero",
+    "actorName": "주인공",
+    "actions": [
+        {
+            "id": "Idle",
+            "name": "대기",
+            "clip": "Fight_Idle",
+            "startup": 0,
+            "active": 0,
+            "recovery": 0,
+            "cancelRatio": 0.0,
+            "moveSpeed": 0.0,
+            "cancels": [
+                {
+                    "input": "Attack",
+                    "next": "LightAtk1"
+                },
+                {
+                    "input": "Heavy",
+                    "next": "HeavyAtk"
+                },
+                {
+                    "input": "Dodge",
+                    "next": "Dodge"
+                },
+                {
+                    "input": "Counter",
+                    "next": "Counter"
+                },
+                {
+                    "input": "Huxley",
+                    "next": "HuxleyShot"
+                }
+            ],
+            "defaultNext": "",
+            "tags": [
+                "idle"
+            ]
+        },
+        {
+            "id": "LightAtk1",
+            "name": "기본공격 1타",
+            "clip": "Atk_P_1",
+            "startup": 5,
+            "active": 8,
+            "recovery": 12,
+            "cancelRatio": 0.0,
+            "moveSpeed": 6.0,
+            "cancels": [
+                {
+                    "input": "Attack",
+                    "next": "LightAtk2"
+                },
+                {
+                    "input": "Heavy",
+                    "next": "HeavyAtk"
+                },
+                {
+                    "input": "Dodge",
+                    "next": "Dodge"
+                },
+                {
+                    "input": "Counter",
+                    "next": "Counter"
+                }
+            ],
+            "defaultNext": "Idle",
+            "tags": [
+                "light",
+                "combo",
+                "chain1"
+            ]
+        },
+        {
+            "id": "LightAtk2",
+            "name": "기본공격 2타",
+            "clip": "Atk_P_2",
+            "startup": 4,
+            "active": 7,
+            "recovery": 6,
+            "cancelRatio": 0.0,
+            "moveSpeed": 6.0,
+            "cancels": [
+                {
+                    "input": "Attack",
+                    "next": "LightAtk3"
+                },
+                {
+                    "input": "Heavy",
+                    "next": "HeavyAtk"
+                },
+                {
+                    "input": "Dodge",
+                    "next": "Dodge"
+                },
+                {
+                    "input": "Counter",
+                    "next": "Counter"
+                }
+            ],
+            "defaultNext": "Idle",
+            "tags": [
+                "light",
+                "combo",
+                "chain2"
+            ]
+        },
+        {
+            "id": "LightAtk3",
+            "name": "기본공격 3타",
+            "clip": "Atk_P_3",
+            "startup": 5,
+            "active": 9,
+            "recovery": 14,
+            "cancelRatio": 0.30000001192092898,
+            "moveSpeed": 6.0,
+            "cancels": [
+                {
+                    "input": "Attack",
+                    "next": "LightAtk1"
+                },
+                {
+                    "input": "Heavy",
+                    "next": "HeavyAtk"
+                },
+                {
+                    "input": "Dodge",
+                    "next": "Dodge"
+                },
+                {
+                    "input": "Counter",
+                    "next": "Counter"
+                }
+            ],
+            "defaultNext": "Idle",
+            "tags": [
+                "light",
+                "combo",
+                "chain3"
+            ]
+        },
+        {
+            "id": "LightAtk4",
+            "name": "기본공격 4타 (니킥)",
+            "clip": "knee strike",
+            "startup": 5,
+            "active": 8,
+            "recovery": 12,
+            "cancelRatio": 0.30000001192092898,
+            "moveSpeed": 5.0,
+            "cancels": [
+                {
+                    "input": "Attack",
+                    "next": "LightAtk1"
+                },
+                {
+                    "input": "Dodge",
+                    "next": "Dodge"
+                }
+            ],
+            "defaultNext": "Idle",
+            "tags": [
+                "light",
+                "combo",
+                "chain4"
+            ]
+        },
+        {
+            "id": "LightAtkDown",
+            "name": "다운 공격",
+            "clip": "low kick",
+            "startup": 4,
+            "active": 10,
+            "recovery": 14,
+            "cancelRatio": 0.5,
+            "moveSpeed": 3.0,
+            "cancels": [
+                {
+                    "input": "Attack",
+                    "next": "LightAtk1"
+                }
+            ],
+            "defaultNext": "Idle",
+            "tags": [
+                "light",
+                "down"
+            ]
+        },
+        {
+            "id": "HeavyAtk",
+            "name": "강공격 (아머 파괴)",
+            "clip": "charge fist",
+            "startup": 10,
+            "active": 12,
+            "recovery": 18,
+            "cancelRatio": 0.6000000238418579,
+            "moveSpeed": 4.0,
+            "cancels": [
+                {
+                    "input": "Dodge",
+                    "next": "Dodge"
+                }
+            ],
+            "defaultNext": "Idle",
+            "tags": [
+                "heavy",
+                "armorBreak"
+            ]
+        },
+        {
+            "id": "Dodge",
+            "name": "회피",
+            "clip": "",
+            "startup": 2,
+            "active": 12,
+            "recovery": 8,
+            "cancelRatio": 0.4000000059604645,
+            "moveSpeed": 12.0,
+            "cancels": [
+                {
+                    "input": "Attack",
+                    "next": "DodgeCounterAtk"
+                }
+            ],
+            "defaultNext": "Idle",
+            "tags": [
+                "dodge",
+                "iFrame"
+            ]
+        },
+        {
+            "id": "DodgeCounterAtk",
+            "name": "회피 후속 공격",
+            "clip": "front sweep",
+            "startup": 3,
+            "active": 10,
+            "recovery": 12,
+            "cancelRatio": 0.30000001192092898,
+            "moveSpeed": 5.0,
+            "cancels": [
+                {
+                    "input": "Attack",
+                    "next": "LightAtk2"
+                },
+                {
+                    "input": "Dodge",
+                    "next": "Dodge"
+                }
+            ],
+            "defaultNext": "Idle",
+            "tags": [
+                "light",
+                "dodgeFollow"
+            ]
+        },
+        {
+            "id": "Counter",
+            "name": "카운터 반격",
+            "clip": "spinning elbow",
+            "startup": 3,
+            "active": 8,
+            "recovery": 12,
+            "cancelRatio": 0.30000001192092898,
+            "moveSpeed": 5.0,
+            "cancels": [
+                {
+                    "input": "Attack",
+                    "next": "LightAtk2"
+                },
+                {
+                    "input": "Dodge",
+                    "next": "Dodge"
+                }
+            ],
+            "defaultNext": "Idle",
+            "tags": [
+                "counter"
+            ]
+        },
+        {
+            "id": "PerfectCounter",
+            "name": "퍼펙트 카운터 강화 반격",
+            "clip": "back kick",
+            "startup": 2,
+            "active": 10,
+            "recovery": 14,
+            "cancelRatio": 0.4000000059604645,
+            "moveSpeed": 6.0,
+            "cancels": [
+                {
+                    "input": "Attack",
+                    "next": "LightAtk1"
+                },
+                {
+                    "input": "Dodge",
+                    "next": "Dodge"
+                }
+            ],
+            "defaultNext": "Idle",
+            "tags": [
+                "counter",
+                "perfect"
+            ]
+        },
+        {
+            "id": "Launch",
+            "name": "띄우기 공격",
+            "clip": "jumping uppercut",
+            "startup": 6,
+            "active": 10,
+            "recovery": 16,
+            "cancelRatio": 0.5,
+            "moveSpeed": 4.0,
+            "cancels": [
+                {
+                    "input": "Attack",
+                    "next": "AirComboFinisher"
+                }
+            ],
+            "defaultNext": "Idle",
+            "tags": [
+                "launch",
+                "airCombo"
+            ]
+        },
+        {
+            "id": "AirComboFinisher",
+            "name": "에어 콤보 피니셔",
+            "clip": "jumping side kick",
+            "startup": 4,
+            "active": 8,
+            "recovery": 18,
+            "cancelRatio": 0.699999988079071,
+            "moveSpeed": 3.0,
+            "cancels": [],
+            "defaultNext": "Idle",
+            "tags": [
+                "airCombo",
+                "finisher"
+            ]
+        },
+        {
+            "id": "Execution1",
+            "name": "처형 모션 1",
+            "clip": "cressent kick",
+            "startup": 8,
+            "active": 14,
+            "recovery": 20,
+            "cancelRatio": 1.0,
+            "moveSpeed": 0.0,
+            "cancels": [],
+            "defaultNext": "Idle",
+            "tags": [
+                "execution",
+                "cinematic"
+            ]
+        },
+        {
+            "id": "Execution2",
+            "name": "처형 모션 2",
+            "clip": "axe kick",
+            "startup": 8,
+            "active": 14,
+            "recovery": 20,
+            "cancelRatio": 1.0,
+            "moveSpeed": 0.0,
+            "cancels": [],
+            "defaultNext": "Idle",
+            "tags": [
+                "execution",
+                "cinematic"
+            ]
+        },
+        {
+            "id": "Execution3",
+            "name": "처형 모션 3 (화려)",
+            "clip": "spinning axe kick",
+            "startup": 10,
+            "active": 16,
+            "recovery": 24,
+            "cancelRatio": 1.0,
+            "moveSpeed": 0.0,
+            "cancels": [],
+            "defaultNext": "Idle",
+            "tags": [
+                "execution",
+                "cinematic",
+                "highCombo"
+            ]
+        },
+        {
+            "id": "HuxleyShot",
+            "name": "헉슬리 건 발사",
+            "clip": "super blast",
+            "startup": 6,
+            "active": 4,
+            "recovery": 14,
+            "cancelRatio": 0.5,
+            "moveSpeed": 0.0,
+            "cancels": [
+                {
+                    "input": "Attack",
+                    "next": "LightAtk1"
+                },
+                {
+                    "input": "Dodge",
+                    "next": "Dodge"
+                }
+            ],
+            "defaultNext": "Idle",
+            "tags": [
+                "huxley",
+                "ranged"
+            ]
+        },
+        {
+            "id": "HuxleyFinisher",
+            "name": "헉슬리 100% 피니셔",
+            "clip": "webster side kick",
+            "startup": 8,
+            "active": 16,
+            "recovery": 24,
+            "cancelRatio": 1.0,
+            "moveSpeed": 0.0,
+            "cancels": [],
+            "defaultNext": "Idle",
+            "tags": [
+                "huxley",
+                "finisher",
+                "cinematic"
+            ]
+        }
+    ]
+}

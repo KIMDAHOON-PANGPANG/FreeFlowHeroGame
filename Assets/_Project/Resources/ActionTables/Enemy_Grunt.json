@@ -1,0 +1,125 @@
+{
+  "actorId": "Enemy_Grunt",
+  "actorName": "일반 졸개",
+  "actions": [
+    {
+      "id": "Idle",
+      "name": "대기",
+      "clip": "kungfu samba",
+      "startup": 0,
+      "active": 0,
+      "recovery": 0,
+      "cancelRatio": 0.0,
+      "moveSpeed": 0.0,
+      "cancels": [],
+      "defaultNext": "",
+      "tags": ["idle"]
+    },
+    {
+      "id": "Attack_Jab",
+      "name": "잽 공격",
+      "clip": "5 inch punch",
+      "startup": 8,
+      "active": 6,
+      "recovery": 14,
+      "cancelRatio": 0.5,
+      "moveSpeed": 4.0,
+      "cancels": [
+        { "input": "Attack", "next": "Attack_BackFist" }
+      ],
+      "defaultNext": "Idle",
+      "tags": ["light", "telegraph_yellow"]
+    },
+    {
+      "id": "Attack_BackFist",
+      "name": "백피스트",
+      "clip": "back fist",
+      "startup": 6,
+      "active": 8,
+      "recovery": 16,
+      "cancelRatio": 0.6,
+      "moveSpeed": 3.0,
+      "cancels": [],
+      "defaultNext": "Idle",
+      "tags": ["light", "telegraph_yellow"]
+    },
+    {
+      "id": "Attack_Heavy",
+      "name": "강공격 (회피 불가)",
+      "clip": "charge fist",
+      "startup": 14,
+      "active": 10,
+      "recovery": 20,
+      "cancelRatio": 0.7,
+      "moveSpeed": 5.0,
+      "cancels": [],
+      "defaultNext": "Idle",
+      "tags": ["heavy", "telegraph_red", "unblockable"]
+    },
+    {
+      "id": "Attack_LowKick",
+      "name": "로우킥",
+      "clip": "low kick",
+      "startup": 6,
+      "active": 8,
+      "recovery": 12,
+      "cancelRatio": 0.5,
+      "moveSpeed": 3.0,
+      "cancels": [],
+      "defaultNext": "Idle",
+      "tags": ["light", "telegraph_yellow"]
+    },
+    {
+      "id": "Attack_Knee",
+      "name": "니킥",
+      "clip": "knee strike",
+      "startup": 8,
+      "active": 8,
+      "recovery": 14,
+      "cancelRatio": 0.5,
+      "moveSpeed": 4.0,
+      "cancels": [],
+      "defaultNext": "Idle",
+      "tags": ["light", "telegraph_yellow"]
+    },
+    {
+      "id": "Telegraph",
+      "name": "공격 예고",
+      "clip": "",
+      "startup": 0,
+      "active": 18,
+      "recovery": 0,
+      "cancelRatio": 0.0,
+      "moveSpeed": 0.0,
+      "cancels": [],
+      "defaultNext": "",
+      "tags": ["telegraph"]
+    },
+    {
+      "id": "HitStun",
+      "name": "피격 경직",
+      "clip": "",
+      "startup": 0,
+      "active": 15,
+      "recovery": 5,
+      "cancelRatio": 0.0,
+      "moveSpeed": 0.0,
+      "cancels": [],
+      "defaultNext": "Idle",
+      "tags": ["hitReaction"]
+    },
+    {
+      "id": "Die",
+      "name": "사망",
+      "clip": "",
+      "startup": 0,
+      "active": 0,
+      "recovery": 60,
+      "cancelRatio": 1.0,
+      "moveSpeed": 0.0,
+      "cancels": [],
+      "defaultNext": "",
+      "tags": ["death"]
+    }
+  ]
+}
