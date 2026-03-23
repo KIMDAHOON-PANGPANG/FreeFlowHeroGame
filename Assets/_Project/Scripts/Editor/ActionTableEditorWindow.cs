@@ -90,6 +90,7 @@ namespace FreeFlowHero.Editor
         private const float TrackHeight = 26f;
         private const float TimelineHeaderWidth = 100f;
         private const float TimeRulerHeight = 20f;
+        private const float TimelinePadding = 12f;  // 타임라인 좌우 여백 (시작/끝 마커 표시용)
         private Vector2 timelineScroll;
         private int selectedNotifyIndex = -1;  // 선택된 노티파이 인덱스 (-1=미선택)
 
@@ -104,12 +105,26 @@ namespace FreeFlowHero.Editor
         private bool[] trackEnabled = { true, true, true, true, true, true, true, true, true, true };
 
         // 드래그 상태
-        private enum DragMode { None, Move, ResizeLeft, ResizeRight }
+        private enum DragMode { None, Move, ResizeLeft, ResizeRight, Scrub }
         private DragMode currentDragMode = DragMode.None;
         private int dragNotifyIndex = -1;
         private int dragStartFrame;
         private int dragEndFrame;
         private float dragMouseStartX;
+
+        // ─── 리사이즈 가능 패널 크기 ───
+        private float leftPanelWidth = 220f;       // 좌측 액션 목록
+        private float rightPanelWidth = 280f;      // 우측 인스펙터
+        private float previewHeight = 200f;         // 프리뷰 높이
+
+        private const float MinPanelWidth = 120f;
+        private const float MaxPanelWidth = 500f;
+        private const float MinPreviewHeight = 80f;
+        private const float MaxPreviewHeight = 500f;
+        private const float SplitterSize = 4f;
+
+        private enum SplitterDrag { None, Left, Right, PreviewBottom }
+        private SplitterDrag activeSplitter = SplitterDrag.None;
 
         // ─── 스타일 ───
         private GUIStyle headerStyle;
@@ -343,25 +358,99 @@ namespace FreeFlowHero.Editor
                 return;
             }
 
+            // ═══ 스플리터 드래그 처리 ═══
+            HandleSplitterDrag();
+
             // ═══ 메인 3컬럼 레이아웃 ═══
             EditorGUILayout.BeginHorizontal();
 
             // ── 좌측: 액션 목록 ──
             DrawActionList();
 
-            // 구분선
-            GUILayout.Box("", GUILayout.Width(2), GUILayout.ExpandHeight(true));
+            // ── 좌측 스플리터 ──
+            DrawVerticalSplitter(SplitterDrag.Left);
 
             // ── 중앙: 프리뷰(상단) + 타임라인(하단) ──
             DrawCenterPanel();
 
-            // 구분선
-            GUILayout.Box("", GUILayout.Width(2), GUILayout.ExpandHeight(true));
+            // ── 우측 스플리터 ──
+            DrawVerticalSplitter(SplitterDrag.Right);
 
             // ── 우측: 인스펙터 ──
             DrawInspectorPanel();
 
             EditorGUILayout.EndHorizontal();
+        }
+
+        /// <summary>세로 스플리터 바 렌더링 + 커서 설정</summary>
+        private void DrawVerticalSplitter(SplitterDrag id)
+        {
+            Rect splitterRect = GUILayoutUtility.GetRect(SplitterSize, SplitterSize,
+                GUILayout.ExpandHeight(true));
+            EditorGUI.DrawRect(splitterRect, new Color(0.15f, 0.15f, 0.15f));
+            // 중앙에 얇은 밝은 선
+            EditorGUI.DrawRect(new Rect(splitterRect.x + SplitterSize * 0.5f - 0.5f,
+                splitterRect.y, 1, splitterRect.height), new Color(0.35f, 0.35f, 0.35f));
+            EditorGUIUtility.AddCursorRect(splitterRect, MouseCursor.ResizeHorizontal);
+
+            Event e = Event.current;
+            if (e.type == EventType.MouseDown && e.button == 0 && splitterRect.Contains(e.mousePosition))
+            {
+                activeSplitter = id;
+                e.Use();
+            }
+        }
+
+        /// <summary>수평 스플리터 바 (프리뷰↔타임라인)</summary>
+        private void DrawHorizontalSplitter()
+        {
+            Rect splitterRect = GUILayoutUtility.GetRect(0, SplitterSize, GUILayout.ExpandWidth(true));
+            EditorGUI.DrawRect(splitterRect, new Color(0.15f, 0.15f, 0.15f));
+            EditorGUI.DrawRect(new Rect(splitterRect.x, splitterRect.y + SplitterSize * 0.5f - 0.5f,
+                splitterRect.width, 1), new Color(0.35f, 0.35f, 0.35f));
+            EditorGUIUtility.AddCursorRect(splitterRect, MouseCursor.ResizeVertical);
+
+            Event e = Event.current;
+            if (e.type == EventType.MouseDown && e.button == 0 && splitterRect.Contains(e.mousePosition))
+            {
+                activeSplitter = SplitterDrag.PreviewBottom;
+                e.Use();
+            }
+        }
+
+        /// <summary>스플리터 드래그 중 패널 크기 조절</summary>
+        private void HandleSplitterDrag()
+        {
+            Event e = Event.current;
+
+            if (activeSplitter == SplitterDrag.None) return;
+
+            if (e.type == EventType.MouseDrag)
+            {
+                switch (activeSplitter)
+                {
+                    case SplitterDrag.Left:
+                        leftPanelWidth += e.delta.x;
+                        leftPanelWidth = Mathf.Clamp(leftPanelWidth, MinPanelWidth, MaxPanelWidth);
+                        break;
+                    case SplitterDrag.Right:
+                        rightPanelWidth -= e.delta.x;
+                        rightPanelWidth = Mathf.Clamp(rightPanelWidth, MinPanelWidth, MaxPanelWidth);
+                        break;
+                    case SplitterDrag.PreviewBottom:
+                        previewHeight += e.delta.y;
+                        previewHeight = Mathf.Clamp(previewHeight, MinPreviewHeight, MaxPreviewHeight);
+                        break;
+                }
+                e.Use();
+                Repaint();
+            }
+
+            if (e.type == EventType.MouseUp && e.button == 0)
+            {
+                activeSplitter = SplitterDrag.None;
+                e.Use();
+            }
         }
 
         private void HandleKeyboardShortcuts()
@@ -509,7 +598,7 @@ namespace FreeFlowHero.Editor
 
         private void DrawActionList()
         {
-            EditorGUILayout.BeginVertical(GUILayout.Width(220));
+            EditorGUILayout.BeginVertical(GUILayout.Width(leftPanelWidth));
 
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
             searchFilter = EditorGUILayout.TextField(searchFilter, EditorStyles.toolbarSearchField);
@@ -603,7 +692,8 @@ namespace FreeFlowHero.Editor
                 DrawPreviewControls(clip, GetEffectiveTotalFrames(action));
             }
 
-            GUILayout.Space(4);
+            // ── 프리뷰↔타임라인 수평 스플리터 ──
+            DrawHorizontalSplitter();
 
             // ── 타임라인 옵션 바 (프레임↔초 토글 + 고정 타임라인 길이) ──
             EditorGUILayout.BeginHorizontal();
@@ -633,13 +723,13 @@ namespace FreeFlowHero.Editor
             // ── 타임라인 트랙 (하단) ──
             DrawNotifyTimeline(action);
 
-            // ── 재생 상태 바 ──
+            // ── 재생 상태 바 (액션 실제 범위 기준으로 표시) ──
             int curFrame = Mathf.RoundToInt(previewFrame);
-            int totalF = GetTimelineTotalFrames(action);
+            int actionTotalF = GetEffectiveTotalFrames(action);
             string playState = isPreviewPlaying ? "▶ Playing" : "⏸ Paused";
             string timeInfo = showTimeAsSeconds
-                ? $"{curFrame * CombatConstants.FrameDuration:F2}s / {totalF * CombatConstants.FrameDuration:F2}s"
-                : $"{curFrame} / {totalF}f   ({curFrame / 60f:F2}s / {totalF / 60f:F2}s)";
+                ? $"{curFrame * CombatConstants.FrameDuration:F2}s / {actionTotalF * CombatConstants.FrameDuration:F2}s"
+                : $"{curFrame} / {actionTotalF}f   ({curFrame / 60f:F2}s / {actionTotalF / 60f:F2}s)";
             EditorGUILayout.LabelField($"{playState}   {timeInfo}", EditorStyles.centeredGreyMiniLabel);
 
             EditorGUILayout.EndVertical();
@@ -651,7 +741,7 @@ namespace FreeFlowHero.Editor
 
         private void DrawInspectorPanel()
         {
-            EditorGUILayout.BeginVertical(GUILayout.Width(280));
+            EditorGUILayout.BeginVertical(GUILayout.Width(rightPanelWidth));
             inspectorScroll = EditorGUILayout.BeginScrollView(inspectorScroll);
 
             if (selectedActionIndex < 0 || currentTable?.actions == null ||
@@ -889,11 +979,38 @@ namespace FreeFlowHero.Editor
 
             // 트랙 헤더 영역
             Rect headerRect = new Rect(outerRect.x, outerRect.y, TimelineHeaderWidth, outerRect.height);
-            // 트랙 컨텐츠 영역
+            // 트랙 컨텐츠 영역 (좌우 패딩 포함)
             Rect contentRect = new Rect(outerRect.x + TimelineHeaderWidth, outerRect.y,
                 outerRect.width - TimelineHeaderWidth, outerRect.height - TimeRulerHeight);
+            // 실제 프레임이 그려지는 영역 (패딩 적용)
+            Rect paddedRect = new Rect(contentRect.x + TimelinePadding, contentRect.y,
+                contentRect.width - TimelinePadding * 2f, contentRect.height);
             // 시간축 영역
             Rect rulerRect = new Rect(contentRect.x, contentRect.yMax, contentRect.width, TimeRulerHeight);
+
+            // ── 액션 실제 범위 vs 여분 구간 색상 구분 ──
+            int effectiveFrames = GetEffectiveTotalFrames(action);
+            if (totalFrames > 0 && paddedRect.width > 0)
+            {
+                // 액션 실제 범위 (0 ~ effectiveFrames): 약간 밝은 색조
+                float actionEndX = paddedRect.x + (paddedRect.width * effectiveFrames / totalFrames);
+                actionEndX = Mathf.Min(actionEndX, paddedRect.xMax);
+                Rect activeZone = new Rect(paddedRect.x, paddedRect.y,
+                    actionEndX - paddedRect.x, paddedRect.height);
+                EditorGUI.DrawRect(activeZone, new Color(0.18f, 0.20f, 0.25f)); // 파란 틴트 활성 구간
+
+                // 여분 구간 (effectiveFrames ~ totalFrames): 어두운 회색 + 빗금 느낌
+                if (effectiveFrames < totalFrames)
+                {
+                    Rect inactiveZone = new Rect(actionEndX, paddedRect.y,
+                        paddedRect.xMax - actionEndX, paddedRect.height);
+                    EditorGUI.DrawRect(inactiveZone, new Color(0.10f, 0.10f, 0.10f)); // 더 어두운 회색
+
+                    // 경계선 (액션 범위 끝 표시)
+                    EditorGUI.DrawRect(new Rect(actionEndX - 1, paddedRect.y, 2, paddedRect.height),
+                        new Color(0.4f, 0.4f, 0.4f, 0.6f));
+                }
+            }
 
             // ── 트랙 헤더 (체크박스 + 이름) ──
             EditorGUI.DrawRect(headerRect, new Color(0.18f, 0.18f, 0.18f));
@@ -909,8 +1026,18 @@ namespace FreeFlowHero.Editor
             {
                 float rowY = headerRect.y + t * TrackHeight;
 
-                // 체크박스 (ON/OFF)
-                Rect toggleRect = new Rect(headerRect.x + 2, rowY + 4, 18, 18);
+                // 트랙 이름 (좌측)
+                string trackName = t < defaultTrackNames.Length ? defaultTrackNames[t] : $"Track {t}";
+                Rect labelRect = new Rect(headerRect.x + 4, rowY, headerRect.width - 24, TrackHeight);
+
+                // 비활성 트랙은 어둡게
+                var labelStyle = new GUIStyle(trackLabelStyle);
+                if (!trackEnabled[t])
+                    labelStyle.normal.textColor = new Color(0.4f, 0.4f, 0.4f);
+                GUI.Label(labelRect, trackName, labelStyle);
+
+                // 체크박스 (ON/OFF) — 우측에 배치
+                Rect toggleRect = new Rect(headerRect.xMax - 20, rowY + 4, 18, 18);
                 bool wasEnabled = trackEnabled[t];
                 trackEnabled[t] = GUI.Toggle(toggleRect, trackEnabled[t], GUIContent.none);
 
@@ -926,16 +1053,6 @@ namespace FreeFlowHero.Editor
                     isDirty = true;
                 }
 
-                // 트랙 이름
-                string trackName = t < defaultTrackNames.Length ? defaultTrackNames[t] : $"Track {t}";
-                Rect labelRect = new Rect(headerRect.x + 20, rowY, headerRect.width - 24, TrackHeight);
-
-                // 비활성 트랙은 어둡게
-                var labelStyle = new GUIStyle(trackLabelStyle);
-                if (!trackEnabled[t])
-                    labelStyle.normal.textColor = new Color(0.4f, 0.4f, 0.4f);
-                GUI.Label(labelRect, trackName, labelStyle);
-
                 // 트랙 구분선
                 EditorGUI.DrawRect(new Rect(outerRect.x, rowY + TrackHeight,
                     outerRect.width, 1), new Color(0.25f, 0.25f, 0.25f));
@@ -944,10 +1061,10 @@ namespace FreeFlowHero.Editor
             // ── 트랙 헤더 우클릭: 트랙 추가/제거 메뉴 ──
             HandleTrackHeaderRightClick(headerRect, action);
 
-            // ── 세로 그리드 라인 (프레임별) ──
-            DrawTimelineGridLines(contentRect, totalFrames);
+            // ── 세로 그리드 라인 (프레임별, 패딩 영역 사용) ──
+            DrawTimelineGridLines(paddedRect, totalFrames, effectiveFrames);
 
-            // ── 노티파이 블록 렌더링 ──
+            // ── 노티파이 블록 렌더링 (paddedRect 기준) ──
             if (action.notifies != null)
             {
                 for (int i = 0; i < action.notifies.Length; i++)
@@ -955,10 +1072,10 @@ namespace FreeFlowHero.Editor
                     var notify = action.notifies[i];
                     if (notify.track < 0 || notify.track >= trackCount) continue;
 
-                    float startX = contentRect.x + (contentRect.width * notify.startFrame / totalFrames);
-                    float endX = contentRect.x + (contentRect.width * notify.endFrame / totalFrames);
+                    float startX = paddedRect.x + (paddedRect.width * notify.startFrame / totalFrames);
+                    float endX = paddedRect.x + (paddedRect.width * notify.endFrame / totalFrames);
                     float blockW = Mathf.Max(endX - startX, 4);
-                    float blockY = contentRect.y + notify.track * TrackHeight + 2;
+                    float blockY = paddedRect.y + notify.track * TrackHeight + 2;
                     float blockH = TrackHeight - 4;
 
                     Rect blockRect = new Rect(startX, blockY, blockW, blockH);
@@ -972,44 +1089,43 @@ namespace FreeFlowHero.Editor
                     if (isDisabled)
                         blockColor = new Color(blockColor.r, blockColor.g, blockColor.b, 0.25f); // 투명하게
 
-                    // ── 인스턴스 모드: 마름모(다이아몬드) 형태 ──
+                    // ── 인스턴스 모드: 사각형 블록 + start 마름모 마커 ──
                     if (notify.isInstance)
                     {
-                        // 인스턴스 = 포인트 마커 (startFrame 위치에 다이아몬드)
-                        float markerX = startX;
-                        float markerSize = blockH * 0.7f;
                         float centerY = blockY + blockH * 0.5f;
 
-                        // 다이아몬드 배경
-                        Vector3[] diamond = {
-                            new Vector3(markerX, centerY - markerSize * 0.5f, 0),
-                            new Vector3(markerX + markerSize * 0.5f, centerY, 0),
-                            new Vector3(markerX, centerY + markerSize * 0.5f, 0),
-                            new Vector3(markerX - markerSize * 0.5f, centerY, 0),
-                        };
-                        Handles.color = blockColor;
-                        Handles.DrawSolidRectangleWithOutline(diamond, blockColor,
-                            isSelected ? Color.white : new Color(0, 0, 0, 0.5f));
+                        // 사각형 블록 배경 (스테이트와 동일하게 길게 유지)
+                        Color instanceBlockColor = new Color(blockColor.r, blockColor.g, blockColor.b, blockColor.a * 0.5f);
+                        EditorGUI.DrawRect(blockRect, instanceBlockColor);
 
-                        // "I" 라벨 (인스턴스 표시)
-                        if (markerSize > 10)
+                        // 선택 테두리
+                        if (isSelected)
                         {
-                            var instanceLabel = new GUIStyle(EditorStyles.miniLabel)
-                            {
-                                alignment = TextAnchor.MiddleCenter,
-                                normal = { textColor = Color.white },
-                                fontSize = 8,
-                                fontStyle = FontStyle.Bold
-                            };
-                            Rect labelR = new Rect(markerX - 6, centerY - 6, 12, 12);
-                            GUI.Label(labelR, "I", instanceLabel);
+                            EditorGUI.DrawRect(new Rect(blockRect.x, blockRect.y, blockRect.width, 2), Color.white);
+                            EditorGUI.DrawRect(new Rect(blockRect.x, blockRect.yMax - 2, blockRect.width, 2), Color.white);
                         }
 
-                        // 인스턴스에도 endFrame까지의 가이드 라인 (옅은 선)
-                        if (blockW > 6)
+                        // start 지점에만 마름모 마커
+                        float diamondSize = Mathf.Min(blockH * 0.45f, 6f);
+                        Color markerColor = isSelected ? Color.white : new Color(1f, 1f, 1f, 0.8f);
+                        EditorGUI.DrawRect(new Rect(blockRect.x, blockRect.y, 2, blockRect.height), markerColor);
+                        DrawDiamondMarker(blockRect.x, centerY, diamondSize, markerColor);
+
+                        // 블록 라벨
+                        if (blockW > 30)
                         {
-                            EditorGUI.DrawRect(new Rect(markerX, centerY - 0.5f, blockW, 1),
-                                new Color(blockColor.r, blockColor.g, blockColor.b, 0.3f));
+                            var blockLabel = new GUIStyle(EditorStyles.miniLabel)
+                            {
+                                alignment = TextAnchor.MiddleCenter,
+                                normal = { textColor = isDisabled ? new Color(1, 1, 1, 0.4f) : Color.white },
+                                fontSize = 9,
+                                fontStyle = FontStyle.Bold,
+                                clipping = TextClipping.Clip
+                            };
+                            string typeName = NotifyTypeInfo.GetDisplayName(notify.TypeEnum);
+                            string label = $"I {typeName} @{notify.startFrame}";
+                            if (isDisabled) label = $"({label})";
+                            GUI.Label(blockRect, label, blockLabel);
                         }
                     }
                     else
@@ -1017,20 +1133,20 @@ namespace FreeFlowHero.Editor
                         // ── 스테이트 모드: 구간 블록 ──
                         EditorGUI.DrawRect(blockRect, blockColor);
 
-                        // ── 시작/끝 마커 (세로 바) ──
+                        // ── 시작/끝 마커 (세로 바 + 마름모) ──
                         Color markerColor = isSelected
                             ? Color.white
                             : new Color(1f, 1f, 1f, 0.6f);
+                        float centerY = blockY + blockH * 0.5f;
+                        float diamondSize = Mathf.Min(blockH * 0.45f, 6f);
 
-                        // 시작 마커 (왼쪽 세로선 + 삼각형)
-                        EditorGUI.DrawRect(new Rect(blockRect.x, blockRect.y, 3, blockRect.height), markerColor);
-                        // 시작 삼각형 (▶)
-                        DrawTriangleMarker(blockRect.x + 1, blockY, blockH, true, markerColor);
+                        // 시작 마커 (세로선 + 마름모)
+                        EditorGUI.DrawRect(new Rect(blockRect.x, blockRect.y, 2, blockRect.height), markerColor);
+                        DrawDiamondMarker(blockRect.x, centerY, diamondSize, markerColor);
 
-                        // 끝 마커 (오른쪽 세로선 + 삼각형)
-                        EditorGUI.DrawRect(new Rect(blockRect.xMax - 3, blockRect.y, 3, blockRect.height), markerColor);
-                        // 끝 삼각형 (◀)
-                        DrawTriangleMarker(blockRect.xMax - 1, blockY, blockH, false, markerColor);
+                        // 끝 마커 (세로선 + 마름모)
+                        EditorGUI.DrawRect(new Rect(blockRect.xMax - 2, blockRect.y, 2, blockRect.height), markerColor);
+                        DrawDiamondMarker(blockRect.xMax, centerY, diamondSize, markerColor);
 
                         // ── 선택 테두리 ──
                         if (isSelected)
@@ -1071,17 +1187,33 @@ namespace FreeFlowHero.Editor
                 }
             }
 
-            // ── 재생 헤드 (빨간 세로선) ──
-            float headX = contentRect.x + (contentRect.width * previewFrame / totalFrames);
+            // ── 재생 헤드 (빨간 세로선, paddedRect 기준) ──
+            float headX = paddedRect.x + (paddedRect.width * previewFrame / totalFrames);
             EditorGUI.DrawRect(new Rect(headX - 1, contentRect.y - 2, 3, contentRect.height + TimeRulerHeight + 4),
                 new Color(1f, 0.2f, 0.2f, 0.9f));
             EditorGUI.DrawRect(new Rect(headX - 4, contentRect.y - 5, 9, 4), Color.red);
 
-            // ── 시간 눈금 ──
-            DrawTimeRuler(rulerRect, totalFrames);
+            // ── 시간 눈금 (paddedRect 기준, effectiveFrames로 눈금 표시) ──
+            Rect paddedRulerRect = new Rect(paddedRect.x, rulerRect.y, paddedRect.width, rulerRect.height);
+            DrawTimeRuler(paddedRulerRect, totalFrames, effectiveFrames);
+            // 눈금 좌우 빈 영역 배경
+            EditorGUI.DrawRect(new Rect(rulerRect.x, rulerRect.y, TimelinePadding, rulerRect.height),
+                new Color(0.16f, 0.16f, 0.16f));
+            EditorGUI.DrawRect(new Rect(paddedRect.xMax, rulerRect.y, TimelinePadding, rulerRect.height),
+                new Color(0.16f, 0.16f, 0.16f));
 
-            // ── 마우스 입력 처리 ──
-            HandleTimelineMouseInput(contentRect, action, totalFrames);
+            // 눈금 영역에도 액션 범위 끝 경계선 표시
+            if (effectiveFrames < totalFrames && totalFrames > 0)
+            {
+                float rulerEndX = paddedRect.x + (paddedRect.width * effectiveFrames / totalFrames);
+                EditorGUI.DrawRect(new Rect(rulerEndX - 1, rulerRect.y, 2, rulerRect.height),
+                    new Color(0.4f, 0.4f, 0.4f, 0.6f));
+            }
+
+            // ── 마우스 입력 처리 (paddedRect 기준 + 전체 contentRect로 스크러빙) ──
+            // 스크러빙은 액션 실제 범위(effectiveFrames) 내로 클램프
+            HandleTimelineMouseInput(paddedRect, action, totalFrames, effectiveFrames);
+            HandleRulerScrub(paddedRulerRect, totalFrames, effectiveFrames);
         }
 
         // ═══════════════════════════════════════════════════════
@@ -1226,7 +1358,20 @@ namespace FreeFlowHero.Editor
             Handles.DrawAAConvexPolygon(verts);
         }
 
-        private void DrawTimeRuler(Rect rulerRect, int totalFrames)
+        /// <summary>시작/끝 지점 마름모(다이아몬드) 마커 렌더링</summary>
+        private void DrawDiamondMarker(float cx, float cy, float size, Color color)
+        {
+            Vector3[] diamond = {
+                new Vector3(cx, cy - size, 0),
+                new Vector3(cx + size, cy, 0),
+                new Vector3(cx, cy + size, 0),
+                new Vector3(cx - size, cy, 0),
+            };
+            Handles.color = color;
+            Handles.DrawAAConvexPolygon(diamond);
+        }
+
+        private void DrawTimeRuler(Rect rulerRect, int totalFrames, int actionFrames)
         {
             EditorGUI.DrawRect(rulerRect, new Color(0.16f, 0.16f, 0.16f));
 
@@ -1237,8 +1382,10 @@ namespace FreeFlowHero.Editor
                 alignment = TextAnchor.UpperCenter
             };
 
-            int step = totalFrames > 60 ? 10 : 5;
-            for (int f = 0; f <= totalFrames; f += step)
+            // 눈금은 액션 실제 범위(actionFrames) 기준으로 표시
+            // 위치는 전체 타임라인(totalFrames) 기준으로 배치
+            int step = actionFrames > 60 ? 10 : 5;
+            for (int f = 0; f <= actionFrames; f += step)
             {
                 float x = rulerRect.x + (rulerRect.width * f / totalFrames);
                 float tickH = (f % 10 == 0) ? rulerRect.height * 0.5f : rulerRect.height * 0.3f;
@@ -1253,10 +1400,24 @@ namespace FreeFlowHero.Editor
                     GUI.Label(new Rect(x - labelW * 0.5f, rulerRect.y + tickH, labelW, 12), tickText, tickLabel);
                 }
             }
+
+            // 액션 마지막 프레임이 step 배수가 아닐 경우 끝 프레임 눈금 추가 표시
+            if (actionFrames % step != 0)
+            {
+                float endX = rulerRect.x + (rulerRect.width * actionFrames / totalFrames);
+                float tickH = rulerRect.height * 0.5f;
+                EditorGUI.DrawRect(new Rect(endX, rulerRect.y, 1, tickH), new Color(0.5f, 0.5f, 0.5f));
+                string endText = showTimeAsSeconds
+                    ? $"{actionFrames * CombatConstants.FrameDuration:F2}s"
+                    : $"{actionFrames}";
+                float labelW = showTimeAsSeconds ? 36f : 28f;
+                var endLabel = new GUIStyle(tickLabel) { normal = { textColor = new Color(0.8f, 0.7f, 0.5f) } };
+                GUI.Label(new Rect(endX - labelW * 0.5f, rulerRect.y + tickH, labelW, 12), endText, endLabel);
+            }
         }
 
         /// <summary>타임라인 컨텐츠 영역에 세로 그리드 라인 렌더링</summary>
-        private void DrawTimelineGridLines(Rect contentRect, int totalFrames)
+        private void DrawTimelineGridLines(Rect contentRect, int totalFrames, int actionFrames)
         {
             if (totalFrames <= 0) return;
 
@@ -1276,7 +1437,8 @@ namespace FreeFlowHero.Editor
             // 10프레임 간격 강조
             Color lineColor10 = new Color(0.5f, 0.5f, 0.5f, 0.5f);
 
-            for (int f = frameStep; f <= totalFrames; f += frameStep)
+            // 액션 범위 내만 그리드 라인 표시 (여분 구간은 비워둠)
+            for (int f = frameStep; f <= actionFrames; f += frameStep)
             {
                 float x = contentRect.x + (contentRect.width * f / totalFrames);
                 Color c = (f % 10 == 0) ? lineColor10 : (f % 5 == 0) ? lineColor5 : lineColor;
@@ -1288,29 +1450,33 @@ namespace FreeFlowHero.Editor
         //  타임라인 마우스 입력
         // ═══════════════════════════════════════════════════════
 
-        private void HandleTimelineMouseInput(Rect contentRect, ActionEntry action, int totalFrames)
+        private void HandleTimelineMouseInput(Rect contentRect, ActionEntry action, int totalFrames, int actionFrames)
         {
             Event e = Event.current;
-            if (!contentRect.Contains(e.mousePosition) && currentDragMode == DragMode.None) return;
+
+            // 드래그 중이면 영역 밖에서도 계속 처리 (특히 Scrub)
+            bool isDragging = currentDragMode != DragMode.None;
+            if (!isDragging && !contentRect.Contains(e.mousePosition)) return;
 
             float framesPerPixel = (float)totalFrames / contentRect.width;
 
             switch (e.type)
             {
                 case EventType.MouseDown when e.button == 0:  // 좌클릭
-                    HandleTimelineLeftClick(contentRect, action, totalFrames, e);
+                    HandleTimelineLeftClick(contentRect, action, totalFrames, actionFrames, e);
                     break;
 
                 case EventType.MouseDown when e.button == 1:  // 우클릭
                     HandleTimelineRightClick(contentRect, action, totalFrames, e);
                     break;
 
-                case EventType.MouseDrag when currentDragMode != DragMode.None:
-                    HandleTimelineDrag(contentRect, action, totalFrames, e, framesPerPixel);
+                case EventType.MouseDrag:
+                    if (isDragging)
+                        HandleTimelineDrag(contentRect, action, totalFrames, actionFrames, e, framesPerPixel);
                     break;
 
                 case EventType.MouseUp when e.button == 0:
-                    if (currentDragMode != DragMode.None)
+                    if (isDragging)
                     {
                         currentDragMode = DragMode.None;
                         dragNotifyIndex = -1;
@@ -1320,14 +1486,13 @@ namespace FreeFlowHero.Editor
             }
         }
 
-        private void HandleTimelineLeftClick(Rect contentRect, ActionEntry action, int totalFrames, Event e)
+        private void HandleTimelineLeftClick(Rect contentRect, ActionEntry action, int totalFrames, int actionFrames, Event e)
         {
-            if (action.notifies == null) return;
-
             float mouseFrame = ((e.mousePosition.x - contentRect.x) / contentRect.width) * totalFrames;
             int track = Mathf.FloorToInt((e.mousePosition.y - contentRect.y) / TrackHeight);
 
             // 블록 히트 테스트 (역순으로 = 위에 그려진 것 우선)
+            if (action.notifies != null)
             for (int i = action.notifies.Length - 1; i >= 0; i--)
             {
                 var notify = action.notifies[i];
@@ -1382,16 +1547,28 @@ namespace FreeFlowHero.Editor
                 return;
             }
 
-            // 빈 영역 클릭 = 노티파이 선택 해제 + 프레임 스크러빙
+            // 빈 영역 클릭 = 노티파이 선택 해제 + 프레임 스크러빙 (액션 범위 내로 클램프)
             selectedNotifyIndex = -1;
-            previewFrame = Mathf.Clamp(mouseFrame, 0, totalFrames);
+            previewFrame = Mathf.Clamp(mouseFrame, 0, actionFrames);
             isPreviewPlaying = false;
+            currentDragMode = DragMode.Scrub;
             e.Use();
             Repaint();
         }
 
-        private void HandleTimelineDrag(Rect contentRect, ActionEntry action, int totalFrames, Event e, float framesPerPixel)
+        private void HandleTimelineDrag(Rect contentRect, ActionEntry action, int totalFrames, int actionFrames, Event e, float framesPerPixel)
         {
+            // ── 스크러빙 모드: 재생 헤드 드래그 (액션 범위 내로 클램프) ──
+            if (currentDragMode == DragMode.Scrub)
+            {
+                float mouseFrame = ((e.mousePosition.x - contentRect.x) / contentRect.width) * totalFrames;
+                previewFrame = Mathf.Clamp(mouseFrame, 0, actionFrames);
+                isPreviewPlaying = false;
+                e.Use();
+                Repaint();
+                return;
+            }
+
             if (dragNotifyIndex < 0 || dragNotifyIndex >= (action.notifies?.Length ?? 0)) return;
 
             var notify = action.notifies[dragNotifyIndex];
@@ -1419,6 +1596,24 @@ namespace FreeFlowHero.Editor
             isDirty = true;
             e.Use();
             Repaint();
+        }
+
+        /// <summary>눈금(룰러) 영역에서 클릭/드래그로 재생 헤드 스크러빙</summary>
+        private void HandleRulerScrub(Rect rulerRect, int totalFrames, int actionFrames)
+        {
+            Event e = Event.current;
+
+            // 룰러 영역 클릭 → 스크러빙 시작 (액션 범위 내로 클램프)
+            if (e.type == EventType.MouseDown && e.button == 0 && rulerRect.Contains(e.mousePosition))
+            {
+                float mouseFrame = ((e.mousePosition.x - rulerRect.x) / rulerRect.width) * totalFrames;
+                previewFrame = Mathf.Clamp(mouseFrame, 0, actionFrames);
+                isPreviewPlaying = false;
+                currentDragMode = DragMode.Scrub;
+                selectedNotifyIndex = -1;
+                e.Use();
+                Repaint();
+            }
         }
 
         private void HandleTimelineRightClick(Rect contentRect, ActionEntry action, int totalFrames, Event e)
@@ -1581,8 +1776,7 @@ namespace FreeFlowHero.Editor
                 return;
             }
 
-            // 프리뷰 렌더 영역
-            float previewHeight = 200f;
+            // 프리뷰 렌더 영역 (리사이즈 가능)
             Rect previewRect = GUILayoutUtility.GetRect(0, previewHeight, GUILayout.ExpandWidth(true));
             if (previewRect.width < 10 || previewRect.height < 10) return;
 
@@ -1638,6 +1832,91 @@ namespace FreeFlowHero.Editor
                 overlayText, overlayShadowStyle);
             GUI.Label(new Rect(previewRect.x, previewRect.y, previewRect.width - 5, 20),
                 overlayText, overlayWhiteStyle);
+
+            // ── COLLISION 히트박스 시각화 오버레이 ──
+            DrawCollisionOverlay(previewRect, action, currentFrame);
+        }
+
+        /// <summary>
+        /// COLLISION 노티파이 구간에 진입하면 프리뷰에 빨간 히트박스 판정 오버레이를 표시.
+        /// 구간을 벗어나면 사라진다.
+        /// </summary>
+        private void DrawCollisionOverlay(Rect previewRect, ActionEntry action, int currentFrame)
+        {
+            if (action.notifies == null) return;
+
+            // 현재 프레임에서 활성인 COLLISION 노티파이를 찾는다
+            bool isCollisionActive = false;
+            float damageScale = 1f;
+            string hitboxId = "";
+
+            for (int i = 0; i < action.notifies.Length; i++)
+            {
+                var n = action.notifies[i];
+                if (n.disabled) continue;
+                if (n.TypeEnum != NotifyType.COLLISION) continue;
+
+                if (n.isInstance)
+                {
+                    // 인스턴스 모드: 정확히 해당 프레임일 때
+                    if (currentFrame == n.startFrame)
+                    {
+                        isCollisionActive = true;
+                        damageScale = n.damageScale;
+                        hitboxId = n.hitboxId ?? "";
+                        break;
+                    }
+                }
+                else
+                {
+                    // 스테이트 모드: 구간 내 포함
+                    if (currentFrame >= n.startFrame && currentFrame < n.endFrame)
+                    {
+                        isCollisionActive = true;
+                        damageScale = n.damageScale;
+                        hitboxId = n.hitboxId ?? "";
+                        break;
+                    }
+                }
+            }
+
+            if (!isCollisionActive) return;
+
+            // ── 빨간 테두리 + 반투명 오버레이 ──
+            Color hitboxColor = new Color(1f, 0.15f, 0.1f, 0.15f);
+            Color hitboxBorder = new Color(1f, 0.2f, 0.1f, 0.8f);
+            float borderW = 3f;
+
+            // 반투명 빨간 배경
+            EditorGUI.DrawRect(previewRect, hitboxColor);
+
+            // 빨간 테두리 (4변)
+            EditorGUI.DrawRect(new Rect(previewRect.x, previewRect.y, previewRect.width, borderW), hitboxBorder);
+            EditorGUI.DrawRect(new Rect(previewRect.x, previewRect.yMax - borderW, previewRect.width, borderW), hitboxBorder);
+            EditorGUI.DrawRect(new Rect(previewRect.x, previewRect.y, borderW, previewRect.height), hitboxBorder);
+            EditorGUI.DrawRect(new Rect(previewRect.xMax - borderW, previewRect.y, borderW, previewRect.height), hitboxBorder);
+
+            // ── 좌측 하단 "COLLISION ACTIVE" 라벨 ──
+            var hitboxLabelStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 11,
+                normal = { textColor = new Color(1f, 0.3f, 0.2f) },
+                alignment = TextAnchor.LowerLeft
+            };
+            var hitboxShadowStyle = new GUIStyle(hitboxLabelStyle)
+            {
+                normal = { textColor = new Color(0, 0, 0, 0.7f) }
+            };
+
+            string hitLabel = "COLLISION ACTIVE";
+            if (!string.IsNullOrEmpty(hitboxId))
+                hitLabel += $"  [{hitboxId}]";
+            if (Mathf.Abs(damageScale - 1f) > 0.01f)
+                hitLabel += $"  x{damageScale:F1}";
+
+            Rect labelR = new Rect(previewRect.x + 6, previewRect.y + 1, previewRect.width - 12, previewRect.height - 4);
+            GUI.Label(new Rect(labelR.x + 1, labelR.y + 1, labelR.width, labelR.height), hitLabel, hitboxShadowStyle);
+            GUI.Label(labelR, hitLabel, hitboxLabelStyle);
         }
 
         private void DrawPreviewControls(AnimationClip clip, int totalFrames)
