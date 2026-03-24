@@ -28,12 +28,12 @@ namespace FreeFlowHero.Combat.Player
         private void Awake()
         {
             fsm = GetComponent<PlayerCombatFSM>();
-            Debug.Log($"[InputHandler] Awake — FSM found: {fsm != null}");
+
         }
 
         private void Start()
         {
-            Debug.Log($"[InputHandler] Start (New Input System) — enabled: {enabled}");
+
         }
 
         private void Update()
@@ -64,7 +64,7 @@ namespace FreeFlowHero.Combat.Player
                 inputCount++;
                 lastInput = $"Attack #{inputCount}";
                 inputIndicatorTimer = 0.5f;
-                Debug.Log($"[InputHandler] >>> Attack (Mouse LB) (state: {fsm.CurrentStateName})");
+
                 fsm.OnCombatInput(new InputData(InputType.Attack, direction));
             }
 
@@ -74,7 +74,7 @@ namespace FreeFlowHero.Combat.Player
                 inputCount++;
                 lastInput = $"Heavy #{inputCount}";
                 inputIndicatorTimer = 0.5f;
-                Debug.Log("[InputHandler] Heavy (Mouse RB)");
+
                 fsm.OnCombatInput(new InputData(InputType.Heavy, direction));
             }
 
@@ -84,7 +84,7 @@ namespace FreeFlowHero.Combat.Player
                 inputCount++;
                 lastInput = $"Dodge #{inputCount}";
                 inputIndicatorTimer = 0.5f;
-                Debug.Log("[InputHandler] Dodge (Space)");
+
                 fsm.OnCombatInput(new InputData(InputType.Dodge, direction));
             }
 
@@ -94,7 +94,7 @@ namespace FreeFlowHero.Combat.Player
                 inputCount++;
                 lastInput = $"Counter #{inputCount}";
                 inputIndicatorTimer = 0.5f;
-                Debug.Log("[InputHandler] Counter (L)");
+
                 fsm.OnCombatInput(new InputData(InputType.Counter, direction));
             }
 
@@ -104,7 +104,7 @@ namespace FreeFlowHero.Combat.Player
                 inputCount++;
                 lastInput = $"Huxley #{inputCount}";
                 inputIndicatorTimer = 0.5f;
-                Debug.Log("[InputHandler] Huxley (U)");
+
                 fsm.OnCombatInput(new InputData(InputType.Huxley, direction));
             }
         }

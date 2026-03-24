@@ -106,7 +106,7 @@ namespace FreeFlowHero.Combat.Player
                     // Phase 4에서 구현
                     if (context.huxleyGauge >= 33f)
                     {
-                        Debug.Log("[Idle] 헉슬리 발사 (Phase 4에서 구현)");
+
                     }
                     break;
 

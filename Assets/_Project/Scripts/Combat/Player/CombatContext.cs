@@ -109,8 +109,13 @@ namespace FreeFlowHero.Combat.Player
             if (comboWindowTimer > 0f)
             {
                 comboWindowTimer -= deltaTime;
-                if (comboWindowTimer <= 0f && comboCount > 0)
+                if (comboWindowTimer <= 0f)
                 {
+                    // ★ comboCount 조건 제거:
+                    //   헛스윙(적 없이 공격)에서는 IncrementCombo()가 호출되지 않아 comboCount=0이지만,
+                    //   comboChainIndex는 전진해 있음. 타이머 만료 시 반드시 리셋해야
+                    //   다음 공격이 1타부터 다시 시작됨.
+                    //   ResetCombo() 내부에서 comboCount > 0일 때만 OnComboBreak 이벤트를 발행하므로 안전.
                     ResetCombo();
                 }
             }

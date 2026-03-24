@@ -105,6 +105,23 @@ AnimatorController 구성 시 이 매핑을 기준으로 할 것.
 | `replaced-combat:hit-reaction` | `.skills/replaced-combat-hit-reaction/SKILL.md` | 히트 리액션, 타격감 연출 구현 |
 | `replaced-combat:combat-math` | `.skills/replaced-combat-math/SKILL.md` | 데미지 공식, 밸런스 수치 설계 |
 
+### 스킬 자동 활용 규칙
+
+사용자의 질문/요청 내용에 따라 **적절한 스킬을 자동으로 판단하여 호출**해야 한다. 사용자가 명시적으로 스킬을 지정하지 않더라도, 아래 매핑 규칙에 따라 관련 스킬의 SKILL.md를 먼저 읽고 지침을 따른다.
+
+| 사용자 요청 키워드/상황 | 호출할 스킬 |
+|----------------------|-----------|
+| 콤보, 회피, 카운터, 워핑, FSM, 인풋 버퍼, 플레이어 이동/조작 | `replaced-combat:player-controller` |
+| 처형, 헉슬리 건, 시네마틱 킬, 피니셔, 게이지 충전 | `replaced-combat:execution-huxley` |
+| 적 AI, 텔레그래프, 공격 턴, 공격 코디네이터, 적 유형, 패턴 | `replaced-combat:enemy-ai` |
+| 히트 리액션, 타격감, 넉백, 히트스탑, 카메라 셰이크, 피격 | `replaced-combat:hit-reaction` |
+| 데미지 공식, 밸런스, 수치 설계, 콤보 스케일링, DPS | `replaced-combat:combat-math` |
+| Unity 전반, 에디터 스크립트, SO, 프리팹, 씬 구성, 아키텍처 | `unity-dev-master` (범용 스킬) |
+
+**복합 요청 시**: 여러 영역에 걸치는 요청이면 관련 스킬을 **모두 읽은 후** 통합하여 작업한다. 예를 들어 "콤보 중 처형이 발동되게 해줘"라면 `player-controller`와 `execution-huxley` 두 스킬을 모두 참조한다.
+
+**`unity-dev-master` 스킬 활용**: 이 프로젝트의 전투 시스템 5개 스킬로 커버되지 않는 Unity 일반 작업(에디터 툴 제작, JSON 파이프라인, 빌드 자동화, UI 시스템, 오디오, 세이브, 최적화 등)에는 `unity-dev-master` 스킬을 호출한다. 전투 시스템 스킬과 함께 사용할 수도 있다.
+
 ## 에이전트 (5개)
 
 | 에이전트 | 경로 | 역할 |
@@ -261,3 +278,30 @@ Assets/_Project/Scripts/Editor/
    - 새로 추가된 파일 목록과 수정된 파일 목록을 간략히 첨부
    - 사용자가 튜닝할 수 있는 데이터 항목과 조절 가이드를 함께 첨부
    - CLAUDE.md가 아닌 **채팅 메시지**로 매번 사용자에게 직접 전달
+
+## 디버그 로그 관리
+
+### 로그 운영 규칙
+- **새 기능 구현 시**: 핵심 진입/전환 로그만 추가 (프레임 단위 반복 로그 금지)
+- **버그 추적 시**: 임시 상세 로그를 추가하되, 해결 후 반드시 이 섹션에 기록하고 제거
+- **상시 유지 로그**: `[태그]` 접두사 + 한 줄 요약 형식. 예: `[Strike] Enter — Action:LightAtk1 ...`
+- **제거 대상**: 매 프레임 반복 출력, 버퍼 처리 과정 상세, 캔슬 경로 분기 상세 등
+
+### 현재 활성 로그 목록
+
+| 파일 | 로그 태그 | 용도 | 상태 |
+|------|----------|------|------|
+| StrikeState.cs | `[Strike] Enter` | 공격 진입 시 액션/프레임 데이터 요약 | 상시 유지 |
+| StrikeState.cs | `[Strike] HIT` | 히트 확인 (타겟명, 콤보 카운트) | 상시 유지 |
+| StrikeState.cs | `[Strike] Animator 오류` | AnimatorController 미할당 등 예외 | 상시 유지 (Warning) |
+| StrikeState.cs | `[Strike] ActionTable 로드 실패` | JSON 폴백 사용 경고 | 상시 유지 (Warning) |
+
+### 제거 이력
+
+| 날짜 | 파일 | 제거한 로그 | 이유 |
+|------|------|-----------|------|
+| 2026-03-24 | StrikeState.cs | HandleInput 차단/통과 상세 로그 7개 | 매 입력마다 출력되어 콘솔 과부하 |
+| 2026-03-24 | StrikeState.cs | 버퍼소비 차단/성공 상세 로그 3개 | 캔슬 윈도우 내 매 프레임 반복 |
+| 2026-03-24 | StrikeState.cs | ResolveCancelTarget/ResolveNextComboAttack 분기 로그 4개 | 콤보 체인 진행 상세 불필요 |
+| 2026-03-24 | StrikeState.cs | CANCEL_WINDOW 진입/프레임 완료 상세 로그 2개 | Enter 로그로 충분 |
+| 2026-03-24 | StrikeState.cs | Active! 히트 판정 시작 로그 1개 | 매 공격마다 반복, HIT 로그로 대체 |

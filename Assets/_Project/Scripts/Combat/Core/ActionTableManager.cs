@@ -77,7 +77,7 @@ namespace FreeFlowHero.Combat.Core
                         }
                         table.BuildMap();
                         tables[table.actorId] = table;
-                        Debug.Log($"[ActionTable] Loaded: {table.actorId} ({table.actorName}) — {table.actions.Length} actions");
+
                     }
                 }
                 catch (System.Exception e)
@@ -87,7 +87,7 @@ namespace FreeFlowHero.Combat.Core
             }
 
             isLoaded = true;
-            Debug.Log($"[ActionTable] Total {tables.Count} actor table(s) loaded.");
+
         }
 
         /// <summary>
@@ -131,7 +131,7 @@ namespace FreeFlowHero.Combat.Core
         /// <summary>런타임 리로드 (핫 리로드용)</summary>
         public void Reload()
         {
-            Debug.Log("[ActionTable] Reloading all tables...");
+
             LoadAll();
         }
 
@@ -171,7 +171,7 @@ namespace FreeFlowHero.Combat.Core
             {
                 string json = JsonUtility.ToJson(table, true);
                 System.IO.File.WriteAllText(filePath, json);
-                Debug.Log($"[ActionTable] Saved: {filePath}");
+
             }
             catch (System.Exception e)
             {

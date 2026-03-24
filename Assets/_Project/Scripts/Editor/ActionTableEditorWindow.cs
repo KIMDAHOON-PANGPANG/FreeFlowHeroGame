@@ -32,9 +32,10 @@ namespace FreeFlowHero.Editor
 
         private string[] actorFiles;
         private string[] actorFileNames;
-        private int selectedActorIndex;
+        private int selectedActorIndex = -1;  // ★ -1로 초기화해야 디폴트 PC_Hero 선택 로직 작동
         private ActorActionTable currentTable;
         private int selectedActionIndex = -1;
+        private int lastRenderedActionIndex = -1;  // 타임라인 갱신 감지용
         private string searchFilter = "";
         private Vector2 leftScroll;
         private Vector2 inspectorScroll;
@@ -57,19 +58,30 @@ namespace FreeFlowHero.Editor
         private Animator previewAnimator;
         private AnimationClip currentPreviewClip;
         private string cachedClipName = "";
+
+        // ─── 히트박스 2D 시각화 ───
+        private GameObject hitboxCubeObj;       // 프리뷰 씬 내 히트박스 Quad (2D 평면)
+        private Material hitboxMaterial;         // 반투명 빨간 머티리얼
+        private Material hitboxWireMaterial;     // 와이어프레임 머티리얼
+        private bool isHitboxSelected;           // 히트박스가 클릭으로 선택되었는지
+        private bool isHitboxDragging;           // 히트박스 드래그 중 여부
+        private Vector2 hitboxDragStartMouse;    // 드래그 시작 마우스 위치
+        private Vector3 hitboxDragStartOffset;   // 드래그 시작 시 오프셋 값
+
+        // ─── 히트박스 트랜스폼 모드 (W/E/R 단축키) ───
+        private enum HitboxGizmoMode { Move, Rotate, Scale }
+        private HitboxGizmoMode hitboxGizmoMode = HitboxGizmoMode.Move;
         private float previewFrame = 0f;
         private bool isPreviewPlaying;
         private double lastPlayTime;
 
-        private const float DefaultRotationY = 90f;
-        private const float DefaultPitchX = 0f;
         private const float DefaultCamDistance = 3.5f;
         private const float DefaultPlaybackSpeed = 1.0f;
         private const int DefaultLoopMode = 0;
 
-        private float previewRotationY = DefaultRotationY;
-        private float previewPitchX = DefaultPitchX;
+        // 2D 고정 뷰: 회전 없음, 줌과 패닝만 사용
         private float previewCamDistance = DefaultCamDistance;
+        private Vector2 previewPanOffset = Vector2.zero; // 2D 뷰 패닝 오프셋 (Z, Y)
         private GUIStyle overlayWhiteStyle;
         private GUIStyle overlayShadowStyle;
         private Vector2 previewDragStart;
@@ -78,20 +90,20 @@ namespace FreeFlowHero.Editor
         private static readonly string[] LoopModeLabels = { "전체", "Startup", "Active", "Recovery" };
         private float playbackSpeed = DefaultPlaybackSpeed;
 
-        private int selectedViewIndex = 1;
-        private static readonly string[] ViewLabels = { "Front", "Left", "Right", "Top", "Down" };
+        // (View 전환 UI 제거됨 — 2D 고정 뷰)
         private static readonly float[] SpeedPresets = { 0.5f, 1.0f, 2.0f };
         private static readonly string[] SpeedLabels = { "0.5x", "1.0x", "2.0x" };
 
         // ─── 타임라인 ───
         private const int MinTracks = 1;
         private const int MaxTracksLimit = 10;
-        private int trackCount = 5;   // 동적 트랙 수 (1~10)
+        private int trackCount = 2;   // 동적 트랙 수 (1~10), 기본 2줄
         private const float TrackHeight = 26f;
         private const float TimelineHeaderWidth = 100f;
-        private const float TimeRulerHeight = 20f;
-        private const float TimelinePadding = 12f;  // 타임라인 좌우 여백 (시작/끝 마커 표시용)
+        private const float TimeRulerHeight = 28f;  // 프레임 번호 + 시간(초) 2줄 표시
+        private const float TimelinePadding = 24f;  // 타임라인 좌우 여백 (눈금 라벨이 잘리지 않도록)
         private Vector2 timelineScroll;
+        private float timelineZoom = 4.0f;  // Ctrl+휠 줌 배율 (0.5~4.0), 기본값=최대 확대
         private int selectedNotifyIndex = -1;  // 선택된 노티파이 인덱스 (-1=미선택)
 
         // ★ 고정 타임라인 길이: 노티파이 endFrame 변경 시에도 타임라인 스케일이 변하지 않도록 함
@@ -115,7 +127,7 @@ namespace FreeFlowHero.Editor
         // ─── 리사이즈 가능 패널 크기 ───
         private float leftPanelWidth = 220f;       // 좌측 액션 목록
         private float rightPanelWidth = 280f;      // 우측 인스펙터
-        private float previewHeight = 200f;         // 프리뷰 높이
+        private float previewHeight = 500f;         // 프리뷰 높이 (기본값=최대)
 
         private const float MinPanelWidth = 120f;
         private const float MaxPanelWidth = 500f;
@@ -144,6 +156,11 @@ namespace FreeFlowHero.Editor
         private void OnEnable()
         {
             RefreshFileList();
+            // ★ 디폴트 액터 자동 로드 (PC_Hero 우선)
+            if (currentTable == null && actorFiles != null && actorFiles.Length > 0)
+            {
+                LoadSelectedActor();
+            }
             EditorApplication.update += OnEditorUpdate;
         }
 
@@ -204,10 +221,54 @@ namespace FreeFlowHero.Editor
             }
         }
 
-        /// <summary>노티파이 있으면 노티파이 기반, 없으면 레거시 TotalFrames</summary>
+        // ★ 클립 프레임 캐시: FindClipForAction은 AssetDatabase 검색이라 매우 무거움.
+        //   액션 ID → 클립 프레임 수를 캐싱하여 프레임당 수십 회 호출되어도 성능 문제 없음.
+        private readonly Dictionary<string, int> clipFramesCache = new Dictionary<string, int>();
+
+        /// <summary>캐시 무효화 (액션 변경, 클립 변경 시 호출)</summary>
+        private void InvalidateClipFramesCache()
+        {
+            clipFramesCache.Clear();
+        }
+
+        /// <summary>특정 액션의 캐시만 무효화</summary>
+        private void InvalidateClipFramesCache(string actionId)
+        {
+            if (actionId != null) clipFramesCache.Remove(actionId);
+        }
+
+        /// <summary>
+        /// 액션의 총 재생 프레임 수.
+        /// ★ 클립 길이 우선: 노티파이 endFrame을 줄여도 액션 총 길이는 변하지 않음.
+        ///   1순위: 애니메이션 클립 길이 (60fps 환산, 캐싱됨)
+        ///   2순위: 레거시 TotalFrames (startup + active + recovery)
+        ///   3순위: 노티파이 범위 (폴백)
+        /// </summary>
         private int GetEffectiveTotalFrames(ActionEntry action)
         {
-            return action.HasNotifies ? action.NotifyTotalFrames : action.TotalFrames;
+            // 1순위: 캐시된 클립 프레임 조회
+            string key = action.id ?? "";
+            if (clipFramesCache.TryGetValue(key, out int cached))
+            {
+                if (cached > 0) return cached;
+            }
+            else
+            {
+                // 캐시 미스: 클립 검색 (1회만 실행)
+                AnimationClip clip = FindClipForAction(action);
+                int clipFrames = 0;
+                if (clip != null)
+                    clipFrames = Mathf.CeilToInt(clip.length * 60f);
+                clipFramesCache[key] = clipFrames;
+                if (clipFrames > 0) return clipFrames;
+            }
+
+            // 2순위: 레거시 TotalFrames
+            if (action.TotalFrames > 0)
+                return action.TotalFrames;
+
+            // 3순위: 노티파이 범위 (폴백)
+            return action.HasNotifies ? action.NotifyTotalFrames : 1;
         }
 
         /// <summary>
@@ -223,31 +284,41 @@ namespace FreeFlowHero.Editor
             return actual;
         }
 
+        // ★ 데이터 튜닝: 액션 길이가 타임라인에서 차지하는 기본 비율 (0.8 = 80%)
+        private const float TimelineFillRatio = 0.8f;
+
         /// <summary>
         /// 액션이 바뀔 때 호출: 클립 길이 또는 레거시 프레임으로 고정 타임라인 길이 설정.
+        /// 액션 길이가 타임라인의 약 80%를 차지하도록 자동 스케일링한다.
         /// </summary>
         private void UpdateFixedTimelineFrames(ActionEntry action)
         {
+            int actionFrames = 0;
+
             // 1순위: 실제 애니메이션 클립 길이
             AnimationClip clip = FindClipForAction(action);
             if (clip != null)
             {
-                // 클립 프레임 수 = 클립 길이(초) × 60fps, playbackRate 적용
                 float rate = action.playbackRate > 0f ? action.playbackRate : 1f;
-                int clipFrames = Mathf.CeilToInt(clip.length * 60f / rate);
-                fixedTimelineFrames = Mathf.Max(clipFrames, 1);
-                return;
+                actionFrames = Mathf.CeilToInt(clip.length * 60f / rate);
             }
 
             // 2순위: 레거시 TotalFrames (startup + active + recovery)
-            if (action.TotalFrames > 0)
+            if (actionFrames <= 0 && action.TotalFrames > 0)
             {
-                fixedTimelineFrames = action.TotalFrames;
-                return;
+                actionFrames = action.TotalFrames;
             }
 
             // 3순위: 현재 노티파이 범위
-            fixedTimelineFrames = GetEffectiveTotalFrames(action);
+            if (actionFrames <= 0)
+            {
+                actionFrames = GetEffectiveTotalFrames(action);
+            }
+
+            actionFrames = Mathf.Max(actionFrames, 1);
+
+            // 액션 길이가 타임라인의 80%를 차지하도록 총 길이 계산
+            fixedTimelineFrames = Mathf.CeilToInt(actionFrames / TimelineFillRatio);
         }
 
         private void InitStyles()
@@ -401,24 +472,78 @@ namespace FreeFlowHero.Editor
             }
         }
 
-        /// <summary>수평 스플리터 바 (프리뷰↔타임라인)</summary>
+        /// <summary>수평 스플리터 바 (프리뷰↔타임라인) — 드래그로 프리뷰 높이 조절</summary>
+        private int horizontalSplitterControlId;
         private void DrawHorizontalSplitter()
         {
-            Rect splitterRect = GUILayoutUtility.GetRect(0, SplitterSize, GUILayout.ExpandWidth(true));
-            EditorGUI.DrawRect(splitterRect, new Color(0.15f, 0.15f, 0.15f));
-            EditorGUI.DrawRect(new Rect(splitterRect.x, splitterRect.y + SplitterSize * 0.5f - 0.5f,
-                splitterRect.width, 1), new Color(0.35f, 0.35f, 0.35f));
+            // 히트 영역은 넓게 (10px), 시각은 중앙 선 (2px)
+            const float hitHeight = 10f;
+            Rect splitterRect = GUILayoutUtility.GetRect(0, hitHeight, GUILayout.ExpandWidth(true));
+            horizontalSplitterControlId = GUIUtility.GetControlID(FocusType.Passive);
+
+            // 배경
+            EditorGUI.DrawRect(splitterRect, new Color(0.13f, 0.13f, 0.13f));
+
+            // 호버/드래그 시 하이라이트
+            Event e = Event.current;
+            bool isActive = GUIUtility.hotControl == horizontalSplitterControlId;
+            bool isHovered = splitterRect.Contains(e.mousePosition);
+            Color lineColor = isActive ? new Color(0.4f, 0.6f, 1f, 0.9f)  // 드래그 중: 파랑
+                : isHovered ? new Color(0.5f, 0.5f, 0.5f, 0.8f)            // 호버: 밝은 회색
+                : new Color(0.3f, 0.3f, 0.3f, 0.6f);                       // 기본: 어두운 선
+
+            // 중앙 가로선 (2px)
+            float lineY = splitterRect.y + hitHeight * 0.5f - 1f;
+            EditorGUI.DrawRect(new Rect(splitterRect.x, lineY, splitterRect.width, 2), lineColor);
+
+            // 드래그 핸들 점 (중앙 5개)
+            if (isHovered || isActive)
+            {
+                float cx = splitterRect.center.x;
+                float dotY = splitterRect.y + hitHeight * 0.5f - 1f;
+                Color dotColor = new Color(0.6f, 0.6f, 0.6f, 0.7f);
+                for (int i = -2; i <= 2; i++)
+                {
+                    EditorGUI.DrawRect(new Rect(cx + i * 8 - 1, dotY, 3, 3), dotColor);
+                }
+            }
+
             EditorGUIUtility.AddCursorRect(splitterRect, MouseCursor.ResizeVertical);
 
-            Event e = Event.current;
-            if (e.type == EventType.MouseDown && e.button == 0 && splitterRect.Contains(e.mousePosition))
+            // ── hotControl 기반 드래그 (IMGUI 표준 패턴, 다른 컨트롤에 이벤트 빼앗기지 않음) ──
+            switch (e.type)
             {
-                activeSplitter = SplitterDrag.PreviewBottom;
-                e.Use();
+                case EventType.MouseDown:
+                    if (e.button == 0 && splitterRect.Contains(e.mousePosition))
+                    {
+                        GUIUtility.hotControl = horizontalSplitterControlId;
+                        e.Use();
+                    }
+                    break;
+                case EventType.MouseDrag:
+                    if (GUIUtility.hotControl == horizontalSplitterControlId)
+                    {
+                        previewHeight += e.delta.y;
+                        previewHeight = Mathf.Clamp(previewHeight, MinPreviewHeight, MaxPreviewHeight);
+                        e.Use();
+                        Repaint();
+                    }
+                    break;
+                case EventType.MouseUp:
+                    if (GUIUtility.hotControl == horizontalSplitterControlId)
+                    {
+                        GUIUtility.hotControl = 0;
+                        e.Use();
+                    }
+                    break;
             }
+
+            // 호버 시 리페인트 (하이라이트 갱신)
+            if (isHovered && e.type == EventType.Repaint)
+                Repaint();
         }
 
-        /// <summary>스플리터 드래그 중 패널 크기 조절</summary>
+        /// <summary>세로 스플리터(좌우 패널) 드래그 중 패널 크기 조절</summary>
         private void HandleSplitterDrag()
         {
             Event e = Event.current;
@@ -436,10 +561,6 @@ namespace FreeFlowHero.Editor
                     case SplitterDrag.Right:
                         rightPanelWidth -= e.delta.x;
                         rightPanelWidth = Mathf.Clamp(rightPanelWidth, MinPanelWidth, MaxPanelWidth);
-                        break;
-                    case SplitterDrag.PreviewBottom:
-                        previewHeight += e.delta.y;
-                        previewHeight = Mathf.Clamp(previewHeight, MinPreviewHeight, MaxPreviewHeight);
                         break;
                 }
                 e.Use();
@@ -760,7 +881,10 @@ namespace FreeFlowHero.Editor
             EditorGUILayout.LabelField("기본 정보", headerStyle);
             action.id = EditorGUILayout.TextField("Action ID", action.id);
             action.name = EditorGUILayout.TextField("표시 이름", action.name);
+            string prevClip = action.clip;
             action.clip = EditorGUILayout.TextField("Animation Clip", action.clip);
+            if (prevClip != action.clip)
+                InvalidateClipFramesCache(action.id); // ★ 클립 변경 시 해당 액션 캐시 무효화
 
             EditorGUILayout.Space(6);
 
@@ -776,7 +900,7 @@ namespace FreeFlowHero.Editor
 
             // ── 재생 배율 ──
             EditorGUILayout.BeginHorizontal();
-            action.playbackRate = EditorGUILayout.Slider("Playback Rate", action.playbackRate, 0.1f, 3.0f);
+            action.playbackRate = EditorGUILayout.Slider("재생배율", action.playbackRate, 0.1f, 3.0f);
             if (GUILayout.Button("1x", EditorStyles.miniButton, GUILayout.Width(28)))
                 action.playbackRate = 1.0f;
             EditorGUILayout.EndHorizontal();
@@ -891,8 +1015,12 @@ namespace FreeFlowHero.Editor
                     notify.endFrame = Mathf.Max(notify.startFrame + 1, newEnd);
                     isDirty = true;
                 }
+                float notifyRate1 = (action.playbackRate > 0f) ? action.playbackRate : 1f;
+                string rateInfo1 = (Mathf.Abs(notifyRate1 - 1f) > 0.01f)
+                    ? $"  | 모션:{notify.DurationTime / notifyRate1:F3}s (x{notifyRate1:F1})"
+                    : "";
                 EditorGUILayout.LabelField(
-                    $"구간: {notify.Duration}f ({notify.DurationTime:F3}s)  [frame {notify.startFrame}~{notify.endFrame}]",
+                    $"구간: {notify.Duration}f ({notify.DurationTime:F3}s)  [frame {notify.startFrame}~{notify.endFrame}]{rateInfo1}",
                     EditorStyles.miniLabel);
             }
             else
@@ -900,8 +1028,12 @@ namespace FreeFlowHero.Editor
                 // ── 프레임(frame) 모드 ──
                 notify.startFrame = EditorGUILayout.IntField("Start Frame", notify.startFrame);
                 notify.endFrame = EditorGUILayout.IntField("End Frame", notify.endFrame);
+                float notifyRate2 = (action.playbackRate > 0f) ? action.playbackRate : 1f;
+                string rateInfo2 = (Mathf.Abs(notifyRate2 - 1f) > 0.01f)
+                    ? $"  | 모션:{notify.DurationTime / notifyRate2:F3}s (x{notifyRate2:F1})"
+                    : "";
                 EditorGUILayout.LabelField(
-                    $"구간: {notify.Duration}f ({notify.DurationTime:F3}s)  [{notify.StartTime:F3}s ~ {notify.EndTime:F3}s]",
+                    $"구간: {notify.Duration}f ({notify.DurationTime:F3}s)  [{notify.StartTime:F3}s ~ {notify.EndTime:F3}s]{rateInfo2}",
                     EditorStyles.miniLabel);
             }
             notify.track = EditorGUILayout.IntSlider("Track", notify.track, 0, trackCount - 1);
@@ -920,6 +1052,38 @@ namespace FreeFlowHero.Editor
                     EditorGUILayout.LabelField("COLLISION 파라미터", EditorStyles.boldLabel);
                     notify.hitboxId = EditorGUILayout.TextField("Hitbox ID", notify.hitboxId);
                     notify.damageScale = EditorGUILayout.Slider("Damage Scale", notify.damageScale, 0f, 5f);
+
+                    EditorGUILayout.Space(6);
+                    EditorGUILayout.LabelField("히트박스 트랜스폼", EditorStyles.boldLabel);
+
+                    // 오프셋 (2D: X, Y만 — Z는 2D 횡스크롤이므로 제외)
+                    EditorGUILayout.LabelField("Offset (캐릭터 기준)", EditorStyles.miniLabel);
+                    EditorGUILayout.BeginHorizontal();
+                    EditorGUILayout.LabelField("X", GUILayout.Width(14));
+                    notify.hitboxOffsetX = EditorGUILayout.FloatField(notify.hitboxOffsetX);
+                    EditorGUILayout.LabelField("Y", GUILayout.Width(14));
+                    notify.hitboxOffsetY = EditorGUILayout.FloatField(
+                        notify.hitboxOffsetY == 0f ? ActionNotify.DefaultHitboxOffsetY : notify.hitboxOffsetY);
+                    EditorGUILayout.EndHorizontal();
+
+                    // 크기 (2D: X, Y만)
+                    EditorGUILayout.LabelField("Size (박스 크기)", EditorStyles.miniLabel);
+                    EditorGUILayout.BeginHorizontal();
+                    EditorGUILayout.LabelField("X", GUILayout.Width(14));
+                    notify.hitboxSizeX = Mathf.Max(0.01f, EditorGUILayout.FloatField(
+                        notify.hitboxSizeX == 0f ? ActionNotify.DefaultHitboxSizeX : notify.hitboxSizeX));
+                    EditorGUILayout.LabelField("Y", GUILayout.Width(14));
+                    notify.hitboxSizeY = Mathf.Max(0.01f, EditorGUILayout.FloatField(
+                        notify.hitboxSizeY == 0f ? ActionNotify.DefaultHitboxSizeY : notify.hitboxSizeY));
+                    EditorGUILayout.EndHorizontal();
+
+                    // 기본값 리셋 버튼
+                    if (GUILayout.Button("히트박스 기본값 리셋", GUILayout.Height(18)))
+                    {
+                        PushUndoSnapshot();
+                        notify.ResetHitboxToDefaults();
+                        isDirty = true;
+                    }
                     break;
 
                 case NotifyType.CANCEL_WINDOW:
@@ -964,8 +1128,16 @@ namespace FreeFlowHero.Editor
 
         private void DrawNotifyTimeline(ActionEntry action)
         {
-            // ★ 고정 타임라인 길이 사용 — endFrame 줄여도 스케일 불변
-            if (fixedTimelineFrames <= 0) UpdateFixedTimelineFrames(action);
+            // ★ 고정 타임라인 길이 사용 — 액션 변경 또는 미설정 시 자동 갱신
+            if (fixedTimelineFrames <= 0 || lastRenderedActionIndex != selectedActionIndex)
+            {
+                // ★ 디폴트: 최대 확대 (액션 노티파이 범위가 타임라인을 꽉 채움)
+                int baseFrames = GetEffectiveTotalFrames(action);
+                fixedTimelineFrames = Mathf.Max(baseFrames, 1);
+                timelineZoom = 4.0f;
+
+                lastRenderedActionIndex = selectedActionIndex;
+            }
             int totalFrames = Mathf.Max(GetTimelineTotalFrames(action), 1);
 
             // 타임라인 전체 영역
@@ -1010,6 +1182,13 @@ namespace FreeFlowHero.Editor
                     EditorGUI.DrawRect(new Rect(actionEndX - 1, paddedRect.y, 2, paddedRect.height),
                         new Color(0.4f, 0.4f, 0.4f, 0.6f));
                 }
+
+                // ★ 액션 구간 좌우 아웃라인 (시작/종료 강조 세로선)
+                Color outlineColor = new Color(0.7f, 0.8f, 1.0f, 0.8f);
+                // 좌측 (0프레임)
+                EditorGUI.DrawRect(new Rect(paddedRect.x, paddedRect.y, 2, paddedRect.height), outlineColor);
+                // 우측 (액션 끝 프레임)
+                EditorGUI.DrawRect(new Rect(actionEndX - 1, paddedRect.y, 2, paddedRect.height), outlineColor);
             }
 
             // ── 트랙 헤더 (체크박스 + 이름) ──
@@ -1021,13 +1200,12 @@ namespace FreeFlowHero.Editor
                 fontSize = 10
             };
 
-            string[] defaultTrackNames = { "STARTUP", "COLLISION", "CANCEL", "Track 3", "Track 4" };
             for (int t = 0; t < trackCount; t++)
             {
                 float rowY = headerRect.y + t * TrackHeight;
 
-                // 트랙 이름 (좌측)
-                string trackName = t < defaultTrackNames.Length ? defaultTrackNames[t] : $"Track {t}";
+                // 트랙 이름 (1번부터 넘버링)
+                string trackName = $"Track {t + 1}";
                 Rect labelRect = new Rect(headerRect.x + 4, rowY, headerRect.width - 24, TrackHeight);
 
                 // 비활성 트랙은 어둡게
@@ -1094,9 +1272,8 @@ namespace FreeFlowHero.Editor
                     {
                         float centerY = blockY + blockH * 0.5f;
 
-                        // 사각형 블록 배경 (스테이트와 동일하게 길게 유지)
-                        Color instanceBlockColor = new Color(blockColor.r, blockColor.g, blockColor.b, blockColor.a * 0.5f);
-                        EditorGUI.DrawRect(blockRect, instanceBlockColor);
+                        // 사각형 블록 배경 (스테이트와 동일하게 불투명 유지)
+                        EditorGUI.DrawRect(blockRect, blockColor);
 
                         // 선택 테두리
                         if (isSelected)
@@ -1189,13 +1366,18 @@ namespace FreeFlowHero.Editor
 
             // ── 재생 헤드 (빨간 세로선, paddedRect 기준) ──
             float headX = paddedRect.x + (paddedRect.width * previewFrame / totalFrames);
-            EditorGUI.DrawRect(new Rect(headX - 1, contentRect.y - 2, 3, contentRect.height + TimeRulerHeight + 4),
+            // 트랙 영역 + 눈금 영역까지만 (outerRect 내부로 제한)
+            float headTop = contentRect.y;
+            float headBottom = Mathf.Min(rulerRect.yMax, outerRect.yMax);
+            EditorGUI.DrawRect(new Rect(headX - 1, headTop, 3, headBottom - headTop),
                 new Color(1f, 0.2f, 0.2f, 0.9f));
-            EditorGUI.DrawRect(new Rect(headX - 4, contentRect.y - 5, 9, 4), Color.red);
+            // 상단 삼각형 마커
+            EditorGUI.DrawRect(new Rect(headX - 4, headTop - 3, 9, 3), Color.red);
 
             // ── 시간 눈금 (paddedRect 기준, effectiveFrames로 눈금 표시) ──
             Rect paddedRulerRect = new Rect(paddedRect.x, rulerRect.y, paddedRect.width, rulerRect.height);
-            DrawTimeRuler(paddedRulerRect, totalFrames, effectiveFrames);
+            float rulerPlaybackRate = (action != null && action.playbackRate > 0f) ? action.playbackRate : 1f;
+            DrawTimeRuler(paddedRulerRect, totalFrames, effectiveFrames, rulerPlaybackRate);
             // 눈금 좌우 빈 영역 배경
             EditorGUI.DrawRect(new Rect(rulerRect.x, rulerRect.y, TimelinePadding, rulerRect.height),
                 new Color(0.16f, 0.16f, 0.16f));
@@ -1214,6 +1396,41 @@ namespace FreeFlowHero.Editor
             // 스크러빙은 액션 실제 범위(effectiveFrames) 내로 클램프
             HandleTimelineMouseInput(paddedRect, action, totalFrames, effectiveFrames);
             HandleRulerScrub(paddedRulerRect, totalFrames, effectiveFrames);
+
+            // ── Ctrl+휠: 타임라인 줌 ──
+            HandleTimelineZoom(outerRect, action);
+        }
+
+        /// <summary>Ctrl+마우스 휠로 타임라인 줌 인/아웃</summary>
+        private void HandleTimelineZoom(Rect timelineArea, ActionEntry action)
+        {
+            Event e = Event.current;
+            if (e.type != EventType.ScrollWheel) return;
+            if (!timelineArea.Contains(e.mousePosition)) return;
+            if (!e.control) return; // Ctrl 키 필수
+
+            float prevZoom = timelineZoom;
+            float zoomDelta = -e.delta.y * 0.05f; // 위로 스크롤 = 줌인
+            timelineZoom = Mathf.Clamp(timelineZoom + zoomDelta, 0.5f, 4.0f);
+
+            // ★ 줌에 따라 fixedTimelineFrames 재계산
+            //   최대 줌(4.0x) = 액션 프레임이 타임라인 100% 차지
+            //   최소 줌(0.5x) = 클립 전체 길이 기반으로 넓게 표시
+            int baseFrames = GetEffectiveTotalFrames(action);
+
+            // 줌 1.0x 기준 타임라인(클립 길이 기반)
+            UpdateFixedTimelineFrames(action);
+            int fullTimeline = fixedTimelineFrames;
+
+            // 줌 레벨에 따라 보간: 4.0x→baseFrames, 0.5x→fullTimeline
+            float t = Mathf.InverseLerp(4.0f, 0.5f, timelineZoom); // 4.0→0, 0.5→1
+            int zoomedFrames = Mathf.RoundToInt(Mathf.Lerp(baseFrames, fullTimeline, t));
+            fixedTimelineFrames = Mathf.Max(zoomedFrames, baseFrames);
+
+            Debug.Log($"[Timeline Zoom] {prevZoom:F2}→{timelineZoom:F2} base:{baseFrames} full:{fullTimeline} result:{fixedTimelineFrames}");
+
+            e.Use();
+            Repaint();
         }
 
         // ═══════════════════════════════════════════════════════
@@ -1234,7 +1451,7 @@ namespace FreeFlowHero.Editor
             // ── 트랙 추가 (현재 트랙 아래에) ──
             if (trackCount < MaxTracksLimit)
             {
-                menu.AddItem(new GUIContent($"트랙 추가 (Track {clickedTrack} 아래에)"), false, () =>
+                menu.AddItem(new GUIContent($"트랙 추가 (Track {clickedTrack + 1} 아래에)"), false, () =>
                 {
                     PushUndoSnapshot();
                     int insertAt = clickedTrack + 1;
@@ -1287,8 +1504,8 @@ namespace FreeFlowHero.Editor
                 }
 
                 string removeLabel = notifyCountOnTrack > 0
-                    ? $"Track {clickedTrack} 제거 (노티파이 {notifyCountOnTrack}개 포함 삭제)"
-                    : $"Track {clickedTrack} 제거";
+                    ? $"Track {clickedTrack + 1} 제거 (노티파이 {notifyCountOnTrack}개 포함 삭제)"
+                    : $"Track {clickedTrack + 1} 제거";
 
                 menu.AddItem(new GUIContent(removeLabel), false, () =>
                 {
@@ -1371,48 +1588,123 @@ namespace FreeFlowHero.Editor
             Handles.DrawAAConvexPolygon(diamond);
         }
 
-        private void DrawTimeRuler(Rect rulerRect, int totalFrames, int actionFrames)
+        private void DrawTimeRuler(Rect rulerRect, int totalFrames, int actionFrames, float playbackRate = 1f)
         {
             EditorGUI.DrawRect(rulerRect, new Color(0.16f, 0.16f, 0.16f));
 
-            var tickLabel = new GUIStyle(EditorStyles.miniLabel)
+            // ── 재생배율 != 1.0일 때 상단에 배율 표시 ──
+            if (Mathf.Abs(playbackRate - 1.0f) > 0.01f)
             {
-                fontSize = 8,
-                normal = { textColor = new Color(0.6f, 0.6f, 0.6f) },
+                var rateStyle = new GUIStyle(EditorStyles.miniLabel);
+                rateStyle.normal.textColor = new Color(1f, 0.6f, 0.2f);
+                rateStyle.alignment = TextAnchor.UpperRight;
+                rateStyle.fontStyle = FontStyle.Bold;
+                GUI.Label(new Rect(rulerRect.xMax - 80, rulerRect.y, 78, 12),
+                    $"재생배율: {playbackRate:F1}x", rateStyle);
+            }
+
+            // ── 줌 레벨에 따른 눈금 간격 결정 ──
+            float pixelsPerFrame = rulerRect.width / Mathf.Max(totalFrames, 1);
+
+            // 기본 5프레임 간격, 공간 부족하면 10, 20으로 확대
+            int majorStep = 5;
+            if (pixelsPerFrame * 5 < 30f) majorStep = 10;
+            if (pixelsPerFrame * 10 < 30f) majorStep = 20;
+
+            // 줌이 충분하면 1프레임 간격 마이너 틱 표시
+            bool showMinorTicks = pixelsPerFrame >= 6f;
+
+            var frameLabel = new GUIStyle(EditorStyles.miniLabel)
+            {
+                fontSize = 9,
+                normal = { textColor = new Color(0.75f, 0.75f, 0.75f) },
+                alignment = TextAnchor.UpperCenter
+            };
+            var timeLabel = new GUIStyle(EditorStyles.miniLabel)
+            {
+                fontSize = 7,
+                normal = { textColor = new Color(0.5f, 0.6f, 0.7f) },
                 alignment = TextAnchor.UpperCenter
             };
 
-            // 눈금은 액션 실제 범위(actionFrames) 기준으로 표시
-            // 위치는 전체 타임라인(totalFrames) 기준으로 배치
-            int step = actionFrames > 60 ? 10 : 5;
-            for (int f = 0; f <= actionFrames; f += step)
+            // ── 마이너 틱 (1프레임 간격) ──
+            if (showMinorTicks)
             {
-                float x = rulerRect.x + (rulerRect.width * f / totalFrames);
-                float tickH = (f % 10 == 0) ? rulerRect.height * 0.5f : rulerRect.height * 0.3f;
-                EditorGUI.DrawRect(new Rect(x, rulerRect.y, 1, tickH), new Color(0.4f, 0.4f, 0.4f));
-
-                if (f % 10 == 0)
+                for (int f = 0; f <= actionFrames; f++)
                 {
-                    string tickText = showTimeAsSeconds
-                        ? $"{f * CombatConstants.FrameDuration:F2}s"
-                        : $"{f}";
-                    float labelW = showTimeAsSeconds ? 36f : 28f;
-                    GUI.Label(new Rect(x - labelW * 0.5f, rulerRect.y + tickH, labelW, 12), tickText, tickLabel);
+                    if (f % majorStep == 0) continue; // 메이저 틱은 별도 처리
+                    float x = rulerRect.x + (rulerRect.width * f / totalFrames);
+                    float tickH = 3f;
+                    EditorGUI.DrawRect(new Rect(x, rulerRect.y, 1, tickH), new Color(0.35f, 0.35f, 0.35f, 0.5f));
                 }
             }
 
-            // 액션 마지막 프레임이 step 배수가 아닐 경우 끝 프레임 눈금 추가 표시
-            if (actionFrames % step != 0)
+            // ── 메이저 틱 (5프레임 간격) — 프레임 번호 + 시간 동시 표시 ──
+            float labelW = 44f; // 라벨 폭
+            // 라벨이 잘리지 않도록 rulerRect 바깥의 허용 범위 (좌우 패딩 영역까지 활용)
+            float labelMinX = rulerRect.x - TimelinePadding;
+            float labelMaxX = rulerRect.xMax + TimelinePadding;
+
+            for (int f = 0; f <= actionFrames; f += majorStep)
+            {
+                float x = rulerRect.x + (rulerRect.width * f / totalFrames);
+                bool isBig = (f % (majorStep * 2) == 0) || f == 0;
+                float tickH = isBig ? rulerRect.height * 0.35f : rulerRect.height * 0.2f;
+                EditorGUI.DrawRect(new Rect(x, rulerRect.y, 1, tickH), new Color(0.5f, 0.5f, 0.5f));
+
+                // ★ 0프레임은 틱 오른쪽에 왼쪽 정렬, 나머지는 중앙 정렬
+                float labelX;
+                var usedFrameLabel = frameLabel;
+                var usedTimeLabel = timeLabel;
+                if (f == 0)
+                {
+                    // 0프레임: 틱 위치에서 약간 오른쪽으로 (잘림 방지)
+                    labelX = x + 2f;
+                    usedFrameLabel = new GUIStyle(frameLabel) { alignment = TextAnchor.UpperLeft };
+                    usedTimeLabel = new GUIStyle(timeLabel) { alignment = TextAnchor.UpperLeft };
+                }
+                else
+                {
+                    labelX = ClampLabelX(x, labelW, labelMinX, labelMaxX);
+                }
+
+                // 프레임 번호 (상단)
+                string frameTxt = $"{f}f";
+                GUI.Label(new Rect(labelX, rulerRect.y + tickH - 1, labelW, 11), frameTxt, usedFrameLabel);
+
+                // 시간 표시 (하단)
+                float timeSec = f * CombatConstants.FrameDuration;
+                string timeTxt = timeSec < 1f ? $"{timeSec:F3}s" : $"{timeSec:F2}s";
+                GUI.Label(new Rect(labelX, rulerRect.y + tickH + 8, labelW, 10), timeTxt, usedTimeLabel);
+            }
+
+            // ── 액션 끝 프레임 (majorStep 배수가 아닌 경우 추가 표시) ──
+            if (actionFrames % majorStep != 0)
             {
                 float endX = rulerRect.x + (rulerRect.width * actionFrames / totalFrames);
-                float tickH = rulerRect.height * 0.5f;
-                EditorGUI.DrawRect(new Rect(endX, rulerRect.y, 1, tickH), new Color(0.5f, 0.5f, 0.5f));
-                string endText = showTimeAsSeconds
-                    ? $"{actionFrames * CombatConstants.FrameDuration:F2}s"
-                    : $"{actionFrames}";
-                float labelW = showTimeAsSeconds ? 36f : 28f;
-                var endLabel = new GUIStyle(tickLabel) { normal = { textColor = new Color(0.8f, 0.7f, 0.5f) } };
-                GUI.Label(new Rect(endX - labelW * 0.5f, rulerRect.y + tickH, labelW, 12), endText, endLabel);
+                float tickH = rulerRect.height * 0.35f;
+                EditorGUI.DrawRect(new Rect(endX, rulerRect.y, 1, tickH), new Color(0.6f, 0.5f, 0.3f));
+
+                // ★ 끝 프레임은 틱 왼쪽에 오른쪽 정렬 (잘림 방지)
+                float endLabelX = endX - labelW - 2f;
+                endLabelX = Mathf.Max(endLabelX, labelMinX);
+
+                var endFrameLabel = new GUIStyle(frameLabel)
+                {
+                    normal = { textColor = new Color(0.9f, 0.7f, 0.4f) },
+                    alignment = TextAnchor.UpperRight
+                };
+                var endTimeLabel = new GUIStyle(timeLabel)
+                {
+                    normal = { textColor = new Color(0.7f, 0.6f, 0.3f) },
+                    alignment = TextAnchor.UpperRight
+                };
+                GUI.Label(new Rect(endLabelX, rulerRect.y + tickH - 1, labelW, 11),
+                    $"{actionFrames}f", endFrameLabel);
+                float endTimeSec = actionFrames * CombatConstants.FrameDuration;
+                string endTimeTxt = endTimeSec < 1f ? $"{endTimeSec:F3}s" : $"{endTimeSec:F2}s";
+                GUI.Label(new Rect(endLabelX, rulerRect.y + tickH + 8, labelW, 10),
+                    endTimeTxt, endTimeLabel);
             }
         }
 
@@ -1619,11 +1911,14 @@ namespace FreeFlowHero.Editor
         private void HandleTimelineRightClick(Rect contentRect, ActionEntry action, int totalFrames, Event e)
         {
             float mouseFrame = ((e.mousePosition.x - contentRect.x) / contentRect.width) * totalFrames;
-            int clickedFrame = Mathf.RoundToInt(mouseFrame);
+            int effectiveMax = GetEffectiveTotalFrames(action);
+            int clickedFrame = Mathf.Clamp(Mathf.RoundToInt(mouseFrame), 0, Mathf.Max(0, effectiveMax - 1));
             int clickedTrack = Mathf.Clamp(
                 Mathf.FloorToInt((e.mousePosition.y - contentRect.y) / TrackHeight), 0, trackCount - 1);
 
             // ── 검색 가능한 팝업 항목 구성 ──
+            // clickedTrack을 캡처하여 노티파이 생성 시 해당 트랙에 배치
+            int targetTrack = clickedTrack;
             var items = new List<NotifySearchPopup.PopupItem>();
 
             // ── STARTUP 계열 ──
@@ -1631,8 +1926,8 @@ namespace FreeFlowHero.Editor
             {
                 Label = "STARTUP 추가",
                 SearchTag = "startup 선딜 시작 전딜 windup",
-                OnSelected = () => AddNotify(action,
-                    ActionNotify.CreateStartup(clickedFrame, clickedFrame + 5, action.moveSpeed))
+                OnSelected = () => AddNotifyToTrack(action,
+                    ActionNotify.CreateStartup(clickedFrame, clickedFrame + 5, action.moveSpeed), targetTrack)
             });
 
             // ── COLLISION 계열 ──
@@ -1640,8 +1935,8 @@ namespace FreeFlowHero.Editor
             {
                 Label = "COLLISION 추가",
                 SearchTag = "collision 히트박스 히트 판정 active 액티브 hitbox attack 공격",
-                OnSelected = () => AddNotify(action,
-                    ActionNotify.CreateCollision(clickedFrame, clickedFrame + 8))
+                OnSelected = () => AddNotifyToTrack(action,
+                    ActionNotify.CreateCollision(clickedFrame, clickedFrame + 8), targetTrack)
             });
 
             items.Add(new NotifySearchPopup.PopupItem { IsSeparator = true });
@@ -1651,44 +1946,44 @@ namespace FreeFlowHero.Editor
             {
                 Label = "CANCEL_WINDOW — 전체 캔슬",
                 SearchTag = "cancel window 캔슬 윈도우 전체 all 공격 이동 회피 카운터",
-                OnSelected = () => AddNotify(action,
-                    ActionNotify.CreateCancelWindow(clickedFrame, clickedFrame + 10))
+                OnSelected = () => AddNotifyToTrack(action,
+                    ActionNotify.CreateCancelWindow(clickedFrame, clickedFrame + 10), targetTrack)
             });
 
             items.Add(new NotifySearchPopup.PopupItem
             {
                 Label = "CANCEL_WINDOW — 공격만",
                 SearchTag = "cancel window 캔슬 윈도우 공격 attack skill 스킬 콤보",
-                OnSelected = () => AddNotify(action,
+                OnSelected = () => AddNotifyToTrack(action,
                     ActionNotify.CreateCancelWindow(clickedFrame, clickedFrame + 10,
-                        skill: true, move: false, dodge: false, counter: false))
+                        skill: true, move: false, dodge: false, counter: false), targetTrack)
             });
 
             items.Add(new NotifySearchPopup.PopupItem
             {
                 Label = "CANCEL_WINDOW — 회피만",
                 SearchTag = "cancel window 캔슬 윈도우 회피 dodge 구르기 대시",
-                OnSelected = () => AddNotify(action,
+                OnSelected = () => AddNotifyToTrack(action,
                     ActionNotify.CreateCancelWindow(clickedFrame, clickedFrame + 10,
-                        skill: false, move: false, dodge: true, counter: false))
+                        skill: false, move: false, dodge: true, counter: false), targetTrack)
             });
 
             items.Add(new NotifySearchPopup.PopupItem
             {
                 Label = "CANCEL_WINDOW — 카운터만",
                 SearchTag = "cancel window 캔슬 윈도우 카운터 counter 반격 패리 parry",
-                OnSelected = () => AddNotify(action,
+                OnSelected = () => AddNotifyToTrack(action,
                     ActionNotify.CreateCancelWindow(clickedFrame, clickedFrame + 10,
-                        skill: false, move: false, dodge: false, counter: true))
+                        skill: false, move: false, dodge: false, counter: true), targetTrack)
             });
 
             items.Add(new NotifySearchPopup.PopupItem
             {
                 Label = "CANCEL_WINDOW — 이동만",
                 SearchTag = "cancel window 캔슬 윈도우 이동 move 무브 걷기 달리기",
-                OnSelected = () => AddNotify(action,
+                OnSelected = () => AddNotifyToTrack(action,
                     ActionNotify.CreateCancelWindow(clickedFrame, clickedFrame + 10,
-                        skill: false, move: true, dodge: false, counter: false))
+                        skill: false, move: true, dodge: false, counter: false), targetTrack)
             });
 
             items.Add(new NotifySearchPopup.PopupItem { IsSeparator = true });
@@ -1727,6 +2022,13 @@ namespace FreeFlowHero.Editor
             selectedNotifyIndex = action.notifies.Length - 1;
             isDirty = true;
             Repaint();
+        }
+
+        /// <summary>노티파이를 생성하면서 클릭된 트랙 번호를 강제 지정</summary>
+        private void AddNotifyToTrack(ActionEntry action, ActionNotify notify, int track)
+        {
+            notify.track = track;
+            AddNotify(action, notify);
         }
 
         /// <summary>레거시 startup/active/recovery → 노티파이 3개로 자동 변환</summary>
@@ -1785,25 +2087,38 @@ namespace FreeFlowHero.Editor
 
             SamplePreviewAnimation(clip, action);
             HandlePreviewMouseInput(previewRect);
+            HandleHitboxDragInput(previewRect, action); // Step 4: 히트박스 드래그 조작
 
             previewRender.BeginPreview(previewRect, GUIStyle.none);
 
+            // ── 2D 고정 뷰: 직교(Orthographic) 카메라, Left 뷰 고정 ──
+            // 카메라: +X 방향에서 원점을 바라봄 → 화면 오른쪽 = +Z, 위 = +Y
+            // 2D 횡스크롤 게임의 사이드 뷰와 일치
             float camHeight = 1.0f;
-            Vector3 camTarget = new Vector3(0, camHeight, 0);
-            float yRad = previewRotationY * Mathf.Deg2Rad;
-            float xRad = previewPitchX * Mathf.Deg2Rad;
-            Vector3 camPos = camTarget + new Vector3(
-                Mathf.Sin(yRad) * Mathf.Cos(xRad) * previewCamDistance,
-                Mathf.Sin(xRad) * previewCamDistance,
-                Mathf.Cos(yRad) * Mathf.Cos(xRad) * previewCamDistance);
+            Vector3 camTarget = new Vector3(0, camHeight + previewPanOffset.y, previewPanOffset.x);
+            float camDist = 10f; // 직교 카메라이므로 거리는 클리핑만 영향
+            Vector3 camPos = camTarget + new Vector3(camDist, 0, 0); // Left 뷰 고정
 
             previewRender.camera.transform.position = camPos;
             previewRender.camera.transform.LookAt(camTarget);
+            previewRender.camera.orthographic = true;
+            previewRender.camera.orthographicSize = previewCamDistance * 0.5f; // 줌 조절용
             previewRender.camera.nearClipPlane = 0.1f;
             previewRender.camera.farClipPlane = 50f;
-            previewRender.lights[0].transform.rotation = Quaternion.Euler(50, -30 + previewRotationY, 0);
+            previewRender.lights[0].transform.rotation = Quaternion.Euler(50, 60, 0); // Left 뷰 고정 조명
             previewRender.lights[0].intensity = 1.2f;
+
+            // ── 히트박스 3D 큐브 업데이트 (카메라 렌더 직전) ──
+            int hitboxFrame = Mathf.RoundToInt(previewFrame);
+            UpdateHitboxCube(action, hitboxFrame);
+
             previewRender.camera.Render();
+
+            // ── 히트박스 와이어프레임 (GL 라인, 카메라 렌더 후) ──
+            if (hitboxCubeObj != null && hitboxCubeObj.activeSelf)
+            {
+                DrawHitboxWireframe(previewRender.camera, hitboxCubeObj.transform.position, hitboxCubeObj.transform.localScale);
+            }
 
             Texture resultTex = previewRender.EndPreview();
             GUI.DrawTexture(previewRect, resultTex, ScaleMode.StretchToFill, false);
@@ -1835,6 +2150,13 @@ namespace FreeFlowHero.Editor
 
             // ── COLLISION 히트박스 시각화 오버레이 ──
             DrawCollisionOverlay(previewRect, action, currentFrame);
+
+            // ── 히트박스 트랜스폼 GUI 오버레이 (선택된 경우에만) ──
+            if (isHitboxSelected && hitboxCubeObj != null && hitboxCubeObj.activeSelf)
+            {
+                DrawHitboxTransformOverlay(previewRect, action);
+                DrawHitboxSelectionHighlight(previewRect);
+            }
         }
 
         /// <summary>
@@ -1882,41 +2204,26 @@ namespace FreeFlowHero.Editor
 
             if (!isCollisionActive) return;
 
-            // ── 빨간 테두리 + 반투명 오버레이 ──
-            Color hitboxColor = new Color(1f, 0.15f, 0.1f, 0.15f);
-            Color hitboxBorder = new Color(1f, 0.2f, 0.1f, 0.8f);
-            float borderW = 3f;
-
-            // 반투명 빨간 배경
-            EditorGUI.DrawRect(previewRect, hitboxColor);
-
-            // 빨간 테두리 (4변)
-            EditorGUI.DrawRect(new Rect(previewRect.x, previewRect.y, previewRect.width, borderW), hitboxBorder);
-            EditorGUI.DrawRect(new Rect(previewRect.x, previewRect.yMax - borderW, previewRect.width, borderW), hitboxBorder);
-            EditorGUI.DrawRect(new Rect(previewRect.x, previewRect.y, borderW, previewRect.height), hitboxBorder);
-            EditorGUI.DrawRect(new Rect(previewRect.xMax - borderW, previewRect.y, borderW, previewRect.height), hitboxBorder);
-
-            // ── 좌측 하단 "COLLISION ACTIVE" 라벨 ──
-            var hitboxLabelStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 11,
-                normal = { textColor = new Color(1f, 0.3f, 0.2f) },
-                alignment = TextAnchor.LowerLeft
-            };
-            var hitboxShadowStyle = new GUIStyle(hitboxLabelStyle)
-            {
-                normal = { textColor = new Color(0, 0, 0, 0.7f) }
-            };
-
-            string hitLabel = "COLLISION ACTIVE";
+            // ── 프리뷰 상단에 작은 "COLLISION ACTIVE" 뱃지만 표시 (전체 오버레이 제거) ──
+            string hitLabel = "● COLLISION";
             if (!string.IsNullOrEmpty(hitboxId))
-                hitLabel += $"  [{hitboxId}]";
+                hitLabel += $" [{hitboxId}]";
             if (Mathf.Abs(damageScale - 1f) > 0.01f)
-                hitLabel += $"  x{damageScale:F1}";
+                hitLabel += $" x{damageScale:F1}";
 
-            Rect labelR = new Rect(previewRect.x + 6, previewRect.y + 1, previewRect.width - 12, previewRect.height - 4);
-            GUI.Label(new Rect(labelR.x + 1, labelR.y + 1, labelR.width, labelR.height), hitLabel, hitboxShadowStyle);
-            GUI.Label(labelR, hitLabel, hitboxLabelStyle);
+            // 뱃지 배경
+            float badgeW = hitLabel.Length * 7f + 12f;
+            Rect badgeRect = new Rect(previewRect.xMax - badgeW - 4, previewRect.y + 20, badgeW, 18);
+            EditorGUI.DrawRect(badgeRect, new Color(1f, 0.15f, 0.1f, 0.6f));
+
+            var badgeStyle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                fontSize = 10,
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = Color.white },
+                alignment = TextAnchor.MiddleCenter
+            };
+            GUI.Label(badgeRect, hitLabel, badgeStyle);
         }
 
         private void DrawPreviewControls(AnimationClip clip, int totalFrames)
@@ -1969,32 +2276,17 @@ namespace FreeFlowHero.Editor
 
             GUILayout.Space(6);
 
-            // View
-            EditorGUILayout.LabelField("View:", GUILayout.Width(32));
-            int newView = GUILayout.Toolbar(selectedViewIndex, ViewLabels, GUILayout.Width(200), GUILayout.Height(18));
-            if (newView != selectedViewIndex)
-            {
-                selectedViewIndex = newView;
-                switch (selectedViewIndex)
-                {
-                    case 0: previewRotationY = 180f; previewPitchX = 0f; break;
-                    case 1: previewRotationY = 90f;  previewPitchX = 0f; break;
-                    case 2: previewRotationY = 270f; previewPitchX = 0f; break;
-                    case 3: previewPitchX = 75f; break;
-                    case 4: previewPitchX = -45f; break;
-                }
-            }
+            // 2D 뷰 고정 라벨
+            EditorGUILayout.LabelField("2D Side View", EditorStyles.miniLabel, GUILayout.Width(70));
 
             GUILayout.Space(4);
 
             if (GUILayout.Button("Reset", EditorStyles.miniButton, GUILayout.Width(40), GUILayout.Height(18)))
             {
-                previewRotationY = DefaultRotationY;
-                previewPitchX = DefaultPitchX;
                 previewCamDistance = DefaultCamDistance;
+                previewPanOffset = Vector2.zero;
                 playbackSpeed = DefaultPlaybackSpeed;
                 loopMode = DefaultLoopMode;
-                selectedViewIndex = 1;
                 previewFrame = 0;
                 isPreviewPlaying = false;
             }
@@ -2011,7 +2303,8 @@ namespace FreeFlowHero.Editor
             CleanupPreview();
 
             previewRender = new PreviewRenderUtility();
-            previewRender.camera.fieldOfView = 30f;
+            previewRender.camera.orthographic = true;
+            previewRender.camera.orthographicSize = previewCamDistance * 0.5f;
             previewRender.camera.clearFlags = CameraClearFlags.SolidColor;
             previewRender.camera.backgroundColor = new Color(0.15f, 0.15f, 0.2f);
 
@@ -2034,6 +2327,512 @@ namespace FreeFlowHero.Editor
                 SetLayerRecursiveForPreview(previewInstance, previewLayer);
                 previewRender.camera.cullingMask = 1 << previewLayer;
             }
+
+            // ── 히트박스 큐브 생성 ──
+            EnsureHitboxCube();
+        }
+
+        /// <summary>
+        /// 프리뷰 씬에 히트박스 시각화용 반투명 Quad(2D 평면)를 생성.
+        /// 2D 횡스크롤이므로 깊이(Z축)가 없는 평면으로 표현한다.
+        /// 빌보드 방식으로 항상 카메라를 바라보며, 캐릭터의 forward 방향에 배치된다.
+        /// </summary>
+        private void EnsureHitboxCube()
+        {
+            if (hitboxCubeObj != null) return;
+            if (previewRender == null) return;
+
+            hitboxCubeObj = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            hitboxCubeObj.name = "_HitboxPreview";
+            hitboxCubeObj.hideFlags = HideFlags.HideAndDontSave;
+
+            // 콜라이더 불필요 (시각 전용)
+            var col = hitboxCubeObj.GetComponent<Collider>();
+            if (col != null) DestroyImmediate(col);
+
+            // 반투명 빨간 양면 머티리얼 (PreviewRenderUtility에서 확실히 동작하는 셰이더 사용)
+            if (hitboxMaterial == null)
+            {
+                hitboxMaterial = new Material(Shader.Find("Hidden/Internal-Colored"));
+                hitboxMaterial.hideFlags = HideFlags.HideAndDontSave;
+                hitboxMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                hitboxMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                hitboxMaterial.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);   // 양면 렌더링
+                hitboxMaterial.SetInt("_ZWrite", 0);                                         // 반투명이므로 ZWrite 끔
+                hitboxMaterial.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
+                hitboxMaterial.color = new Color(1f, 0.2f, 0.1f, 0.25f);
+            }
+            hitboxCubeObj.GetComponent<MeshRenderer>().sharedMaterial = hitboxMaterial;
+
+            // 프리뷰 레이어 설정
+            hitboxCubeObj.layer = 1;
+            hitboxCubeObj.SetActive(false); // 기본 비활성
+
+            // PreviewRenderUtility 씬에 추가
+            previewRender.AddSingleGO(hitboxCubeObj);
+        }
+
+        /// <summary>
+        /// 현재 프레임의 활성 COLLISION 노티파이에 따라 히트박스 Quad를 업데이트.
+        ///
+        /// ★ 2D 횡스크롤 → 3D 프리뷰 좌표 매핑 (디스플레이 좌표):
+        ///   hitboxOffsetX (전방 거리) → world +Z  (Left 뷰에서 화면 오른쪽)
+        ///   hitboxOffsetY (높이)     → world +Y  (화면 위)
+        ///   world X = 0 고정
+        ///
+        /// 이 매핑은 Left 뷰(기본 편집 뷰)에서 2D 게임 레이아웃과 일치:
+        ///   Z+ = 캐릭터 전방 = 화면 오른쪽, Y+ = 위
+        ///
+        /// Quad 배치: Y축 90도 고정 회전 — Left 2D 뷰에서 정면으로 보임
+        ///   → 직교 카메라 + 고정 뷰이므로 빌보드 불필요
+        /// </summary>
+        private void UpdateHitboxCube(ActionEntry action, int currentFrame)
+        {
+            if (hitboxCubeObj == null) return;
+
+            ActionNotify activeCollision = null;
+
+            // 1순위: 선택된 COLLISION 노티파이
+            if (selectedNotifyIndex >= 0 && action.notifies != null &&
+                selectedNotifyIndex < action.notifies.Length)
+            {
+                var sel = action.notifies[selectedNotifyIndex];
+                if (sel.TypeEnum == NotifyType.COLLISION && !sel.disabled)
+                    activeCollision = sel;
+            }
+
+            // 2순위: 현재 프레임에서 활성인 COLLISION 노티파이
+            if (activeCollision == null && action.notifies != null)
+            {
+                for (int i = 0; i < action.notifies.Length; i++)
+                {
+                    var n = action.notifies[i];
+                    if (n.disabled || n.TypeEnum != NotifyType.COLLISION) continue;
+                    bool active = n.isInstance
+                        ? currentFrame == n.startFrame
+                        : currentFrame >= n.startFrame && currentFrame < n.endFrame;
+                    if (active) { activeCollision = n; break; }
+                }
+            }
+
+            if (activeCollision == null)
+            {
+                hitboxCubeObj.SetActive(false);
+                return;
+            }
+
+            // ── 2D 데이터 읽기 ──
+            float fwd = activeCollision.hitboxOffsetX;  // 전방 거리
+            float up  = activeCollision.hitboxOffsetY == 0f
+                ? ActionNotify.DefaultHitboxOffsetY
+                : activeCollision.hitboxOffsetY;
+            float sizeW = activeCollision.hitboxSizeX == 0f ? ActionNotify.DefaultHitboxSizeX : activeCollision.hitboxSizeX;
+            float sizeH = activeCollision.hitboxSizeY == 0f ? ActionNotify.DefaultHitboxSizeY : activeCollision.hitboxSizeY;
+
+            // ── 3D 프리뷰 좌표 변환 ──
+            // 디스플레이 좌표: Left 뷰(기본 뷰) 기준 최적화
+            //   hitboxOffsetX(전방) → world +Z  (Left 뷰 화면 오른쪽)
+            //   hitboxOffsetY(높이) → world +Y  (화면 위)
+            //   world X = 0 고정
+            // 이 매핑은 Left 뷰에서 2D 게임과 동일한 시각적 레이아웃을 제공한다
+            Vector3 hitboxPos = new Vector3(0f, up, fwd);
+            hitboxCubeObj.SetActive(true);
+            hitboxCubeObj.transform.position = hitboxPos;
+            hitboxCubeObj.transform.localScale = new Vector3(sizeW, sizeH, 1f);
+
+            // 2D 고정 뷰: Left 뷰(카메라 +X→-X)에서 Quad가 정면으로 보이도록 Y축 90도 회전
+            // Quad 기본 XY 평면을 YZ 평면(화면 정면)으로 변환
+            hitboxCubeObj.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+
+            // 구간 내/밖 투명도 조절
+            bool inRange = activeCollision.isInstance
+                ? currentFrame == activeCollision.startFrame
+                : currentFrame >= activeCollision.startFrame && currentFrame < activeCollision.endFrame;
+
+            if (hitboxMaterial != null)
+            {
+                if (isHitboxSelected)
+                {
+                    // 선택됨: 노란색 계열로 강조
+                    hitboxMaterial.color = inRange
+                        ? new Color(1f, 0.85f, 0.1f, 0.35f)
+                        : new Color(1f, 0.85f, 0.1f, 0.15f);
+                }
+                else
+                {
+                    hitboxMaterial.color = inRange
+                        ? new Color(1f, 0.2f, 0.1f, 0.3f)
+                        : new Color(1f, 0.2f, 0.1f, 0.12f);
+                }
+            }
+        }
+
+        /// <summary>
+        /// GL.Lines로 히트박스의 2D 사각형 와이어프레임(4개 엣지 + X 대각선)을 그린다.
+        /// Quad는 Y축 90도 고정 회전 (Left 2D 뷰 전용).
+        /// camera.Render() 이후, EndPreview() 이전에 호출해야 한다.
+        /// </summary>
+        private void DrawHitboxWireframe(Camera cam, Vector3 center, Vector3 scale)
+        {
+            if (hitboxWireMaterial == null)
+            {
+                hitboxWireMaterial = new Material(Shader.Find("Hidden/Internal-Colored"));
+                hitboxWireMaterial.hideFlags = HideFlags.HideAndDontSave;
+                hitboxWireMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                hitboxWireMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                hitboxWireMaterial.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+                hitboxWireMaterial.SetInt("_ZWrite", 0);
+                hitboxWireMaterial.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
+            }
+
+            // Y축 90도 고정 회전 기준 정점 계산
+            // Quad 로컬 (x,y,0) → Y90° 회전 후 (0, y, -x)
+            float halfW = scale.x * 0.5f; // sizeX → Z축 방향 (화면 가로)
+            float halfH = scale.y * 0.5f; // sizeY → Y축 방향 (화면 세로)
+
+            Vector3[] v = new Vector3[4];
+            v[0] = center + new Vector3(0f, -halfH,  halfW); // 좌하
+            v[1] = center + new Vector3(0f, -halfH, -halfW); // 우하
+            v[2] = center + new Vector3(0f,  halfH, -halfW); // 우상
+            v[3] = center + new Vector3(0f,  halfH,  halfW); // 좌상
+
+            GL.PushMatrix();
+            GL.LoadProjectionMatrix(cam.projectionMatrix);
+            GL.modelview = cam.worldToCameraMatrix;
+
+            hitboxWireMaterial.SetPass(0);
+
+            GL.Begin(GL.LINES);
+            // 선택 시 노란색, 미선택 시 빨간색 와이어
+            Color wireColor = isHitboxSelected
+                ? new Color(1f, 0.9f, 0.2f, 1f)
+                : new Color(1f, 0.3f, 0.15f, 0.9f);
+            GL.Color(wireColor);
+
+            // 사각형 4변
+            GLLine(v[0], v[1]); GLLine(v[1], v[2]);
+            GLLine(v[2], v[3]); GLLine(v[3], v[0]);
+            // 대각선 X 표시 (판정 영역임을 강조)
+            GLLine(v[0], v[2]); GLLine(v[1], v[3]);
+
+            GL.End();
+            GL.PopMatrix();
+        }
+
+        private static void GLLine(Vector3 a, Vector3 b)
+        {
+            GL.Vertex(a);
+            GL.Vertex(b);
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  히트박스 드래그 조작 + W/E/R 단축키
+        // ═══════════════════════════════════════════════════════
+
+        private enum HitboxDragType { None, Move, Scale }
+        private HitboxDragType hitboxDragType = HitboxDragType.None;
+        private Vector3 hitboxDragStartSize;
+
+        /// <summary>
+        /// 프리뷰 영역 내에서 히트박스 드래그 입력 처리 + W/E/R 단축키.
+        /// W = Move(이동), E = Rotate(현재 2D라 미사용, 예약), R = Scale(크기).
+        /// 좌클릭+드래그: 현재 gizmo 모드에 따라 이동 또는 크기 조절.
+        /// </summary>
+        /// <summary>마우스 위치(EditorWindow 좌표)를 프리뷰의 2D 직교 월드 좌표(Z, Y)로 변환</summary>
+        private Vector2 PreviewMouseToWorld(Rect previewRect, Vector2 mousePos)
+        {
+            float orthoSize = previewCamDistance * 0.5f;
+            float aspect = previewRect.width / Mathf.Max(previewRect.height, 1f);
+            float camTargetZ = previewPanOffset.x;
+            float camTargetY = 1.0f + previewPanOffset.y;
+
+            float normX = (mousePos.x - previewRect.center.x) / previewRect.width;   // -0.5 ~ 0.5
+            float normY = (mousePos.y - previewRect.center.y) / previewRect.height;   // -0.5 ~ 0.5
+
+            float worldZ = camTargetZ + normX * orthoSize * 2f * aspect;
+            float worldY = camTargetY - normY * orthoSize * 2f; // 화면 Y 반전
+            return new Vector2(worldZ, worldY);
+        }
+
+        /// <summary>히트박스 영역 내에 월드 좌표가 있는지 히트테스트</summary>
+        private bool HitTestHitbox(Vector2 worldZY, ActionNotify collision)
+        {
+            float fwd = collision.hitboxOffsetX;
+            float up  = collision.hitboxOffsetY == 0f ? ActionNotify.DefaultHitboxOffsetY : collision.hitboxOffsetY;
+            float halfW = (collision.hitboxSizeX == 0f ? ActionNotify.DefaultHitboxSizeX : collision.hitboxSizeX) * 0.5f;
+            float halfH = (collision.hitboxSizeY == 0f ? ActionNotify.DefaultHitboxSizeY : collision.hitboxSizeY) * 0.5f;
+
+            // 히트박스 중심 = (Z=fwd, Y=up), 약간의 여유분 추가(클릭 편의)
+            float margin = 0.05f;
+            return worldZY.x >= fwd - halfW - margin && worldZY.x <= fwd + halfW + margin &&
+                   worldZY.y >= up  - halfH - margin && worldZY.y <= up  + halfH + margin;
+        }
+
+        private void HandleHitboxDragInput(Rect previewRect, ActionEntry action)
+        {
+            if (hitboxCubeObj == null || !hitboxCubeObj.activeSelf)
+            {
+                isHitboxSelected = false;
+                return;
+            }
+
+            ActionNotify activeCollision = GetActiveCollisionNotify(action);
+            if (activeCollision == null)
+            {
+                isHitboxSelected = false;
+                return;
+            }
+
+            Event e = Event.current;
+
+            // ── W/E/R 단축키 (선택된 상태에서만) ──
+            if (isHitboxSelected && e.type == EventType.KeyDown)
+            {
+                switch (e.keyCode)
+                {
+                    case KeyCode.W:
+                        hitboxGizmoMode = HitboxGizmoMode.Move;
+                        e.Use(); Repaint(); break;
+                    case KeyCode.E:
+                        hitboxGizmoMode = HitboxGizmoMode.Rotate;
+                        e.Use(); Repaint(); break;
+                    case KeyCode.R:
+                        hitboxGizmoMode = HitboxGizmoMode.Scale;
+                        e.Use(); Repaint(); break;
+                    case KeyCode.Escape:
+                        isHitboxSelected = false;
+                        e.Use(); Repaint(); break;
+                }
+            }
+
+            // 프리뷰 영역 내부가 아니면 드래그 처리 안 함
+            if (!previewRect.Contains(e.mousePosition) && !isHitboxDragging)
+                return;
+
+            switch (e.type)
+            {
+                case EventType.MouseDown:
+                    if (e.button == 0 && !e.alt && !isDraggingPreview)
+                    {
+                        // 히트테스트: 클릭한 곳이 히트박스 위인지 확인
+                        Vector2 worldZY = PreviewMouseToWorld(previewRect, e.mousePosition);
+                        bool hitOnBox = HitTestHitbox(worldZY, activeCollision);
+
+                        if (hitOnBox)
+                        {
+                            // ── 히트박스 선택 + 드래그 시작 ──
+                            isHitboxSelected = true;
+
+                            if (hitboxGizmoMode == HitboxGizmoMode.Scale)
+                            {
+                                hitboxDragType = HitboxDragType.Scale;
+                                hitboxDragStartSize = new Vector3(
+                                    activeCollision.hitboxSizeX == 0f ? ActionNotify.DefaultHitboxSizeX : activeCollision.hitboxSizeX,
+                                    activeCollision.hitboxSizeY == 0f ? ActionNotify.DefaultHitboxSizeY : activeCollision.hitboxSizeY,
+                                    0f);
+                            }
+                            else
+                            {
+                                hitboxDragType = HitboxDragType.Move;
+                                hitboxDragStartOffset = new Vector3(
+                                    activeCollision.hitboxOffsetX,
+                                    activeCollision.hitboxOffsetY == 0f ? ActionNotify.DefaultHitboxOffsetY : activeCollision.hitboxOffsetY,
+                                    0f);
+                            }
+                            hitboxDragStartMouse = e.mousePosition;
+                            isHitboxDragging = true;
+                            PushUndoSnapshot();
+                            e.Use();
+                        }
+                        else
+                        {
+                            // ── 빈 곳 클릭 → 선택 해제 ──
+                            isHitboxSelected = false;
+                            Repaint();
+                            // e.Use() 안 함 → 다른 입력 핸들러가 처리할 수 있도록
+                        }
+                    }
+                    break;
+
+                case EventType.MouseDrag:
+                    if (isHitboxDragging && e.button == 0)
+                    {
+                        Vector2 delta = e.mousePosition - hitboxDragStartMouse;
+                        float sensitivity = previewCamDistance / Mathf.Max(previewRect.width, 200f) * 2f;
+
+                        if (hitboxDragType == HitboxDragType.Move)
+                        {
+                            // 2D 고정 뷰 (Left): 마우스 가로 → hitboxOffsetX(전방, +Z)
+                            //                     마우스 세로 → hitboxOffsetY(높이, +Y)
+                            activeCollision.hitboxOffsetX = hitboxDragStartOffset.x + delta.x * sensitivity;
+                            activeCollision.hitboxOffsetY = hitboxDragStartOffset.y - delta.y * sensitivity;
+                        }
+                        else if (hitboxDragType == HitboxDragType.Scale)
+                        {
+                            // 스케일: 2D Left 뷰에서 드래그 방향과 일치하도록 부호 보정
+                            // 마우스 오른쪽(+delta.x) → 폭 증가, 마우스 위(-delta.y) → 높이 증가
+                            activeCollision.hitboxSizeX = Mathf.Max(0.05f, hitboxDragStartSize.x - delta.x * sensitivity);
+                            activeCollision.hitboxSizeY = Mathf.Max(0.05f, hitboxDragStartSize.y + delta.y * sensitivity);
+                        }
+
+                        isDirty = true;
+                        e.Use();
+                        Repaint();
+                    }
+                    break;
+
+                case EventType.MouseUp:
+                    if (isHitboxDragging && e.button == 0)
+                    {
+                        isHitboxDragging = false;
+                        hitboxDragType = HitboxDragType.None;
+                        e.Use();
+                    }
+                    break;
+            }
+        }
+
+        /// <summary>현재 선택/활성 중인 COLLISION 노티파이를 반환</summary>
+        private ActionNotify GetActiveCollisionNotify(ActionEntry action)
+        {
+            if (action.notifies == null) return null;
+
+            // 1순위: 선택된 COLLISION 노티파이
+            if (selectedNotifyIndex >= 0 && selectedNotifyIndex < action.notifies.Length)
+            {
+                var sel = action.notifies[selectedNotifyIndex];
+                if (sel.TypeEnum == NotifyType.COLLISION && !sel.disabled)
+                    return sel;
+            }
+
+            // 2순위: 현재 프레임에서 활성인 COLLISION 노티파이
+            int frame = Mathf.RoundToInt(previewFrame);
+            for (int i = 0; i < action.notifies.Length; i++)
+            {
+                var n = action.notifies[i];
+                if (n.disabled || n.TypeEnum != NotifyType.COLLISION) continue;
+                bool active = n.isInstance
+                    ? frame == n.startFrame
+                    : frame >= n.startFrame && frame < n.endFrame;
+                if (active) return n;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 프리뷰 영역에 히트박스 트랜스폼 정보 오버레이를 그린다.
+        /// W/E/R 모드 표시, 좌표/크기 수치, 드래그 힌트를 포함.
+        /// </summary>
+        /// <summary>선택된 히트박스에 노란 선택 테두리를 프리뷰 위에 그린다.</summary>
+        private void DrawHitboxSelectionHighlight(Rect previewRect)
+        {
+            if (hitboxCubeObj == null || !hitboxCubeObj.activeSelf) return;
+
+            // 히트박스 월드 좌표를 프리뷰 스크린 좌표로 변환
+            Vector3 pos = hitboxCubeObj.transform.position;
+            Vector3 scale = hitboxCubeObj.transform.localScale;
+            float halfW = scale.x * 0.5f; // sizeX → Z 방향
+            float halfH = scale.y * 0.5f; // sizeY → Y 방향
+
+            float orthoSize = previewCamDistance * 0.5f;
+            float aspect = previewRect.width / Mathf.Max(previewRect.height, 1f);
+            float camTargetZ = previewPanOffset.x;
+            float camTargetY = 1.0f + previewPanOffset.y;
+
+            // 월드 Z/Y → 스크린 X/Y
+            float screenCenterX = previewRect.center.x + (pos.z - camTargetZ) / (orthoSize * 2f * aspect) * previewRect.width;
+            float screenCenterY = previewRect.center.y - (pos.y - camTargetY) / (orthoSize * 2f) * previewRect.height;
+            float screenHalfW = halfW / (orthoSize * 2f * aspect) * previewRect.width;
+            float screenHalfH = halfH / (orthoSize * 2f) * previewRect.height;
+
+            // 선택 하이라이트 테두리 (노란색 점선 스타일)
+            Rect highlightRect = new Rect(
+                screenCenterX - screenHalfW,
+                screenCenterY - screenHalfH,
+                screenHalfW * 2f,
+                screenHalfH * 2f);
+
+            Color selectColor = new Color(1f, 0.9f, 0.2f, 0.8f);
+            float bw = 2f;
+            EditorGUI.DrawRect(new Rect(highlightRect.x - bw, highlightRect.y - bw, highlightRect.width + bw * 2, bw), selectColor);
+            EditorGUI.DrawRect(new Rect(highlightRect.x - bw, highlightRect.yMax, highlightRect.width + bw * 2, bw), selectColor);
+            EditorGUI.DrawRect(new Rect(highlightRect.x - bw, highlightRect.y, bw, highlightRect.height), selectColor);
+            EditorGUI.DrawRect(new Rect(highlightRect.xMax, highlightRect.y, bw, highlightRect.height), selectColor);
+
+            // 네 꼭짓점에 작은 핸들 사각형
+            float handleSize = 5f;
+            Color handleColor = new Color(1f, 0.95f, 0.3f, 1f);
+            Rect[] corners = {
+                new Rect(highlightRect.x - handleSize, highlightRect.y - handleSize, handleSize * 2, handleSize * 2),
+                new Rect(highlightRect.xMax - handleSize, highlightRect.y - handleSize, handleSize * 2, handleSize * 2),
+                new Rect(highlightRect.x - handleSize, highlightRect.yMax - handleSize, handleSize * 2, handleSize * 2),
+                new Rect(highlightRect.xMax - handleSize, highlightRect.yMax - handleSize, handleSize * 2, handleSize * 2),
+            };
+            foreach (var cr in corners)
+                EditorGUI.DrawRect(cr, handleColor);
+        }
+
+        private void DrawHitboxTransformOverlay(Rect previewRect, ActionEntry action)
+        {
+            ActionNotify ac = GetActiveCollisionNotify(action);
+            if (ac == null) return;
+
+            float offX = ac.hitboxOffsetX;
+            float offY = ac.hitboxOffsetY == 0f ? ActionNotify.DefaultHitboxOffsetY : ac.hitboxOffsetY;
+            float szX = ac.hitboxSizeX == 0f ? ActionNotify.DefaultHitboxSizeX : ac.hitboxSizeX;
+            float szY = ac.hitboxSizeY == 0f ? ActionNotify.DefaultHitboxSizeY : ac.hitboxSizeY;
+
+            // ── 좌측 하단: 좌표/크기 수치 ──
+            var coordStyle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                fontSize = 10,
+                normal = { textColor = new Color(0.9f, 0.9f, 0.9f, 0.9f) },
+                alignment = TextAnchor.LowerLeft
+            };
+            string coordText = $"Offset({offX:F2}, {offY:F2})  Size({szX:F2}, {szY:F2})";
+            GUI.Label(new Rect(previewRect.x + 4, previewRect.yMax - 32, previewRect.width - 8, 14), coordText, coordStyle);
+
+            // ── 좌측 하단: 드래그 모드 힌트 ──
+            string modeLabel;
+            Color modeColor;
+            switch (hitboxGizmoMode)
+            {
+                case HitboxGizmoMode.Move:
+                    modeLabel = isHitboxDragging ? "드래그: 위치 이동 중" : "[W] Move  |  E Rotate  |  R Scale";
+                    modeColor = new Color(0.3f, 1f, 0.3f, 0.9f); // 초록
+                    break;
+                case HitboxGizmoMode.Rotate:
+                    modeLabel = "[E] Rotate (2D 예약)  |  W Move  |  R Scale";
+                    modeColor = new Color(0.3f, 0.6f, 1f, 0.9f); // 파랑
+                    break;
+                case HitboxGizmoMode.Scale:
+                    modeLabel = isHitboxDragging ? "드래그: 크기 조절 중" : "W Move  |  E Rotate  |  [R] Scale";
+                    modeColor = new Color(1f, 0.6f, 0.2f, 0.9f); // 주황
+                    break;
+                default:
+                    modeLabel = ""; modeColor = Color.white; break;
+            }
+
+            var hintStyle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                fontSize = 10,
+                normal = { textColor = modeColor },
+                alignment = TextAnchor.LowerLeft
+            };
+            GUI.Label(new Rect(previewRect.x + 4, previewRect.yMax - 18, previewRect.width - 8, 16), modeLabel, hintStyle);
+
+            // ── 좌측 상단: "HITBOX" 표시 + 모드 아이콘 ──
+            var titleStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 11,
+                normal = { textColor = modeColor },
+                alignment = TextAnchor.UpperLeft
+            };
+            string modeIcon = hitboxGizmoMode == HitboxGizmoMode.Move ? "✥"
+                : hitboxGizmoMode == HitboxGizmoMode.Scale ? "⬚" : "↻";
+            GUI.Label(new Rect(previewRect.x + 4, previewRect.y + 2, 200, 16),
+                $"{modeIcon} HITBOX ({ac.hitboxId ?? "default"})", titleStyle);
         }
 
         private void CleanupPreview()
@@ -2043,6 +2842,11 @@ namespace FreeFlowHero.Editor
             {
                 try { AnimationMode.StopAnimationMode(); } catch { }
             }
+            // 히트박스 큐브 정리
+            if (hitboxCubeObj != null) { DestroyImmediate(hitboxCubeObj); hitboxCubeObj = null; }
+            if (hitboxMaterial != null) { DestroyImmediate(hitboxMaterial); hitboxMaterial = null; }
+            if (hitboxWireMaterial != null) { DestroyImmediate(hitboxWireMaterial); hitboxWireMaterial = null; }
+
             if (previewInstance != null) { DestroyImmediate(previewInstance); previewInstance = null; }
             previewAnimator = null;
             if (previewRender != null) { previewRender.Cleanup(); previewRender = null; }
@@ -2136,20 +2940,24 @@ namespace FreeFlowHero.Editor
 
             switch (e.type)
             {
-                case EventType.MouseDown when e.button == 0:
+                // 2D 고정 뷰: 좌클릭 드래그는 히트박스 전용 (카메라 회전 없음)
+                // 중클릭(휠 클릭) 드래그로 카메라 패닝만 허용
+                case EventType.MouseDown when e.button == 2: // 중클릭 = 패닝
                     isDraggingPreview = true;
                     previewDragStart = e.mousePosition;
                     e.Use();
                     break;
                 case EventType.MouseDrag when isDraggingPreview:
-                    previewRotationY += (e.mousePosition.x - previewDragStart.x) * 0.5f;
-                    previewPitchX = Mathf.Clamp(previewPitchX - (e.mousePosition.y - previewDragStart.y) * 0.3f, -80f, 80f);
+                    // 2D 패닝: 마우스 이동 → 카메라 타겟 이동 (직교 뷰에서 상하좌우)
+                    float panSensitivity = previewCamDistance * 0.5f / Mathf.Max(previewRect.height, 100f);
+                    float deltaZ = -(e.mousePosition.x - previewDragStart.x) * panSensitivity;
+                    float deltaY = (e.mousePosition.y - previewDragStart.y) * panSensitivity;
+                    previewPanOffset += new Vector2(deltaZ, deltaY);
                     previewDragStart = e.mousePosition;
-                    selectedViewIndex = -1;
                     Repaint();
                     e.Use();
                     break;
-                case EventType.MouseUp when e.button == 0:
+                case EventType.MouseUp when e.button == 2:
                     isDraggingPreview = false;
                     e.Use();
                     break;
@@ -2280,7 +3088,20 @@ namespace FreeFlowHero.Editor
             var files = Directory.GetFiles(TableFolderPath, "*.json");
             actorFiles = files;
             actorFileNames = files.Select(f => Path.GetFileNameWithoutExtension(f)).ToArray();
-            if (actorFiles.Length > 0 && selectedActorIndex < 0) selectedActorIndex = 0;
+
+            // ★ 디폴트 액터: PC_Hero 우선 선택
+            if (actorFiles.Length > 0 && selectedActorIndex < 0)
+            {
+                selectedActorIndex = 0; // 기본값
+                for (int i = 0; i < actorFileNames.Length; i++)
+                {
+                    if (actorFileNames[i] == "PC_Hero")
+                    {
+                        selectedActorIndex = i;
+                        break;
+                    }
+                }
+            }
             if (selectedActorIndex >= actorFiles.Length) selectedActorIndex = actorFiles.Length - 1;
         }
 
@@ -2292,6 +3113,7 @@ namespace FreeFlowHero.Editor
             selectedActionIndex = currentTable?.actions?.Length > 0 ? 0 : -1;
             selectedNotifyIndex = -1;
             isDirty = false;
+            InvalidateClipFramesCache(); // ★ 액터 변경 시 클립 캐시 초기화
             ResetUndoHistory();
             Repaint();
         }
@@ -2413,6 +3235,20 @@ namespace FreeFlowHero.Editor
             if (action.HasTag("execution")) return new Color(0.9f, 0.3f, 0.9f);
             if (action.HasTag("huxley")) return new Color(0.3f, 0.9f, 0.9f);
             return new Color(0.6f, 0.6f, 0.6f);
+        }
+
+        /// <summary>
+        /// 라벨 X 좌표를 클램프하여 좌우 잘림을 방지.
+        /// 기본은 중앙 정렬(x - labelW/2)이지만 경계에서는 밀어냄.
+        /// </summary>
+        private static float ClampLabelX(float tickX, float labelW, float minX, float maxX)
+        {
+            float centered = tickX - labelW * 0.5f;
+            // 왼쪽 잘림 방지
+            if (centered < minX) centered = minX;
+            // 오른쪽 잘림 방지
+            if (centered + labelW > maxX) centered = maxX - labelW;
+            return centered;
         }
 
         private static Texture2D MakeTex(int w, int h, Color col)

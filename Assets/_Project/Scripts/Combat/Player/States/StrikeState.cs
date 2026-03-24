@@ -24,19 +24,22 @@ namespace FreeFlowHero.Combat.Player
     {
         public override string StateName => "Strike";
 
+        /// <summary>현재 실행 중인 액션 ID (디버그 UI용)</summary>
+        public string CurrentActionId => currentAction?.id ?? "None";
+
         // ─── 액터 ID ───
         private const string ActorId = "PC_Hero";
 
         // ─── 콤보 → 액션 ID 매핑 ───
         // ★ 데이터 튜닝: 콤보 체인 순서. JSON의 Action ID와 일치해야 함.
-        private static readonly string[] ComboActionIds = { "LightAtk1", "LightAtk2", "LightAtk3" };
+        private static readonly string[] ComboActionIds = { "LightAtk1", "LightAtk2", "LightAtk3", "LightAtk4" };
         private int MaxComboChain => ComboActionIds.Length;
 
         // ─── 폴백 기본값 (JSON 로드 실패 시) ───
-        private static readonly int[] FallbackStartup  = { 5, 4, 5 };
-        private static readonly int[] FallbackActive   = { 8, 7, 9 };
-        private static readonly int[] FallbackRecovery = { 12, 10, 14 };
-        private static readonly float[] FallbackCancelRatio = { 0f, 0f, 0.3f };
+        private static readonly int[] FallbackStartup  = { 5, 4, 5, 5 };
+        private static readonly int[] FallbackActive   = { 8, 7, 9, 8 };
+        private static readonly int[] FallbackRecovery = { 12, 10, 14, 12 };
+        private static readonly float[] FallbackCancelRatio = { 0f, 0f, 0.3f, 0.3f };
         private const float FallbackMoveSpeed = 6f;
 
         // ─── 시각 피드백 ───
@@ -68,9 +71,15 @@ namespace FreeFlowHero.Combat.Player
         // 노티파이 모드
         private ActionNotifyProcessor notifyProcessor;
         private bool useNotifyMode;
+        private float currentPlaybackRate = 1f;  // ★ 애니메이션 재생 배율 (프레임 스케일링용)
 
         // 히트박스 활성 추적 (노티파이 모드에서 이벤트 구독 관리)
         private bool hitboxSubscribed;
+
+        // ★ 공격 중 플래그: true인 동안 공격 계열 입력은 버퍼에만 쌓이고 소비되지 않음.
+        //   Enter() → true, CANCEL_WINDOW 진입 → false.
+        //   회피/카운터는 isAttacking과 무관하게 즉시 처리 (생존 우선).
+        private bool isAttacking;
 
         // 현재 액션의 JSON 데이터 참조
         private ActionEntry currentAction;
@@ -81,6 +90,8 @@ namespace FreeFlowHero.Combat.Player
             hitConnected = false;
             stateElapsedTime = 0f;
             hitboxSubscribed = false;
+            isAttacking = true;             // ★ 공격 시작 → 공격 입력 잠금
+            context.canCancel = false;      // ★ 이전 상태의 canCancel 잔류값 초기화
 
             // ─── 콤보 인덱스에 따른 액션 데이터 결정 ───
             int idx = Mathf.Clamp(context.comboChainIndex, 0, MaxComboChain - 1);
@@ -94,11 +105,27 @@ namespace FreeFlowHero.Combat.Player
                 // ★ 노티파이 모드
                 useNotifyMode = true;
                 notifyProcessor = new ActionNotifyProcessor(currentAction);
-                totalFrames = notifyProcessor.TotalFrames;
-                moveSpeed = currentAction.moveSpeed; // 레거시 moveSpeed는 STARTUP 노티에서 오버라이드됨
+                moveSpeed = currentAction.moveSpeed;
 
-                Debug.Log($"[Strike] Enter (NOTIFY) — Chain:{context.comboChainIndex} Action:{currentAction.id} " +
-                    $"TotalFrames:{totalFrames} Notifies:{currentAction.notifies.Length}");
+                // ★ playbackRate에 따라 totalFrames를 스케일링
+                //   playbackRate=0.4이면 effectiveFrames=25 → totalFrames=63 (실제 벽시계 프레임)
+                //   이렇게 해야 애니메이션과 스테이트머신이 동기화됨
+                currentPlaybackRate = (currentAction.playbackRate > 0f) ? currentAction.playbackRate : 1f;
+
+                // ★ 스테이트 지속 프레임 결정: 세 값 중 최대
+                //   1) NotifyTotalFrames: 노티파이 커버 범위
+                //   2) Legacy TotalFrames: startup+active+recovery
+                //   3) ClipFrames: 실제 애니메이션 클립 길이 (60fps 환산)
+                //   클립이 가장 길면 클립 기준, 아니면 데이터 기준.
+                int notifyTotalFrames = notifyProcessor.TotalFrames;
+                int legacyTotalFrames = currentAction.TotalFrames;
+                int clipFrames = GetClipFrames(currentAction.clip);
+                int effectiveTotalFrames = Mathf.Max(notifyTotalFrames, Mathf.Max(legacyTotalFrames, clipFrames));
+                totalFrames = Mathf.CeilToInt(effectiveTotalFrames / currentPlaybackRate);
+
+                Debug.Log($"[Strike] Enter — Action:{currentAction.id} Chain:{context.comboChainIndex} " +
+                    $"Notify:{notifyTotalFrames} Legacy:{legacyTotalFrames} Clip:{clipFrames} " +
+                    $"Effective:{effectiveTotalFrames} Wall:{totalFrames} Rate:{currentPlaybackRate:F2}");
             }
             else if (currentAction != null)
             {
@@ -114,8 +141,8 @@ namespace FreeFlowHero.Combat.Player
                 cancelDelay = currentAction.CancelDelay;
                 totalFrames = startupFrames + activeFrames + recoveryFrames;
 
-                Debug.Log($"[Strike] Enter (LEGACY) — Chain:{context.comboChainIndex} Action:{currentAction.id} " +
-                    $"Frames:{startupFrames}/{activeFrames}/{recoveryFrames} CancelDelay:{cancelDelay:F3}s");
+                Debug.Log($"[Strike] Enter — Action:{currentAction.id} Chain:{context.comboChainIndex} " +
+                    $"Legacy:{startupFrames}/{activeFrames}/{recoveryFrames} Total:{totalFrames}");
             }
             else
             {
@@ -195,7 +222,11 @@ namespace FreeFlowHero.Combat.Player
 
         private void UpdateNotifyMode(int frame, float deltaTime)
         {
-            notifyProcessor.Tick(frame);
+            // ★ 벽시계 프레임 → 애니메이션 프레임 변환
+            //   playbackRate=0.4이면 벽시계 15프레임 = 애니메이션 6프레임
+            //   노티파이(COLLISION, CANCEL_WINDOW)는 애니메이션 프레임 기준으로 정의됨
+            int animFrame = Mathf.FloorToInt(frame * currentPlaybackRate);
+            notifyProcessor.Tick(animFrame);
 
             // ── STARTUP: 이동 속도 적용 ──
             if (notifyProcessor.IsStartupActive && notifyProcessor.StartupMoveSpeed > 0f)
@@ -216,41 +247,76 @@ namespace FreeFlowHero.Combat.Player
                 UnsubscribeHitbox();
             }
 
-            // ── CANCEL_WINDOW: 캔슬 플래그 ──
-            // 노티파이 모드에서는 context.canCancel을 캔슬 윈도우 활성 여부로 매 프레임 갱신
+            // ── CANCEL_WINDOW: 캔슬 플래그 + isAttacking 해제 ──
+            bool prevCanCancel = context.canCancel;
             context.canCancel = notifyProcessor.AnyCancelActive;
+
+            // ★ CANCEL_WINDOW 최초 진입 → isAttacking 해제 (공격 입력 잠금 풀림)
+            if (context.canCancel && !prevCanCancel)
+            {
+                isAttacking = false;
+                Debug.Log($"[Strike][DEBUG] CANCEL_WINDOW OPEN — wall:{frame} anim:{animFrame} isAttacking→false HasBuffer:{fsm.InputBuffer.HasInput} BufferPeek:{fsm.InputBuffer.Peek?.Type}");
+            }
 
             // 캔슬 가능하고 버퍼에 입력이 있으면 처리
             if (context.canCancel && fsm.InputBuffer.HasInput)
             {
                 var buffered = fsm.InputBuffer.Consume();
-
-                // 노티파이 모드: 입력 타입별 캔슬 허용 여부 체크
                 string inputKey = InputTypeToString(buffered.Type);
-                if (notifyProcessor.CanCancelWith(inputKey))
+                bool canCancelWith = notifyProcessor.CanCancelWith(inputKey);
+
+                Debug.Log($"[Strike][DEBUG] BUFFER CONSUME — wall:{frame} anim:{animFrame} Type:{buffered.Type} CanCancelWith({inputKey}):{canCancelWith} isAttacking:{isAttacking}");
+
+                if (canCancelWith)
                 {
-                    HandleBufferedInput(buffered);
-                    return;
+                    // ★ isAttacking 중이면 공격 계열은 소비하지 않음 (아직 모션 진행 중)
+                    if (IsAttackInput(buffered.Type) && isAttacking)
+                    {
+                        Debug.Log($"[Strike][DEBUG] BUFFER RE-QUEUE — isAttacking guard blocked");
+                        fsm.InputBuffer.BufferInput(buffered);
+                    }
+                    else
+                    {
+                        Debug.Log($"[Strike][DEBUG] BUFFER → HandleBufferedInput — {buffered.Type}");
+                        HandleBufferedInput(buffered);
+                        return;
+                    }
                 }
                 else
                 {
-                    // 이 캔슬 타입은 현재 윈도우에서 허용되지 않음 → 다시 버퍼에 넣기
+                    Debug.Log($"[Strike][DEBUG] BUFFER RE-QUEUE — CanCancelWith false");
                     fsm.InputBuffer.BufferInput(buffered);
                 }
             }
+            else if (context.canCancel && !fsm.InputBuffer.HasInput)
+            {
+                // ★ 디버그: 캔슬 윈도우 열렸는데 버퍼가 비어있음 (만료 의심)
+                var peek = fsm.InputBuffer.Peek;
+                if (peek != null)
+                    Debug.Log($"[Strike][DEBUG] CANCEL_WINDOW ACTIVE but HasInput=false (버퍼 만료!) wall:{frame} anim:{animFrame} Peek:{peek.Type}");
+            }
 
-            // 프레임 완료 → Idle
+            // 프레임 완료 → 다음 체인 인덱스 전진 후 Idle
             if (frame >= totalFrames)
             {
-                // defaultNext가 있으면 해당 액션으로, 없으면 Idle
-                if (!string.IsNullOrEmpty(currentAction?.defaultNext))
+                // ★ 콤보 액션 정상 완료 → 다음 공격을 위해 체인 인덱스 전진
+                // Idle 복귀 후 콤보 윈도우 내에 다시 공격하면 다음 타수(2타→3타 등)가 나감
+                int currentIdx = System.Array.IndexOf(ComboActionIds, currentAction?.id);
+                if (currentIdx >= 0)
                 {
-                    ResolveCancelTarget(currentAction.defaultNext, default);
+                    context.comboChainIndex = (currentIdx + 1) % MaxComboChain;
                 }
-                else
+
+                // ★ 콤보 윈도우 타이머 시작 (히트 여부 무관)
+                //   히트 시에는 IncrementCombo()에서 이미 시작되지만,
+                //   헛스윙(적 없이 공격) 시에도 comboWindowTimer를 시작해야
+                //   시간 초과 후 comboChainIndex가 0으로 리셋됨
+                if (context.comboWindowTimer <= 0f)
                 {
-                    fsm.TransitionTo<IdleState>();
+                    context.comboWindowTimer = CombatConstants.ComboWindowDuration;
                 }
+
+                fsm.TransitionTo<IdleState>();
             }
         }
 
@@ -310,8 +376,21 @@ namespace FreeFlowHero.Combat.Player
 
         public override void HandleInput(InputData input)
         {
+            int frame = context.stateFrameCounter;
+            int animFrame = Mathf.FloorToInt(frame * currentPlaybackRate);
+
+            // ★ 공격 계열 입력: isAttacking 중이면 무조건 버퍼 (모션 완주 보장)
+            if (IsAttackInput(input.Type) && isAttacking)
+            {
+                Debug.Log($"[Strike][DEBUG] HandleInput BUFFER — {input.Type} wall:{frame} anim:{animFrame} isAttacking:true canCancel:{context.canCancel}");
+                fsm.InputBuffer.BufferInput(input);
+                return;
+            }
+
+            // 캔슬 윈도우가 아직 안 열렸으면 버퍼
             if (!context.canCancel)
             {
+                Debug.Log($"[Strike][DEBUG] HandleInput BUFFER — {input.Type} wall:{frame} anim:{animFrame} canCancel:false");
                 fsm.InputBuffer.BufferInput(input);
                 return;
             }
@@ -322,11 +401,13 @@ namespace FreeFlowHero.Combat.Player
                 string inputKey = InputTypeToString(input.Type);
                 if (!notifyProcessor.CanCancelWith(inputKey))
                 {
+                    Debug.Log($"[Strike][DEBUG] HandleInput BUFFER — {input.Type} wall:{frame} anim:{animFrame} CanCancelWith({inputKey}):false");
                     fsm.InputBuffer.BufferInput(input);
                     return;
                 }
             }
 
+            Debug.Log($"[Strike][DEBUG] HandleInput PASS → HandleBufferedInput — {input.Type} wall:{frame} anim:{animFrame}");
             HandleBufferedInput(input);
         }
 
@@ -343,6 +424,7 @@ namespace FreeFlowHero.Combat.Player
             // 캔슬 경로가 정의되어 있으면 해당 액션으로 분기
             if (cancelTarget != null)
             {
+                Debug.Log($"[Strike][DEBUG] HandleBufferedInput — cancels[{inputKey}]→{cancelTarget}");
                 ResolveCancelTarget(cancelTarget, input);
                 return;
             }
@@ -350,14 +432,19 @@ namespace FreeFlowHero.Combat.Player
             // ─── 노티파이 캔슬 윈도우의 nextAction 확인 ───
             if (useNotifyMode && !string.IsNullOrEmpty(notifyProcessor?.CancelNextAction))
             {
+                Debug.Log($"[Strike][DEBUG] HandleBufferedInput — nextAction→{notifyProcessor.CancelNextAction}");
                 ResolveCancelTarget(notifyProcessor.CancelNextAction, input);
                 return;
             }
 
+            Debug.Log($"[Strike][DEBUG] HandleBufferedInput — 기본 분기 (cancels 없음, nextAction 없음) input:{input.Type}");
             // ─── 캔슬 경로 없으면 기본 분기 ───
             switch (input.Type)
             {
                 case InputType.Attack:
+                case InputType.Heavy:
+                    // cancels[]에도 nextAction에도 없는 경우 → 기본 순환 증가
+                    context.comboChainIndex = (context.comboChainIndex + 1) % MaxComboChain;
                     ResolveNextComboAttack(input);
                     break;
 
@@ -367,10 +454,6 @@ namespace FreeFlowHero.Combat.Player
 
                 case InputType.Counter:
                     fsm.TransitionTo<CounterState>();
-                    break;
-
-                case InputType.Heavy:
-                    ResolveNextComboAttack(input);
                     break;
 
                 default:
@@ -418,6 +501,12 @@ namespace FreeFlowHero.Combat.Player
             }
         }
 
+        /// <summary>공격 계열 입력인지 판별 (Attack, Heavy)</summary>
+        private static bool IsAttackInput(InputType type)
+        {
+            return type == InputType.Attack || type == InputType.Heavy;
+        }
+
         /// <summary>InputType enum → JSON 캔슬 경로의 input 문자열 변환</summary>
         private static string InputTypeToString(InputType type)
         {
@@ -433,19 +522,16 @@ namespace FreeFlowHero.Combat.Player
         }
 
         /// <summary>
-        /// 프리플로우 콤보 체인: 다음 공격 시 타겟 재선택 + 워핑 판정
+        /// 프리플로우 콤보 체인: 다음 공격 시 타겟 재선택 + 워핑 판정.
+        /// ★ comboChainIndex는 이 함수 호출 전에 반드시 세팅되어 있어야 함.
+        ///   - ResolveCancelTarget에서 명시적으로 세팅하거나
+        ///   - HandleBufferedInput 기본 분기에서 직접 증가
         /// </summary>
         private void ResolveNextComboAttack(InputData input)
         {
-            // JSON 캔슬 경로에서 comboChainIndex가 이미 세팅된 경우가 아니면 순환 증가
-            if (System.Array.IndexOf(ComboActionIds, currentAction?.GetCancelTarget(InputTypeToString(input.Type))) < 0)
-            {
-                context.comboChainIndex = (context.comboChainIndex + 1) % MaxComboChain;
-            }
-
             // 타겟 재선택 (방향 입력 없으면 현재 facing 사용)
             Vector2 playerPos = GetPos();
-            float inputDir = input.Direction.x;
+            float inputDir = (input != null) ? input.Direction.x : 0f;
             if (Mathf.Approximately(inputDir, 0f))
                 inputDir = context.playerTransform.localScale.x >= 0 ? 1f : -1f;
 
@@ -534,8 +620,7 @@ namespace FreeFlowHero.Combat.Player
                 flashTimer = FlashDuration;
             }
 
-            Debug.Log($"[Strike] HIT! — Target: {target.GetTransform().name}, Combo: {context.comboCount}" +
-                (useNotifyMode ? $", DmgScale: {notifyProcessor.DamageScale:F2}" : ""));
+            Debug.Log($"[Strike] HIT — {target.GetTransform().name} Combo:{context.comboCount}");
 
             target.TakeHit(hitData);
         }
@@ -565,7 +650,22 @@ namespace FreeFlowHero.Combat.Player
                 spriteRenderer.color = AttackFlashColor;
                 flashTimer = FlashDuration;
             }
-            Debug.Log("[Strike] Active! — 히트 판정 시작");
+            // 히트 판정 시작
+        }
+
+        /// <summary>클립 이름으로 AnimatorController에서 실제 클립 길이(60fps 프레임 수)를 반환</summary>
+        private int GetClipFrames(string clipName)
+        {
+            if (string.IsNullOrEmpty(clipName)) return 0;
+            var controller = context.playerAnimator?.runtimeAnimatorController;
+            if (controller == null) return 0;
+
+            foreach (var clip in controller.animationClips)
+            {
+                if (clip.name == clipName)
+                    return Mathf.CeilToInt(clip.length * 60f);
+            }
+            return 0;
         }
 
         /// <summary>콤보 인덱스에 따른 애니메이션 설정</summary>

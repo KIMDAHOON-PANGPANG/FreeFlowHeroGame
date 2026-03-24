@@ -30,6 +30,9 @@ namespace FreeFlowHero.Editor
         private const string Atk2FBX = MartialArtRoot + "/Atk_P_2.fbx";
         private const string Atk3FBX = MartialArtRoot + "/Atk_P_3.fbx";
 
+        // ─── 4타 (EEJANAI knee strike) ───
+        private const string Atk4FBX = FBXFolder + "/knee strike.fbx";
+
         // 애니메이션 → 전투 액션 매핑 (1~3타: Martial Art, 나머지: EEJANAI)
         private static readonly (string fbxName, string stateName, string triggerName)[] AnimMap = new[]
         {
@@ -91,13 +94,24 @@ namespace FreeFlowHero.Editor
             rootStateMachine.defaultState = locomotionState;
             int clipFoundCount = 0;
 
-            // ─── 1~3타 콤보 상태 (Martial Art Animations Sample — 절대경로 로드) ───
+            // ─── 1~4타 콤보 상태 (1~3타: Martial Art, 4타: EEJANAI knee strike) ───
             int stateCount = 0;
-            string[] atkFBXPaths = { Atk1FBX, Atk2FBX, Atk3FBX };
-            string[] atkStateNames = { "Strike_LightAtk1", "Strike_LightAtk2", "Strike_LightAtk3" };
+            string[] atkFBXPaths = { Atk1FBX, Atk2FBX, Atk3FBX, Atk4FBX };
+            string[] atkStateNames = { "Strike_LightAtk1", "Strike_LightAtk2", "Strike_LightAtk3", "Strike_LightAtk4" };
+            // FBX 이름 → FindClipByFBXName 폴백용 (EEJANAI 등 .anim 추출된 에셋 대응)
+            string[] atkFBXFallbackNames = { null, null, null, "knee strike" };
             for (int i = 0; i < atkFBXPaths.Length; i++)
             {
                 AnimationClip clip = LoadClipFromFBX(atkFBXPaths[i]);
+
+                // FBX 직접 로드 실패 시 이름으로 폴백 검색 (.anim 추출된 에셋 대응)
+                if (clip == null && atkFBXFallbackNames[i] != null)
+                {
+                    clip = FindClipByFBXName(atkFBXFallbackNames[i]);
+                    if (clip != null)
+                        Debug.Log($"[AnimBuilder] ✓ {atkStateNames[i]} 클립 (폴백 검색): {clip.name} ({clip.length:F2}초)");
+                }
+
                 var state = rootStateMachine.AddState(atkStateNames[i],
                     GetStatePosition(stateCount + 1));
                 stateCount++;
@@ -106,7 +120,8 @@ namespace FreeFlowHero.Editor
                 {
                     state.motion = clip;
                     clipFoundCount++;
-                    Debug.Log($"[AnimBuilder] ✓ {atkStateNames[i]} 클립: {clip.name} ({clip.length:F2}초)");
+                    if (atkFBXFallbackNames[i] == null) // 폴백이 아닌 경우만 로그 (폴백은 위에서 이미 출력)
+                        Debug.Log($"[AnimBuilder] ✓ {atkStateNames[i]} 클립: {clip.name} ({clip.length:F2}초)");
                 }
                 else
                 {
@@ -177,12 +192,12 @@ namespace FreeFlowHero.Editor
                 $"\n  Locomotion (Idle/Walk/Run 블렌드) + 전투 상태 {stateCount}개, 클립 {clipFoundCount}개 매핑됨");
         }
 
-        /// <summary>Strike 트리거 + ComboIndex로 3종 분기 (1~3타)</summary>
+        /// <summary>Strike 트리거 + ComboIndex로 4종 분기 (1~4타)</summary>
         private static void SetupStrikeComboTransitions(
             AnimatorStateMachine sm, AnimatorController controller)
         {
             string[] strikeStates = { "Strike_LightAtk1", "Strike_LightAtk2",
-                                      "Strike_LightAtk3" };
+                                      "Strike_LightAtk3", "Strike_LightAtk4" };
 
             for (int i = 0; i < strikeStates.Length; i++)
             {

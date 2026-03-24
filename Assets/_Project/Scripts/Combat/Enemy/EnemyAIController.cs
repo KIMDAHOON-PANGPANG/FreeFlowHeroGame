@@ -306,7 +306,7 @@ namespace FreeFlowHero.Combat.Enemy
                         TelegraphDuration = telegraphDuration
                     });
 
-                    Debug.Log($"[EnemyAI] {gameObject.name} 텔레그래프: {telegraphType}");
+
                     break;
 
                 case AIState.Attack:
@@ -475,7 +475,7 @@ namespace FreeFlowHero.Combat.Enemy
             float dist = GetDistToPlayer();
             if (dist > attackRange * 1.5f)
             {
-                Debug.Log($"[EnemyAI] {gameObject.name} 공격 빗나감 (거리: {dist:F1})");
+
                 return;
             }
 
@@ -505,7 +505,7 @@ namespace FreeFlowHero.Combat.Enemy
             // 이벤트 발행
             CombatEventBus.Publish(new OnPlayerHit { HitData = hitData });
 
-            Debug.Log($"[EnemyAI] {gameObject.name} 공격! dmg={attackDamage}");
+
         }
 
         // ────────────────────────────

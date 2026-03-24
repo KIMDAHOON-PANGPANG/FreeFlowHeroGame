@@ -56,6 +56,15 @@ namespace FreeFlowHero.Combat.Core
         public string hitboxId;     // 히트박스 식별자 (기본: "default")
         public float damageScale;   // 데미지 배율 (1.0 = 기본)
 
+        // ─── COLLISION 히트박스 트랜스폼 (캐릭터 루트 기준 로컬 좌표) ───
+        // ★ JsonUtility: 누락 float → 0으로 역직렬화됨. 에디터에서 0일 때 기본값 적용.
+        public float hitboxOffsetX;  // 히트박스 X 오프셋 (좌우, 기본 0)
+        public float hitboxOffsetY;  // 히트박스 Y 오프셋 (상하, 기본 0.8 = 캐릭터 중심)
+        public float hitboxOffsetZ;  // 히트박스 Z 오프셋 (전후, 기본 0.5 = 전방)
+        public float hitboxSizeX;    // 히트박스 X 크기 (폭, 기본 0.6)
+        public float hitboxSizeY;    // 히트박스 Y 크기 (높이, 기본 0.8)
+        public float hitboxSizeZ;    // 히트박스 Z 크기 (깊이, 기본 0.5)
+
         // ─── CANCEL_WINDOW 파라미터 ───
         public bool skillCancel;    // 공격 캔슬 (콤보 연계) 허용
         public bool moveCancel;     // 이동 캔슬 허용
@@ -63,7 +72,45 @@ namespace FreeFlowHero.Combat.Core
         public bool counterCancel;  // 카운터 캔슬 허용
         public string nextAction;   // 스킬 캔슬 시 전이 대상 액션 ID (비어있으면 CancelRoute 참조)
 
+        // ─── 히트박스 기본값 상수 ───
+        public const float DefaultHitboxOffsetY = 0.8f;
+        public const float DefaultHitboxOffsetZ = 0.5f;
+        public const float DefaultHitboxSizeX = 0.6f;
+        public const float DefaultHitboxSizeY = 0.8f;
+        public const float DefaultHitboxSizeZ = 0.5f;
+
         // ─── 계산 프로퍼티 ───
+
+        /// <summary>히트박스 오프셋 (0이면 기본값 적용, Z는 2D 횡스크롤이므로 고정)</summary>
+        public Vector3 GetHitboxOffset()
+        {
+            return new Vector3(
+                hitboxOffsetX,
+                hitboxOffsetY == 0f ? DefaultHitboxOffsetY : hitboxOffsetY,
+                0f  // 2D 횡스크롤: Z 오프셋 사용 안 함
+            );
+        }
+
+        /// <summary>히트박스 크기 (0이면 기본값 적용, Z는 2D 횡스크롤이므로 얇은 고정값)</summary>
+        public Vector3 GetHitboxSize()
+        {
+            return new Vector3(
+                hitboxSizeX == 0f ? DefaultHitboxSizeX : hitboxSizeX,
+                hitboxSizeY == 0f ? DefaultHitboxSizeY : hitboxSizeY,
+                0.1f  // 2D 횡스크롤: Z 크기 얇게 고정 (시각 확인용)
+            );
+        }
+
+        /// <summary>히트박스 값을 기본값으로 리셋 (Z는 2D이므로 0 고정)</summary>
+        public void ResetHitboxToDefaults()
+        {
+            hitboxOffsetX = 0f;
+            hitboxOffsetY = DefaultHitboxOffsetY;
+            hitboxOffsetZ = 0f;  // 2D: Z 사용 안 함
+            hitboxSizeX = DefaultHitboxSizeX;
+            hitboxSizeY = DefaultHitboxSizeY;
+            hitboxSizeZ = 0f;    // 2D: Z 사용 안 함
+        }
 
         /// <summary>구간 프레임 수</summary>
         public int Duration => Mathf.Max(endFrame - startFrame, 0);
@@ -128,7 +175,7 @@ namespace FreeFlowHero.Combat.Core
             };
         }
 
-        /// <summary>COLLISION 노티파이 생성</summary>
+        /// <summary>COLLISION 노티파이 생성 (히트박스 기본값 포함)</summary>
         public static ActionNotify CreateCollision(int start, int end, float damageScale = 1f, string hitboxId = "default")
         {
             return new ActionNotify
@@ -143,6 +190,13 @@ namespace FreeFlowHero.Combat.Core
                 hitboxId = hitboxId,
                 moveSpeed = 0f,
                 nextAction = "",
+                // 히트박스 트랜스폼 기본값 (2D: Z 제외)
+                hitboxOffsetX = 0f,
+                hitboxOffsetY = DefaultHitboxOffsetY,
+                hitboxOffsetZ = 0f,
+                hitboxSizeX = DefaultHitboxSizeX,
+                hitboxSizeY = DefaultHitboxSizeY,
+                hitboxSizeZ = 0f,
             };
         }
 

@@ -64,7 +64,7 @@ namespace FreeFlowHero.Combat.Player
             }
 
             SafeSetTrigger("Counter");
-            Debug.Log("[Counter] Enter — 카운터 윈도우 시작");
+
 
             // Phase 2 간이 판정
             TryResolveCounter();
@@ -191,12 +191,12 @@ namespace FreeFlowHero.Combat.Player
                 counterResult = (context.globalFrameCounter % 4 == 0)
                     ? CounterType.Perfect
                     : CounterType.Normal;
-                Debug.Log($"[Counter] 타겟 발견: {target.GetTransform().name} — {counterResult}");
+
             }
             else
             {
                 counterResult = CounterType.Miss;
-                Debug.Log("[Counter] 타겟 없음 — Miss");
+
             }
         }
 
@@ -258,7 +258,7 @@ namespace FreeFlowHero.Combat.Player
             scalePulseTimer = ScalePulseDuration;
 
             SafeSetTrigger("CounterStrike");
-            Debug.Log($"[Counter] 반격! — {counterResult}, 콤보: {context.comboCount}");
+
         }
 
         private void EnterMiss()
@@ -266,7 +266,7 @@ namespace FreeFlowHero.Combat.Player
             currentPhase = Phase.Miss;
             if (spriteRenderer != null)
                 spriteRenderer.color = CounterMissColor;
-            Debug.Log("[Counter] Miss — 빈 동작");
+
         }
 
         /// <summary>스케일을 원래 크기로 복원 (방향 유지)</summary>

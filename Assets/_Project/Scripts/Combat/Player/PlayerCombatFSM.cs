@@ -71,8 +71,7 @@ namespace FreeFlowHero.Combat.Player
                 if (found != null)
                     context.playerAnimator = found;
 
-                Debug.Log($"[FSM] Animator 검색 결과: {(context.playerAnimator != null ? context.playerAnimator.gameObject.name : "NULL")}" +
-                    $" enabled={context.playerAnimator?.enabled} controller={context.playerAnimator?.runtimeAnimatorController?.name ?? "NONE"}");
+
             }
 
             // ★ Root Motion 비활성화: 3D 메쉬가 Rigidbody2D와 분리 이동하는 것을 방지
@@ -80,7 +79,7 @@ namespace FreeFlowHero.Combat.Player
             if (context.playerAnimator != null)
             {
                 context.playerAnimator.applyRootMotion = false;
-                Debug.Log($"[FSM] Root Motion 비활성화: {context.playerAnimator.gameObject.name}");
+
             }
 
             // 상태 등록 — Phase 1
@@ -226,7 +225,7 @@ namespace FreeFlowHero.Combat.Player
                 context.playerRigidbody.position = pos;
                 isGrounded = true;
                 fallSpeed = 0f;
-                Debug.Log($"[FSM] 바닥 스냅 완료: Y={pos.y:F2} (ground={groundSurfaceY:F2})");
+
             }
         }
 
@@ -301,7 +300,17 @@ namespace FreeFlowHero.Combat.Player
             }
         }
 
-        // ─── 디버그 ───
+        // ─── 현재 액션 이름 (디버그 UI용) ───
+        /// <summary>현재 실행 중인 액션 ID (Strike 상태에서만 유효)</summary>
+        public string CurrentActionId
+        {
+            get
+            {
+                if (currentState is StrikeState strike)
+                    return strike.CurrentActionId;
+                return CurrentStateName;
+            }
+        }
 
         // ─── 디버그 OnGUI (빌드에서도 표시) ───
 
@@ -380,6 +389,66 @@ namespace FreeFlowHero.Combat.Player
             helpStyle.normal.textColor = new Color(0.7f, 0.7f, 0.7f);
             GUI.Label(new Rect(x, y, boxW, lineH),
                 "LClick: Attack | RClick: Heavy | Space: Dodge | L: Counter | U: Huxley", helpStyle);
+
+            // ─── PC 머리 위 디버그 텍스트: 현재 액션 이름 ───
+            DrawWorldActionLabel();
+        }
+
+        /// <summary>PC 머리 위에 현재 액션 이름을 월드 좌표 기준으로 표시</summary>
+        private GUIStyle actionLabelStyle;
+        private Texture2D actionLabelBgTex;
+
+        private void DrawWorldActionLabel()
+        {
+            if (context.playerTransform == null) return;
+
+            Camera cam = Camera.main;
+            if (cam == null) return;
+
+            // 캐릭터 머리 위 위치 (Y + 2.0 오프셋)
+            Vector3 worldPos = context.playerTransform.position + Vector3.up * 2.0f;
+            Vector3 screenPos = cam.WorldToScreenPoint(worldPos);
+
+            // 카메라 뒤에 있으면 표시 안 함
+            if (screenPos.z < 0) return;
+
+            // Unity GUI 좌표계 변환 (Y축 반전)
+            float guiY = Screen.height - screenPos.y;
+
+            // 스타일 캐시
+            if (actionLabelStyle == null)
+            {
+                actionLabelStyle = new GUIStyle(GUI.skin.label);
+                actionLabelStyle.fontSize = 22;
+                actionLabelStyle.fontStyle = FontStyle.Bold;
+                actionLabelStyle.alignment = TextAnchor.MiddleCenter;
+                actionLabelStyle.richText = true;
+            }
+            if (actionLabelBgTex == null)
+                actionLabelBgTex = MakeTexture(2, 2, new Color(0, 0, 0, 0.6f));
+
+            // 상태별 색상
+            string actionText = CurrentActionId;
+            string colorHex;
+            switch (CurrentStateName)
+            {
+                case "Strike":  colorHex = "FFFF00"; break; // 노랑
+                case "Warp":    colorHex = "80CCFF"; break; // 연파랑
+                case "Dodge":   colorHex = "44FF44"; break; // 초록
+                case "Counter": colorHex = "FFAA00"; break; // 주황
+                case "Hit":     colorHex = "FF4444"; break; // 빨강
+                default:        colorHex = "FFFFFF"; break; // 흰색
+            }
+
+            string label = $"<color=#{colorHex}>attack num: {actionText}</color>";
+
+            // 배경 박스
+            float labelW = 300;
+            float labelH = 30;
+            Rect labelRect = new Rect(screenPos.x - labelW * 0.5f, guiY - labelH, labelW, labelH);
+
+            GUI.DrawTexture(labelRect, actionLabelBgTex);
+            GUI.Label(labelRect, label, actionLabelStyle);
         }
 
         /// <summary>단색 텍스처 생성 (OnGUI 배경용)</summary>

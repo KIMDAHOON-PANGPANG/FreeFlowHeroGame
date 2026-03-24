@@ -99,8 +99,7 @@ namespace FreeFlowHero.Combat.Enemy
             if (activeAttackers.Count < maxSimultaneousAttackers && globalCooldownTimer <= 0f)
             {
                 activeAttackers.Add(enemy);
-                Debug.Log($"[AttackCoordinator] 공격 승인: {enemy.gameObject.name} " +
-                    $"(활성: {activeAttackers.Count}/{maxSimultaneousAttackers})");
+
                 return true;
             }
 
@@ -108,8 +107,7 @@ namespace FreeFlowHero.Combat.Enemy
             if (!attackQueue.Contains(enemy))
             {
                 attackQueue.Enqueue(enemy);
-                Debug.Log($"[AttackCoordinator] 대기열 등록: {enemy.gameObject.name} " +
-                    $"(대기: {attackQueue.Count})");
+
             }
             return false;
         }
@@ -131,9 +129,7 @@ namespace FreeFlowHero.Combat.Enemy
                 : breathingTime;
             globalCooldownTimer = cooldown;
 
-            Debug.Log($"[AttackCoordinator] 슬롯 반환: {enemy.gameObject.name} " +
-                $"(활성: {activeAttackers.Count}/{maxSimultaneousAttackers}, " +
-                $"쿨다운: {cooldown:F2}초)");
+
         }
 
         /// <summary>특정 적이 현재 공격 중인지 확인</summary>
@@ -177,7 +173,7 @@ namespace FreeFlowHero.Combat.Enemy
 
                 activeAttackers.Add(next);
                 // 대기열에서 승인된 적에게 알림 → EnemyAI가 자체적으로 텔레그래프 진입
-                Debug.Log($"[AttackCoordinator] 대기열→승인: {next.gameObject.name}");
+
             }
         }
 

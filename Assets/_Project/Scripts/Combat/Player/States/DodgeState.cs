@@ -77,7 +77,7 @@ namespace FreeFlowHero.Combat.Player
             // 애니메이션
             SafeSetTrigger("Dodge");
 
-            Debug.Log($"[Dodge] Enter — direction: {dodgeDirection}");
+
         }
 
         public override void Update(float deltaTime)
@@ -208,8 +208,7 @@ namespace FreeFlowHero.Combat.Player
             safePos.x = safeX;
             MoveTo(safePos);
 
-            Debug.Log($"[Dodge] Post-dodge overlap resolved: pushed to X={safeX:F2} " +
-                $"(dir={pushDir:F0}, group=[{groupLeft:F2},{groupRight:F2}])");
+
         }
 
         public override void HandleInput(InputData input)

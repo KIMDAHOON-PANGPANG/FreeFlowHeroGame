@@ -102,6 +102,12 @@ namespace FreeFlowHero.Combat.Core
         /// <param name="frame">현재 프레임 (0-based, 60fps 기준)</param>
         public void Tick(int frame)
         {
+            // ★ 에지 플래그는 매 호출마다 리셋 (1프레임 전용 신호)
+            //   playbackRate < 1일 때 여러 벽시계 프레임이 같은 animFrame에 매핑되므로,
+            //   early return 전에 반드시 클리어해야 중복 발화를 방지함.
+            CollisionJustStarted = false;
+            CollisionJustEnded = false;
+
             // 같은 프레임 중복 호출 방지
             if (frame == lastFrame) return;
             lastFrame = frame;

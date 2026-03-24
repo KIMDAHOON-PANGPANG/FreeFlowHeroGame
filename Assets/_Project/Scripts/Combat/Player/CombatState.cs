@@ -32,17 +32,11 @@ namespace FreeFlowHero.Combat.Player
             if (context.playerRigidbody != null)
                 context.playerRigidbody.linearVelocity = Vector2.zero;
 
-#if UNITY_EDITOR
-            Debug.Log($"[FSM] Enter: {StateName} pos=({GetPos().x:F2},{GetPos().y:F2})");
-#endif
         }
 
         /// <summary>상태 이탈 시 호출</summary>
         public virtual void Exit()
         {
-#if UNITY_EDITOR
-            Debug.Log($"[FSM] Exit: {StateName} (frames: {context.stateFrameCounter}) pos=({GetPos().x:F2},{GetPos().y:F2})");
-#endif
         }
 
         /// <summary>매 프레임 업데이트</summary>

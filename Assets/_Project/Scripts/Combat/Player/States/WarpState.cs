@@ -61,7 +61,7 @@ namespace FreeFlowHero.Combat.Player
                 spriteRenderer.color = WarpColor;
             }
 
-            Debug.Log($"[Warp] Enter — {startPos} → {endPos} (duration: {warpDuration:F3}s)");
+
         }
 
         public override void Update(float deltaTime)

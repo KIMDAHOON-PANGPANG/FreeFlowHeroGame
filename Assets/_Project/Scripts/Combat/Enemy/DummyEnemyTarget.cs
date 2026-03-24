@@ -53,15 +53,13 @@ namespace FreeFlowHero.Combat.Enemy
                 rb.position = knockPos;
             }
 
-            // 콘솔 로그
-            Debug.Log($"[DummyEnemy] 피격! 데미지={hitData.BaseDamage:F0} " +
-                $"HP={currentHP:F0}/{maxHP:F0} 콤보={hitData.ComboCount}");
+
 
             // 사망 처리
             if (currentHP <= 0f)
             {
                 CombatEventBus.Publish(new OnEnemyDeath { Enemy = this });
-                Debug.Log("[DummyEnemy] 사망!");
+
             }
         }
 
@@ -103,7 +101,7 @@ namespace FreeFlowHero.Combat.Enemy
         public void ResetHP()
         {
             currentHP = maxHP;
-            Debug.Log("[DummyEnemy] HP 리셋");
+
         }
 
 #if UNITY_EDITOR
