@@ -24,6 +24,22 @@ namespace FreeFlowHero.Combat.Core
 
         /// <summary>캔슬 허용 구간 — 내부 플래그로 캔슬 종류별 허용/불허 제어.</summary>
         CANCEL_WINDOW = 2,
+
+        /// <summary>워핑 트리거 — 타겟에게 보간 이동. 인스턴스 모드(1회 발화) 전용.</summary>
+        WARP = 3,
+    }
+
+    /// <summary>
+    /// 워핑 이징 커브 종류.
+    /// JsonUtility에서는 int로 직렬화되므로 ActionNotify.warpEaseType과 매핑.
+    /// </summary>
+    public enum WarpEaseType
+    {
+        CubicOut = 0,    // 기본: 빠른 가속 후 부드러운 감속
+        QuadOut = 1,     // 좀 더 부드러운 감속
+        ExpoOut = 2,     // 급격한 가속 후 급감속
+        Linear = 3,      // 일정 속도
+        BackOut = 4,     // 약간 오버슈트 후 안착 (타격감 강화)
     }
 
     /// <summary>
@@ -71,6 +87,22 @@ namespace FreeFlowHero.Combat.Core
         public bool dodgeCancel;    // 회피 캔슬 허용
         public bool counterCancel;  // 카운터 캔슬 허용
         public string nextAction;   // 스킬 캔슬 시 전이 대상 액션 ID (비어있으면 CancelRoute 참조)
+
+        // ─── WARP 파라미터 ───
+        // ★ 데이터 튜닝: 액션별 워핑 느낌을 개별 조절 가능
+        public float warpOffsetX;      // 적 기준 도착 오프셋 X (음수=적 앞쪽, 양수=적 뒤쪽, 기본 -0.5)
+        public float warpOffsetY;      // 적 기준 도착 오프셋 Y (0=같은 높이)
+        public float warpDuration;     // 워핑 시간 (초). 0=거리 비례 자동 계산
+        public int warpEaseType;       // 이징 커브 (WarpEaseType enum 참조, 기본 0=CubicOut)
+        public float warpMinDuration;  // 자동 계산 시 최소 시간 (초, 기본 0.04)
+        public float warpMaxDuration;  // 자동 계산 시 최대 시간 (초, 기본 0.12)
+        public bool warpInvincible;    // 워핑 중 무적 (기본 true)
+        public bool warpAutoTarget;    // 자동 타겟 재선택 (기본 true)
+
+        // ─── 워핑 기본값 상수 ───
+        public const float DefaultWarpOffsetX = -0.5f;
+        public const float DefaultWarpMinDuration = 0.04f;
+        public const float DefaultWarpMaxDuration = 0.12f;
 
         // ─── 히트박스 기본값 상수 ───
         public const float DefaultHitboxOffsetY = 0.8f;
@@ -223,6 +255,59 @@ namespace FreeFlowHero.Combat.Core
                 moveSpeed = 0f,
             };
         }
+
+        /// <summary>WARP 노티파이 생성 (인스턴스 모드 전용)</summary>
+        public static ActionNotify CreateWarp(int triggerFrame,
+            float offsetX = DefaultWarpOffsetX, float offsetY = 0f,
+            float duration = 0f, int easeType = 0,
+            bool invincible = true, bool autoTarget = true)
+        {
+            return new ActionNotify
+            {
+                type = NotifyType.WARP.ToString(),
+                startFrame = triggerFrame,
+                endFrame = triggerFrame + 3,  // 인스턴스: endFrame은 타임라인 시각 표시용
+                track = 3,
+                disabled = false,
+                isInstance = true,            // 포인트 이벤트 (1회 발화)
+                // WARP 파라미터
+                warpOffsetX = offsetX,
+                warpOffsetY = offsetY,
+                warpDuration = duration,
+                warpEaseType = easeType,
+                warpMinDuration = DefaultWarpMinDuration,
+                warpMaxDuration = DefaultWarpMaxDuration,
+                warpInvincible = invincible,
+                warpAutoTarget = autoTarget,
+                // 다른 타입 파라미터 기본값
+                damageScale = 1f,
+                hitboxId = "",
+                moveSpeed = 0f,
+                nextAction = "",
+            };
+        }
+
+        /// <summary>워핑 이징 커브 적용</summary>
+        public static float ApplyWarpEasing(float t, int easeType)
+        {
+            switch (easeType)
+            {
+                case 0: // CubicOut
+                    return 1f - Mathf.Pow(1f - t, 3f);
+                case 1: // QuadOut
+                    return 1f - (1f - t) * (1f - t);
+                case 2: // ExpoOut
+                    return Mathf.Approximately(t, 1f) ? 1f : 1f - Mathf.Pow(2f, -10f * t);
+                case 3: // Linear
+                    return t;
+                case 4: // BackOut (오버슈트)
+                    float c1 = 1.70158f;
+                    float c3 = c1 + 1f;
+                    return 1f + c3 * Mathf.Pow(t - 1f, 3f) + c1 * Mathf.Pow(t - 1f, 2f);
+                default:
+                    return 1f - Mathf.Pow(1f - t, 3f);
+            }
+        }
     }
 
     /// <summary>
@@ -238,6 +323,7 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.STARTUP:       return new Color(0.3f, 0.5f, 0.9f, 0.8f);  // 파랑
                 case NotifyType.COLLISION:      return new Color(0.9f, 0.3f, 0.2f, 0.8f);  // 빨강
                 case NotifyType.CANCEL_WINDOW:  return new Color(0.9f, 0.8f, 0.2f, 0.8f);  // 노랑
+                case NotifyType.WARP:           return new Color(0.2f, 0.9f, 0.5f, 0.8f);  // 초록
                 default:                        return new Color(0.5f, 0.5f, 0.5f, 0.8f);  // 회색
             }
         }
@@ -250,6 +336,7 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.STARTUP:       return "STARTUP";
                 case NotifyType.COLLISION:      return "COLLISION";
                 case NotifyType.CANCEL_WINDOW:  return "CANCEL";
+                case NotifyType.WARP:           return "WARP";
                 default:                        return type.ToString();
             }
         }
@@ -262,7 +349,8 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.STARTUP:       return 0;
                 case NotifyType.COLLISION:      return 1;
                 case NotifyType.CANCEL_WINDOW:  return 2;
-                default:                        return 3;
+                case NotifyType.WARP:           return 3;
+                default:                        return 4;
             }
         }
 
@@ -274,6 +362,7 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.STARTUP:       return 5;
                 case NotifyType.COLLISION:      return 8;
                 case NotifyType.CANCEL_WINDOW:  return 10;
+                case NotifyType.WARP:           return 3;  // 인스턴스: 시각 표시용 최소 길이
                 default:                        return 5;
             }
         }

@@ -28,9 +28,8 @@ namespace FreeFlowHero.Combat.Core
         public const int NormalCounterWindow = 8;           // ±8f
 
         // ─── 워핑 ───
-        public const float WarpDuration = 0.12f;           // 워핑 이동 시간
-        public const float MaxWarpDistance = 20f;           // 최대 워핑 거리
-        public const float WarpArrivalOffset = 0.5f;       // 타겟 앞 착지 오프셋
+        // WarpDuration, WarpArrivalOffset → WARP 노티파이 파라미터로 이전됨
+        public const float MaxWarpDistance = 20f;           // 거리 비례 워핑 시간 계산 기준
 
         // ─── 텔레그래프 ───
         public const float TelegraphMinDuration = 0.3f;

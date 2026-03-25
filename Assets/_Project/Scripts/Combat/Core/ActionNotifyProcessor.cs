@@ -72,6 +72,13 @@ namespace FreeFlowHero.Combat.Core
         /// <summary>활성 STARTUP 노티파이의 moveSpeed</summary>
         public float StartupMoveSpeed { get; private set; }
 
+        // ─── WARP 상태 (인스턴스 모드) ───
+        /// <summary>이번 프레임에 WARP 노티파이가 발화되었는지</summary>
+        public bool IsWarpTriggered { get; private set; }
+
+        /// <summary>발화된 WARP 노티파이 (파라미터 참조용)</summary>
+        public ActionNotify WarpNotify { get; private set; }
+
         // ─── 인스턴스 이벤트 (1회 발화) ───
         /// <summary>이번 프레임에 발화된 인스턴스 노티파이 목록</summary>
         public IReadOnlyList<ActionNotify> InstanceEvents => instanceEvents;
@@ -127,6 +134,8 @@ namespace FreeFlowHero.Combat.Core
             CancelNextAction = "";
             IsStartupActive = false;
             StartupMoveSpeed = 0f;
+            IsWarpTriggered = false;
+            WarpNotify = null;
 
             // ── 인스턴스 이벤트 초기화 ──
             instanceEvents.Clear();
@@ -188,6 +197,11 @@ namespace FreeFlowHero.Combat.Core
                     if (n.counterCancel) CanCounterCancel = true;
                     if (!string.IsNullOrEmpty(n.nextAction))
                         CancelNextAction = n.nextAction;
+                    break;
+
+                case NotifyType.WARP:
+                    IsWarpTriggered = true;
+                    WarpNotify = n;
                     break;
             }
         }

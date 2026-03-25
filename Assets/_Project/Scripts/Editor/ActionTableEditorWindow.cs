@@ -1094,6 +1094,50 @@ namespace FreeFlowHero.Editor
                     notify.counterCancel = EditorGUILayout.Toggle("Counter Cancel", notify.counterCancel);
                     notify.nextAction = EditorGUILayout.TextField("Next Action", notify.nextAction);
                     break;
+
+                case NotifyType.WARP:
+                    EditorGUILayout.LabelField("WARP 파라미터", EditorStyles.boldLabel);
+
+                    // 도착 오프셋
+                    EditorGUILayout.LabelField("도착 오프셋 (적 기준)", EditorStyles.miniLabel);
+                    EditorGUILayout.BeginHorizontal();
+                    EditorGUILayout.LabelField("X", GUILayout.Width(14));
+                    notify.warpOffsetX = EditorGUILayout.FloatField(
+                        Mathf.Approximately(notify.warpOffsetX, 0f) ? ActionNotify.DefaultWarpOffsetX : notify.warpOffsetX);
+                    EditorGUILayout.LabelField("Y", GUILayout.Width(14));
+                    notify.warpOffsetY = EditorGUILayout.FloatField(notify.warpOffsetY);
+                    EditorGUILayout.EndHorizontal();
+                    EditorGUILayout.HelpBox(
+                        "X: 음수=적 앞쪽(기본 -0.5), 양수=적 뒤쪽\nY: 0=같은 높이",
+                        MessageType.None);
+
+                    EditorGUILayout.Space(4);
+
+                    // 워핑 시간
+                    notify.warpDuration = Mathf.Max(0f,
+                        EditorGUILayout.FloatField("Duration (초, 0=자동)", notify.warpDuration));
+                    if (Mathf.Approximately(notify.warpDuration, 0f))
+                    {
+                        EditorGUI.indentLevel++;
+                        notify.warpMinDuration = Mathf.Max(0.01f,
+                            EditorGUILayout.FloatField("Min Duration",
+                                notify.warpMinDuration > 0f ? notify.warpMinDuration : ActionNotify.DefaultWarpMinDuration));
+                        notify.warpMaxDuration = Mathf.Max(notify.warpMinDuration,
+                            EditorGUILayout.FloatField("Max Duration",
+                                notify.warpMaxDuration > 0f ? notify.warpMaxDuration : ActionNotify.DefaultWarpMaxDuration));
+                        EditorGUI.indentLevel--;
+                    }
+
+                    // 이징 커브
+                    string[] easeNames = { "CubicOut (기본)", "QuadOut", "ExpoOut", "Linear", "BackOut (오버슈트)" };
+                    notify.warpEaseType = EditorGUILayout.Popup("Easing", notify.warpEaseType, easeNames);
+
+                    EditorGUILayout.Space(2);
+
+                    // 옵션
+                    notify.warpInvincible = EditorGUILayout.Toggle("무적 (Invincible)", notify.warpInvincible);
+                    notify.warpAutoTarget = EditorGUILayout.Toggle("자동 타겟 (Auto Target)", notify.warpAutoTarget);
+                    break;
             }
 
             EditorGUILayout.Space(4);
@@ -1984,6 +2028,33 @@ namespace FreeFlowHero.Editor
                 OnSelected = () => AddNotifyToTrack(action,
                     ActionNotify.CreateCancelWindow(clickedFrame, clickedFrame + 10,
                         skill: false, move: true, dodge: false, counter: false), targetTrack)
+            });
+
+            items.Add(new NotifySearchPopup.PopupItem { IsSeparator = true });
+
+            // ── WARP 계열 ──
+            items.Add(new NotifySearchPopup.PopupItem
+            {
+                Label = "WARP — 기본 워핑",
+                SearchTag = "warp 워핑 워프 이동 dash 대시 접근 approach 텔레포트",
+                OnSelected = () => AddNotifyToTrack(action,
+                    ActionNotify.CreateWarp(clickedFrame), targetTrack)
+            });
+
+            items.Add(new NotifySearchPopup.PopupItem
+            {
+                Label = "WARP — 밀착 워핑 (offset 작음)",
+                SearchTag = "warp 워핑 밀착 close 접근 근접 가까이",
+                OnSelected = () => AddNotifyToTrack(action,
+                    ActionNotify.CreateWarp(clickedFrame, offsetX: -0.3f), targetTrack)
+            });
+
+            items.Add(new NotifySearchPopup.PopupItem
+            {
+                Label = "WARP — 후방 워핑",
+                SearchTag = "warp 워핑 후방 뒤 back behind 회전 돌아서",
+                OnSelected = () => AddNotifyToTrack(action,
+                    ActionNotify.CreateWarp(clickedFrame, offsetX: 0.5f), targetTrack)
             });
 
             items.Add(new NotifySearchPopup.PopupItem { IsSeparator = true });

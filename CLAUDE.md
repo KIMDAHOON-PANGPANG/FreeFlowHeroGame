@@ -172,6 +172,8 @@ OnHitReactionEnd(Target)       — 히트 리액션 종료
 OnEnemyStunned(Enemy)          — 적 스턴
 OnEnemyDeath(Enemy)            — 적 사망
 OnPlayerHit(HitData)           — 플레이어 피격
+OnWarpStart(Target, StartPos, EndPos) — 워핑 시작
+OnWarpEnd(Target)              — 워핑 완료
 ```
 
 ## 주요 수치 레퍼런스 (빠른 참조)
@@ -189,7 +191,7 @@ OnPlayerHit(HitData)           — 플레이어 피격
 | 처형 임계치 | HP 20% 이하 | 콤보 x50 시 30% |
 | 처형 거리 | 2.0 유닛 | 근접 거리 |
 | 헉슬리 기본 충전 | 히트당 5% | comboMultiplier 적용 |
-| 워핑 시간 | 0.1~0.15초 | DOTween/AnimationCurve |
+| 워핑 시간 | 0.04~0.12초 | WARP 노티파이 (거리 비례 자동 또는 고정) |
 
 ## 구현 로드맵
 
@@ -235,7 +237,8 @@ Assets/_Project/Scripts/Editor/
 ├── EnemyAnimatorBuilder.cs    ← 적 AnimatorController 자동 생성 (Phase 3 추가)
 ├── CombatConfigGenerator.cs   ← SO 에셋 배치 생성
 ├── LayerAndTagSetup.cs        ← 레이어/태그 자동 등록
-└── ActionTableEditorWindow.cs ← 액션 테이블 에디터 (JSON 시각 편집 툴)
+├── ActionTableEditorWindow.cs ← 액션 테이블 에디터 (JSON 시각 편집 툴)
+└── WarpNotifyMigrator.cs      ← 기존 액션에 WARP 노티파이 자동 추가
 ```
 
 ### 원칙

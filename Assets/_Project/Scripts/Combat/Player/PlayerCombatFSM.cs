@@ -87,7 +87,7 @@ namespace FreeFlowHero.Combat.Player
             RegisterState(new StrikeState());
             RegisterState(new HitState());
             // 상태 등록 — Phase 2: 프리플로우 코어
-            RegisterState(new WarpState());
+            // WarpState 제거됨: 워핑은 StrikeState 내부 WARP 노티파이로 처리
             RegisterState(new DodgeState());
             RegisterState(new CounterState());
         }
@@ -356,7 +356,6 @@ namespace FreeFlowHero.Combat.Player
             {
                 case "Strike":  stateColor = "<color=yellow>"; break;
                 case "Hit":     stateColor = "<color=red>"; break;
-                case "Warp":    stateColor = "<color=#80CCFF>"; break;
                 case "Dodge":   stateColor = "<color=#44FF44>"; break;
                 case "Counter": stateColor = "<color=#FFAA00>"; break;
                 default:        stateColor = "<color=lime>"; break;
@@ -433,7 +432,6 @@ namespace FreeFlowHero.Combat.Player
             switch (CurrentStateName)
             {
                 case "Strike":  colorHex = "FFFF00"; break; // 노랑
-                case "Warp":    colorHex = "80CCFF"; break; // 연파랑
                 case "Dodge":   colorHex = "44FF44"; break; // 초록
                 case "Counter": colorHex = "FFAA00"; break; // 주황
                 case "Hit":     colorHex = "FF4444"; break; // 빨강

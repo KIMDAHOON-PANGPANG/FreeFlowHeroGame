@@ -129,10 +129,8 @@ namespace FreeFlowHero.Combat.Player
 
         /// <summary>
         /// 프리플로우 공격 분기:
-        /// 1. 타겟 선택
-        /// 2. 워핑 필요 → WarpState
-        /// 3. 근접 거리 → 바로 StrikeState
-        /// 4. 타겟 없음 → 헛스윙 StrikeState
+        /// 1. 타겟 선택 + 방향 전환
+        /// 2. 무조건 StrikeState 진입 (워핑은 WARP 노티파이가 처리)
         /// </summary>
         private void ResolveAttack(InputData input)
         {
@@ -149,30 +147,21 @@ namespace FreeFlowHero.Combat.Player
 
             if (target != null)
             {
-                // 타겟 발견 → 워핑 필요 여부
                 context.currentTarget = target.GetTransform();
 
-                if (fsm.TargetSelector.NeedsWarp(playerPos, target))
-                {
-                    // 워핑 필요 → WarpState → 자동으로 StrikeState 전환
-                    fsm.TransitionTo<WarpState>();
-                }
-                else
-                {
-                    // 근접 → 바로 Strike
-                    float dir = Mathf.Sign(target.GetTransform().position.x - playerPos.x);
-                    Vector3 scale = context.playerTransform.localScale;
-                    scale.x = Mathf.Abs(scale.x) * (dir >= 0 ? 1f : -1f);
-                    context.playerTransform.localScale = scale;
-
-                    fsm.TransitionTo<StrikeState>();
-                }
+                // 방향 전환
+                float dir = Mathf.Sign(target.GetTransform().position.x - playerPos.x);
+                Vector3 scale = context.playerTransform.localScale;
+                scale.x = Mathf.Abs(scale.x) * (dir >= 0 ? 1f : -1f);
+                context.playerTransform.localScale = scale;
             }
             else
             {
-                // 타겟 없음 → 헛스윙 Strike
-                fsm.TransitionTo<StrikeState>();
+                context.currentTarget = null;
             }
+
+            // 워핑은 WARP 노티파이가 처리 → 무조건 StrikeState 진입
+            fsm.TransitionTo<StrikeState>();
         }
     }
 }

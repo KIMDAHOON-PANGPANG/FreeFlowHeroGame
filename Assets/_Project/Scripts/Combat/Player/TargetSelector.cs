@@ -14,7 +14,7 @@ namespace FreeFlowHero.Combat.Player
         // ─── 설정 ───
         private const float MaxAutoRange = 12f;           // 워핑 가능 최대 거리
         private const float DirectionWeight = 2.5f;       // 입력 방향 가중치
-        private const float MeleeRange = 1.5f;            // 이 거리 안이면 워핑 불필요
+        public const float MeleeRange = 1.5f;             // 이 거리 안이면 워핑 불필요
         private const float LastTargetPenalty = 8f;        // 직전 타겟 페널티 (다른 적 우선)
 
         /// <summary>현재 선택된 타겟</summary>
@@ -96,14 +96,6 @@ namespace FreeFlowHero.Combat.Player
             LastHitTarget = target;
         }
 
-        /// <summary>워핑이 필요한지 확인 (근접 범위 밖이면 워핑 필요)</summary>
-        public bool NeedsWarp(Vector2 playerPos, ICombatTarget target)
-        {
-            if (target == null) return false;
-            float dist = Vector2.Distance(playerPos, (Vector2)target.GetTransform().position);
-            return dist > MeleeRange;
-        }
-
         /// <summary>현재 타겟이 여전히 유효한지 검증</summary>
         public bool IsTargetValid()
         {
@@ -112,19 +104,7 @@ namespace FreeFlowHero.Combat.Player
             return CurrentTarget.IsTargetable;
         }
 
-        /// <summary>워핑 도착 위치 계산 (타겟 약간 앞, Y는 플레이어 유지)</summary>
-        public Vector2 GetWarpDestination(Vector2 playerPos, ICombatTarget target)
-        {
-            if (target == null) return playerPos;
-
-            Vector2 targetPos = target.GetTransform().position;
-            float dir = Mathf.Sign(targetPos.x - playerPos.x);
-
-            return new Vector2(
-                targetPos.x - dir * CombatConstants.WarpArrivalOffset,
-                playerPos.y  // Y좌표는 플레이어 기준 유지 (높이 틀어짐 방지)
-            );
-        }
+        // NeedsWarp, GetWarpDestination → WARP 노티파이(StrikeState.StartInlineWarp)로 이전됨
 
         /// <summary>타겟 클리어</summary>
         public void ClearTarget()

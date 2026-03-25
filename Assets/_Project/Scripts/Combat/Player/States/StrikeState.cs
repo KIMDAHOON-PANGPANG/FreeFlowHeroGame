@@ -84,6 +84,16 @@ namespace FreeFlowHero.Combat.Player
         // 현재 액션의 JSON 데이터 참조
         private ActionEntry currentAction;
 
+        // ─── 인라인 워핑 상태 (WARP 노티파이로 트리거) ───
+        private bool isWarpActive;
+        private Vector2 warpStartPos;
+        private Vector2 warpEndPos;
+        private float warpTimer;
+        private float activeWarpDuration;
+        private int activeWarpEaseType;
+        private Color warpOriginalColor;
+        private static readonly Color WarpColor = new Color(0.5f, 0.8f, 1f, 0.7f);
+
         public override void Enter()
         {
             base.Enter();
@@ -92,6 +102,7 @@ namespace FreeFlowHero.Combat.Player
             hitboxSubscribed = false;
             isAttacking = true;             // ★ 공격 시작 → 공격 입력 잠금
             context.canCancel = false;      // ★ 이전 상태의 canCancel 잔류값 초기화
+            isWarpActive = false;           // 인라인 워핑 초기화
 
             // ─── 콤보 인덱스에 따른 액션 데이터 결정 ───
             int idx = Mathf.Clamp(context.comboChainIndex, 0, MaxComboChain - 1);
@@ -192,6 +203,14 @@ namespace FreeFlowHero.Combat.Player
             hitbox?.Deactivate();
             UnsubscribeHitbox();
 
+            // 워핑 중 Exit 시 플래그 정리
+            if (isWarpActive)
+            {
+                isWarpActive = false;
+                context.isWarping = false;
+                context.isInvulnerable = false;
+            }
+
             if (spriteRenderer != null)
                 spriteRenderer.color = originalColor;
 
@@ -227,6 +246,23 @@ namespace FreeFlowHero.Combat.Player
             //   노티파이(COLLISION, CANCEL_WINDOW)는 애니메이션 프레임 기준으로 정의됨
             int animFrame = Mathf.FloorToInt(frame * currentPlaybackRate);
             notifyProcessor.Tick(animFrame);
+
+            // ── 인라인 워핑 진행 중이면 워핑만 업데이트 ──
+            if (isWarpActive)
+            {
+                UpdateInlineWarp(deltaTime);
+                // 워핑 중에는 COLLISION/CANCEL 처리 스킵, 프레임 카운터는 계속 진행
+                // 프레임 완료 체크만 수행
+                if (isWarpActive) return;
+                // 워핑 완료 → 아래로 계속 진행
+            }
+
+            // ── WARP 노티파이 트리거 감지 ──
+            if (notifyProcessor.IsWarpTriggered)
+            {
+                StartInlineWarp(notifyProcessor.WarpNotify);
+                if (isWarpActive) return; // 워핑 시작됨 → 이번 프레임은 여기서 종료
+            }
 
             // ── STARTUP: 이동 속도 적용 ──
             if (notifyProcessor.IsStartupActive && notifyProcessor.StartupMoveSpeed > 0f)
@@ -376,6 +412,13 @@ namespace FreeFlowHero.Combat.Player
 
         public override void HandleInput(InputData input)
         {
+            // 워핑 중 입력은 버퍼에만 저장
+            if (isWarpActive)
+            {
+                fsm.InputBuffer.BufferInput(input);
+                return;
+            }
+
             int frame = context.stateFrameCounter;
             int animFrame = Mathf.FloorToInt(frame * currentPlaybackRate);
 
@@ -521,11 +564,19 @@ namespace FreeFlowHero.Combat.Player
             }
         }
 
+        public override void OnHit(HitData hitData)
+        {
+            // 워핑 중 무적
+            if (isWarpActive) return;
+            base.OnHit(hitData);
+        }
+
         /// <summary>
-        /// 프리플로우 콤보 체인: 다음 공격 시 타겟 재선택 + 워핑 판정.
+        /// 프리플로우 콤보 체인: 다음 공격 시 타겟 재선택.
         /// ★ comboChainIndex는 이 함수 호출 전에 반드시 세팅되어 있어야 함.
         ///   - ResolveCancelTarget에서 명시적으로 세팅하거나
         ///   - HandleBufferedInput 기본 분기에서 직접 증가
+        /// ★ 워핑은 WARP 노티파이가 처리하므로 WarpState 분기 제거됨.
         /// </summary>
         private void ResolveNextComboAttack(InputData input)
         {
@@ -539,22 +590,136 @@ namespace FreeFlowHero.Combat.Player
                 playerPos, context.activeEnemies, inputDir);
 
             if (target != null)
-            {
                 context.currentTarget = target.GetTransform();
+            else
+                context.currentTarget = null;
 
-                if (fsm.TargetSelector.NeedsWarp(playerPos, target))
-                {
-                    fsm.TransitionTo<WarpState>();
-                }
-                else
-                {
-                    fsm.TransitionTo<StrikeState>();
-                }
+            // 워핑은 WARP 노티파이가 처리 → 무조건 StrikeState 진입
+            fsm.TransitionTo<StrikeState>();
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  인라인 워핑 (WARP 노티파이 트리거)
+        // ═══════════════════════════════════════════════════════
+
+        /// <summary>WARP 노티파이로 인라인 워핑 시작</summary>
+        private void StartInlineWarp(ActionNotify warpNotify)
+        {
+            // 자동 타겟 재선택
+            if (warpNotify.warpAutoTarget)
+            {
+                Vector2 playerPos = GetPos();
+                float inputDir = context.playerTransform.localScale.x >= 0 ? 1f : -1f;
+                var target = fsm.TargetSelector.SelectTarget(
+                    playerPos, context.activeEnemies, inputDir);
+                if (target != null)
+                    context.currentTarget = target.GetTransform();
+            }
+
+            // 타겟 없으면 워핑 스킵 (헛스윙)
+            if (context.currentTarget == null) return;
+
+            Vector2 startPos = GetPos();
+            Vector2 targetPos = (Vector2)context.currentTarget.position;
+
+            // 근접 거리 이내면 워핑 스킵, 방향만 전환
+            float dist = Vector2.Distance(startPos, targetPos);
+            if (dist <= TargetSelector.MeleeRange)
+            {
+                // 방향 전환만
+                float d = Mathf.Sign(targetPos.x - startPos.x);
+                Vector3 scale = context.playerTransform.localScale;
+                scale.x = Mathf.Abs(scale.x) * (d >= 0 ? 1f : -1f);
+                context.playerTransform.localScale = scale;
+                facing = d;
+                return;
+            }
+
+            // 워핑 시작
+            isWarpActive = true;
+            context.isWarping = true;
+            context.isInvulnerable = warpNotify.warpInvincible;
+
+            warpStartPos = startPos;
+
+            // 도착 위치 계산 (노티파이 파라미터)
+            float dir = Mathf.Sign(targetPos.x - startPos.x);
+            float offsetX = warpNotify.warpOffsetX;
+            // ★ offsetX가 0이면 기본값 사용 (JsonUtility 누락 필드 대응)
+            if (Mathf.Approximately(offsetX, 0f))
+                offsetX = ActionNotify.DefaultWarpOffsetX;
+            warpEndPos = new Vector2(
+                targetPos.x + dir * offsetX,
+                startPos.y + warpNotify.warpOffsetY
+            );
+
+            // 방향 전환
+            Vector3 sc = context.playerTransform.localScale;
+            sc.x = Mathf.Abs(sc.x) * (dir >= 0 ? 1f : -1f);
+            context.playerTransform.localScale = sc;
+            facing = dir;
+
+            // 워핑 시간 계산
+            if (warpNotify.warpDuration > 0f)
+            {
+                activeWarpDuration = warpNotify.warpDuration;
             }
             else
             {
-                context.currentTarget = null;
-                fsm.TransitionTo<StrikeState>();
+                // 자동 계산: 거리 비례
+                float minD = warpNotify.warpMinDuration > 0f
+                    ? warpNotify.warpMinDuration : ActionNotify.DefaultWarpMinDuration;
+                float maxD = warpNotify.warpMaxDuration > 0f
+                    ? warpNotify.warpMaxDuration : ActionNotify.DefaultWarpMaxDuration;
+                float warpDist = Vector2.Distance(warpStartPos, warpEndPos);
+                activeWarpDuration = Mathf.Lerp(minD, maxD, warpDist / CombatConstants.MaxWarpDistance);
+                activeWarpDuration = Mathf.Max(activeWarpDuration, minD);
+            }
+
+            activeWarpEaseType = warpNotify.warpEaseType;
+            warpTimer = 0f;
+
+            // 히트박스 비활성 (워핑 중 공격 판정 방지)
+            hitbox?.Deactivate();
+            UnsubscribeHitbox();
+
+            // 시각 피드백: 시안색
+            if (spriteRenderer != null)
+            {
+                warpOriginalColor = spriteRenderer.color;
+                spriteRenderer.color = WarpColor;
+            }
+
+            // 속도 초기화 (Kinematic 직접 이동)
+            if (context.playerRigidbody != null)
+                context.playerRigidbody.linearVelocity = Vector2.zero;
+
+            Debug.Log($"[Strike] WARP START — dist:{dist:F1} dur:{activeWarpDuration:F3} " +
+                $"ease:{activeWarpEaseType} offset:({warpNotify.warpOffsetX:F1},{warpNotify.warpOffsetY:F1})");
+        }
+
+        /// <summary>인라인 워핑 매 프레임 업데이트</summary>
+        private void UpdateInlineWarp(float deltaTime)
+        {
+            warpTimer += deltaTime;
+            float t = Mathf.Clamp01(warpTimer / activeWarpDuration);
+            float eased = ActionNotify.ApplyWarpEasing(t, activeWarpEaseType);
+
+            Vector2 newPos = Vector2.Lerp(warpStartPos, warpEndPos, eased);
+            MoveTo(newPos);
+
+            if (t >= 1f)
+            {
+                // 워핑 완료
+                isWarpActive = false;
+                context.isWarping = false;
+                context.isInvulnerable = false;
+
+                // 색상 복원
+                if (spriteRenderer != null)
+                    spriteRenderer.color = warpOriginalColor;
+
+                Debug.Log($"[Strike] WARP END");
             }
         }
 
