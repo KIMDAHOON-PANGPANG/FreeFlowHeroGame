@@ -110,8 +110,8 @@ namespace FreeFlowHero.Editor
         //   클립 길이 또는 레거시 TotalFrames를 기준으로 설정, 노티파이가 넘어가면 자동 확장
         private int fixedTimelineFrames = 0;   // 0이면 아직 미설정 → 자동 계산
 
-        // ★ 프레임 ↔ 초 표시 토글
-        private bool showTimeAsSeconds = false;
+        // ★ 프레임 ↔ 초 표시 토글 (디폴트: 초 표시)
+        private bool showTimeAsSeconds = true;
 
         // 트랙 활성 상태 (에디터 전용, 비활성 트랙의 노티파이는 disabled 처리)
         private bool[] trackEnabled = { true, true, true, true, true, true, true, true, true, true };
@@ -144,6 +144,12 @@ namespace FreeFlowHero.Editor
         private GUIStyle tagStyle;
         private GUIStyle frameBarBg;
         private bool stylesInit;
+
+        // ─── 커스텀 툴팁 (자체 호버 감지) ───
+        private GUIStyle tooltipStyle;
+        private string pendingTooltip;  // 이번 OnGUI 프레임에서 호버된 툴팁 텍스트
+        private static readonly Vector2 TooltipOffset = new Vector2(18, -10);
+        private const float TooltipMaxWidth = 280f;
 
         // ─── 경로 ───
         private static string TableFolderPath =>
@@ -419,6 +425,7 @@ namespace FreeFlowHero.Editor
 
         private void OnGUI()
         {
+            pendingTooltip = null; // ★ 매 프레임 리셋
             InitStyles();
             HandleKeyboardShortcuts();
             DrawToolbar();
@@ -451,6 +458,100 @@ namespace FreeFlowHero.Editor
             DrawInspectorPanel();
 
             EditorGUILayout.EndHorizontal();
+
+            // ── 커스텀 툴팁 (마우스 커서에 가려지지 않는 위치) ──
+            DrawCustomTooltip();
+        }
+
+        /// <summary>
+        /// 직전에 그린 EditorGUILayout 필드의 Rect에 마우스가 올라가 있으면
+        /// pendingTooltip에 텍스트를 등록한다.
+        /// GUIContent tooltip이 아니라 자체 호버 감지이므로 Unity 기본 툴팁이 뜨지 않는다.
+        /// </summary>
+        private void Tip(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+            if (Event.current.type == EventType.Repaint)
+            {
+                Rect r = GUILayoutUtility.GetLastRect();
+                if (r.Contains(Event.current.mousePosition))
+                    pendingTooltip = text;
+            }
+        }
+
+        /// <summary>
+        /// pendingTooltip이 있으면 마우스 커서 오른쪽 위에 커스텀 툴팁 팝업을 그린다.
+        /// OnGUI 맨 마지막에 호출하여 다른 UI 위에 오버레이한다.
+        /// </summary>
+        private void DrawCustomTooltip()
+        {
+            if (Event.current.type != EventType.Repaint) return;
+            if (string.IsNullOrEmpty(pendingTooltip)) return;
+
+            // 마우스가 윈도우 안에 있는지 확인
+            Vector2 mouse = Event.current.mousePosition;
+            Rect windowRect = new Rect(0, 0, position.width, position.height);
+            if (!windowRect.Contains(mouse)) return;
+
+            // 스타일 초기화 (한 번만)
+            if (tooltipStyle == null)
+            {
+                tooltipStyle = new GUIStyle(EditorStyles.helpBox)
+                {
+                    fontSize = 11,
+                    wordWrap = true,
+                    richText = false,
+                    padding = new RectOffset(8, 8, 6, 6),
+                    normal = { textColor = new Color(0.9f, 0.9f, 0.9f) },
+                    alignment = TextAnchor.UpperLeft
+                };
+                var tex = new Texture2D(1, 1);
+                tex.SetPixel(0, 0, new Color(0.18f, 0.18f, 0.18f, 0.96f));
+                tex.Apply();
+                tooltipStyle.normal.background = tex;
+            }
+
+            var content = new GUIContent(pendingTooltip);
+            Vector2 size = tooltipStyle.CalcSize(content);
+
+            // 최대 너비 제한 → 높이 재계산
+            if (size.x > TooltipMaxWidth)
+            {
+                size.x = TooltipMaxWidth;
+                size.y = tooltipStyle.CalcHeight(content, TooltipMaxWidth);
+            }
+
+            // ── 위치 계산: 마우스 오른쪽 위 ──
+            float x = mouse.x + TooltipOffset.x;
+            float y = mouse.y + TooltipOffset.y - size.y;
+
+            // 오른쪽 넘침 → 마우스 왼쪽으로
+            if (x + size.x > windowRect.width - 4f)
+                x = mouse.x - size.x - 12f;
+
+            // 위쪽 넘침 → 마우스 아래로
+            if (y < 4f)
+                y = mouse.y + 24f;
+
+            // 아래쪽 넘침
+            if (y + size.y > windowRect.height - 4f)
+                y = windowRect.height - size.y - 4f;
+
+            // 왼쪽 넘침
+            if (x < 4f)
+                x = 4f;
+
+            Rect tooltipRect = new Rect(x, y, size.x, size.y);
+
+            // 배경
+            EditorGUI.DrawRect(tooltipRect, new Color(0.15f, 0.15f, 0.15f, 0.96f));
+            // 테두리 (1px)
+            EditorGUI.DrawRect(new Rect(tooltipRect.x, tooltipRect.y, tooltipRect.width, 1), new Color(0.45f, 0.45f, 0.45f, 0.8f));
+            EditorGUI.DrawRect(new Rect(tooltipRect.x, tooltipRect.yMax - 1, tooltipRect.width, 1), new Color(0.45f, 0.45f, 0.45f, 0.8f));
+            EditorGUI.DrawRect(new Rect(tooltipRect.x, tooltipRect.y, 1, tooltipRect.height), new Color(0.45f, 0.45f, 0.45f, 0.8f));
+            EditorGUI.DrawRect(new Rect(tooltipRect.xMax - 1, tooltipRect.y, 1, tooltipRect.height), new Color(0.45f, 0.45f, 0.45f, 0.8f));
+            // 텍스트
+            GUI.Label(tooltipRect, pendingTooltip, tooltipStyle);
         }
 
         /// <summary>세로 스플리터 바 렌더링 + 커서 설정</summary>
@@ -816,7 +917,7 @@ namespace FreeFlowHero.Editor
             // ── 프리뷰↔타임라인 수평 스플리터 ──
             DrawHorizontalSplitter();
 
-            // ── 타임라인 옵션 바 (프레임↔초 토글 + 고정 타임라인 길이) ──
+            // ── 타임라인 옵션 바 (프레임↔초 토글 + 재생배율 + 고정 타임라인 길이) ──
             EditorGUILayout.BeginHorizontal();
             {
                 // 프레임↔초 토글
@@ -826,13 +927,27 @@ namespace FreeFlowHero.Editor
 
                 GUILayout.FlexibleSpace();
 
+                // ★ 재생배율 표시 (타임라인 바 위쪽 중앙)
+                float rate = (action != null && action.playbackRate > 0f) ? action.playbackRate : 1f;
+                var rateStyle = new GUIStyle(EditorStyles.boldLabel);
+                rateStyle.alignment = TextAnchor.MiddleCenter;
+                rateStyle.normal.textColor = Mathf.Abs(rate - 1f) > 0.01f
+                    ? new Color(1f, 0.6f, 0.2f)   // 1.0x가 아니면 주황색 강조
+                    : new Color(0.7f, 0.7f, 0.7f); // 1.0x면 회색
+                EditorGUILayout.LabelField($"재생배율: {rate:F1}x", rateStyle, GUILayout.Width(120));
+
+                GUILayout.FlexibleSpace();
+
                 // 고정 타임라인 길이 표시/편집
                 EditorGUILayout.LabelField("타임라인 길이:", GUILayout.Width(80));
                 int newFixed = EditorGUILayout.IntField(fixedTimelineFrames, GUILayout.Width(50));
                 if (newFixed != fixedTimelineFrames && newFixed > 0)
                     fixedTimelineFrames = newFixed;
                 if (showTimeAsSeconds)
-                    EditorGUILayout.LabelField($"({fixedTimelineFrames * CombatConstants.FrameDuration:F2}s)", EditorStyles.miniLabel, GUILayout.Width(60));
+                {
+                    float tlTimeSec = fixedTimelineFrames * CombatConstants.FrameDuration / Mathf.Max(rate, 0.01f);
+                    EditorGUILayout.LabelField($"({tlTimeSec:F2}s)", EditorStyles.miniLabel, GUILayout.Width(60));
+                }
                 else
                     EditorGUILayout.LabelField("f", EditorStyles.miniLabel, GUILayout.Width(12));
 
@@ -844,13 +959,14 @@ namespace FreeFlowHero.Editor
             // ── 타임라인 트랙 (하단) ──
             DrawNotifyTimeline(action);
 
-            // ── 재생 상태 바 (액션 실제 범위 기준으로 표시) ──
+            // ── 재생 상태 바 (액션 실제 범위 기준, 재생배율 반영) ──
             int curFrame = Mathf.RoundToInt(previewFrame);
             int actionTotalF = GetEffectiveTotalFrames(action);
+            float statusRate = (action != null && action.playbackRate > 0f) ? action.playbackRate : 1f;
             string playState = isPreviewPlaying ? "▶ Playing" : "⏸ Paused";
             string timeInfo = showTimeAsSeconds
-                ? $"{curFrame * CombatConstants.FrameDuration:F2}s / {actionTotalF * CombatConstants.FrameDuration:F2}s"
-                : $"{curFrame} / {actionTotalF}f   ({curFrame / 60f:F2}s / {actionTotalF / 60f:F2}s)";
+                ? $"{curFrame * CombatConstants.FrameDuration / statusRate:F2}s / {actionTotalF * CombatConstants.FrameDuration / statusRate:F2}s  ({curFrame}f / {actionTotalF}f)"
+                : $"{curFrame} / {actionTotalF}f   ({curFrame * CombatConstants.FrameDuration / statusRate:F2}s / {actionTotalF * CombatConstants.FrameDuration / statusRate:F2}s)";
             EditorGUILayout.LabelField($"{playState}   {timeInfo}", EditorStyles.centeredGreyMiniLabel);
 
             EditorGUILayout.EndVertical();
@@ -880,44 +996,48 @@ namespace FreeFlowHero.Editor
             // ── 기본 정보 ──
             EditorGUILayout.LabelField("기본 정보", headerStyle);
             action.id = EditorGUILayout.TextField("Action ID", action.id);
+            Tip("액션 고유 식별자. 캔슬 라우팅, 코드 참조에 사용 (예: LightAtk1)");
             action.name = EditorGUILayout.TextField("표시 이름", action.name);
+            Tip("에디터에서 표시되는 이름. 게임 내 표시용이 아닌 작업용 라벨");
             string prevClip = action.clip;
             action.clip = EditorGUILayout.TextField("Animation Clip", action.clip);
+            Tip("매핑할 AnimationClip 이름. FBX 내부 클립명과 일치해야 함");
             if (prevClip != action.clip)
                 InvalidateClipFramesCache(action.id); // ★ 클립 변경 시 해당 액션 캐시 무효화
 
             EditorGUILayout.Space(6);
 
-            // ── 레거시 프레임 데이터 (하위호환) ──
-            EditorGUILayout.LabelField("프레임 데이터 (레거시)", headerStyle);
-            action.startup = EditorGUILayout.IntSlider("Startup", action.startup, 0, 30);
-            action.active = EditorGUILayout.IntSlider("Active", action.active, 0, 30);
-            action.recovery = EditorGUILayout.IntSlider("Recovery", action.recovery, 0, 40);
-            EditorGUILayout.LabelField($"총 {action.TotalFrames}f = {action.TotalDuration:F3}s",
-                EditorStyles.centeredGreyMiniLabel);
-
-            EditorGUILayout.Space(4);
-
             // ── 재생 배율 ──
             EditorGUILayout.BeginHorizontal();
             action.playbackRate = EditorGUILayout.Slider("재생배율", action.playbackRate, 0.1f, 3.0f);
+            Tip("애니메이션 재생 속도 배율.\n1.0 = 원본 속도, 0.5 = 절반 속도, 2.0 = 2배속.\n타임라인의 실시간 표시에 영향");
             if (GUILayout.Button("1x", EditorStyles.miniButton, GUILayout.Width(28)))
                 action.playbackRate = 1.0f;
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.Space(6);
 
-            // ── 캔슬 설정 ──
-            EditorGUILayout.LabelField("캔슬 설정", headerStyle);
-            action.cancelRatio = EditorGUILayout.Slider("Cancel Ratio", action.cancelRatio, 0f, 1f);
-            action.moveSpeed = EditorGUILayout.FloatField("Move Speed", action.moveSpeed);
-            action.defaultNext = EditorGUILayout.TextField("Default Next", action.defaultNext);
+            // ── 트랜지션 블렌딩 ──
+            EditorGUILayout.LabelField("트랜지션 블렌딩", headerStyle);
+            EditorGUILayout.BeginHorizontal();
+            action.transitionIn = EditorGUILayout.Slider("이전 → 진입", action.transitionIn, 0.0f, 0.5f);
+            Tip("이전 액션에서 이 액션으로 전환될 때 블렌딩 시간(초).\nAnimator 크로스페이드 구간입니다.\n이 값만큼 프리뷰 시작이 지연되어 인게임과 일치합니다.\n0 = 보정 없음");
+            if (GUILayout.Button("0", EditorStyles.miniButton, GUILayout.Width(20)))
+                action.transitionIn = 0f;
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            action.transitionOut = EditorGUILayout.Slider("퇴장 → 다음", action.transitionOut, 0.0f, 0.5f);
+            Tip("이 액션에서 다음 액션으로 전환될 때 블렌딩 시간(초).\nAnimator 크로스페이드 구간입니다.\n현재는 참고용 메타데이터입니다.");
+            if (GUILayout.Button("0", EditorStyles.miniButton, GUILayout.Width(20)))
+                action.transitionOut = 0f;
+            EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.Space(6);
 
-            // ── 캔슬 경로 ──
-            EditorGUILayout.LabelField("캔슬 경로", headerStyle);
-            DrawCancelRoutes(action);
+            // ── 이동 속도 ──
+            action.moveSpeed = EditorGUILayout.FloatField("Move Speed", action.moveSpeed);
+            Tip("이 액션 실행 중 캐릭터 이동 속도 (유닛/초).\n0이면 제자리에서 실행");
 
             EditorGUILayout.Space(6);
 
@@ -977,6 +1097,7 @@ namespace FreeFlowHero.Editor
             EditorGUILayout.BeginHorizontal();
             bool prevInstance = notify.isInstance;
             notify.isInstance = EditorGUILayout.Toggle("Instance (1회 실행)", notify.isInstance);
+            Tip("체크: startFrame에서 1회만 발화.\n해제: startFrame~endFrame 구간 동안 매 프레임 활성 (State 모드)");
             EditorGUILayout.EndHorizontal();
             if (notify.isInstance)
             {
@@ -996,23 +1117,29 @@ namespace FreeFlowHero.Editor
             // ── Disabled 토글 ──
             bool prevDisabled = notify.disabled;
             notify.disabled = EditorGUILayout.Toggle("Disabled (비활성)", notify.disabled);
+            Tip("체크하면 이 노티파이를 런타임에서 무시.\n테스트/디버깅용으로 일시 비활성화할 때 사용");
             if (prevDisabled != notify.disabled)
                 isDirty = true;
 
             EditorGUILayout.Space(4);
 
+            // ★ 타임라인 최대 프레임 (인스펙터 입력 클램프용)
+            int inspectorMaxFrame = fixedTimelineFrames > 0 ? fixedTimelineFrames : 9999;
+
             if (showTimeAsSeconds)
             {
                 // ── 초(seconds) 모드 ──
                 float startSec = EditorGUILayout.FloatField("Start (초)", notify.StartTime);
+                Tip("노티파이 시작 시간 (초). 프레임으로 자동 변환됨");
                 float endSec = EditorGUILayout.FloatField("End (초)", notify.EndTime);
+                Tip("노티파이 종료 시간 (초). Instance 모드에서는 표시용");
                 // 초→프레임 역변환
                 int newStart = Mathf.RoundToInt(startSec / CombatConstants.FrameDuration);
                 int newEnd = Mathf.RoundToInt(endSec / CombatConstants.FrameDuration);
                 if (newStart != notify.startFrame || newEnd != notify.endFrame)
                 {
-                    notify.startFrame = Mathf.Max(0, newStart);
-                    notify.endFrame = Mathf.Max(notify.startFrame + 1, newEnd);
+                    notify.startFrame = Mathf.Clamp(newStart, 0, inspectorMaxFrame - 1);
+                    notify.endFrame = Mathf.Clamp(newEnd, notify.startFrame + 1, inspectorMaxFrame);
                     isDirty = true;
                 }
                 float notifyRate1 = (action.playbackRate > 0f) ? action.playbackRate : 1f;
@@ -1026,8 +1153,12 @@ namespace FreeFlowHero.Editor
             else
             {
                 // ── 프레임(frame) 모드 ──
-                notify.startFrame = EditorGUILayout.IntField("Start Frame", notify.startFrame);
-                notify.endFrame = EditorGUILayout.IntField("End Frame", notify.endFrame);
+                int inputStart = EditorGUILayout.IntField("Start Frame", notify.startFrame);
+                Tip("노티파이 시작 프레임 (0부터 시작)");
+                int inputEnd = EditorGUILayout.IntField("End Frame", notify.endFrame);
+                Tip("노티파이 종료 프레임. Instance 모드에서는 표시용");
+                notify.startFrame = Mathf.Clamp(inputStart, 0, inspectorMaxFrame - 1);
+                notify.endFrame = Mathf.Clamp(inputEnd, notify.startFrame + 1, inspectorMaxFrame);
                 float notifyRate2 = (action.playbackRate > 0f) ? action.playbackRate : 1f;
                 string rateInfo2 = (Mathf.Abs(notifyRate2 - 1f) > 0.01f)
                     ? $"  | 모션:{notify.DurationTime / notifyRate2:F3}s (x{notifyRate2:F1})"
@@ -1037,6 +1168,7 @@ namespace FreeFlowHero.Editor
                     EditorStyles.miniLabel);
             }
             notify.track = EditorGUILayout.IntSlider("Track", notify.track, 0, trackCount - 1);
+            Tip("타임라인에서 이 노티파이가 표시되는 트랙 번호.\n겹치는 노티파이를 다른 트랙에 배치하여 시각적으로 구분");
 
             EditorGUILayout.Space(4);
 
@@ -1046,12 +1178,15 @@ namespace FreeFlowHero.Editor
                 case NotifyType.STARTUP:
                     EditorGUILayout.LabelField("STARTUP 파라미터", EditorStyles.boldLabel);
                     notify.moveSpeed = EditorGUILayout.FloatField("Move Speed", notify.moveSpeed);
+                    Tip("STARTUP 구간 중 캐릭터 전진 속도 (유닛/초).\n0이면 제자리에서 선딜");
                     break;
 
                 case NotifyType.COLLISION:
                     EditorGUILayout.LabelField("COLLISION 파라미터", EditorStyles.boldLabel);
                     notify.hitboxId = EditorGUILayout.TextField("Hitbox ID", notify.hitboxId);
+                    Tip("히트박스 식별자. 같은 액션에 여러 COLLISION이 있을 때 구분용");
                     notify.damageScale = EditorGUILayout.Slider("Damage Scale", notify.damageScale, 0f, 5f);
+                    Tip("이 COLLISION의 데미지 배율.\n1.0 = 기본 데미지, 0.5 = 절반, 2.0 = 2배");
 
                     EditorGUILayout.Space(6);
                     EditorGUILayout.LabelField("히트박스 트랜스폼", EditorStyles.boldLabel);
@@ -1089,10 +1224,35 @@ namespace FreeFlowHero.Editor
                 case NotifyType.CANCEL_WINDOW:
                     EditorGUILayout.LabelField("CANCEL_WINDOW 파라미터", EditorStyles.boldLabel);
                     notify.skillCancel = EditorGUILayout.Toggle("Skill Cancel (콤보)", notify.skillCancel);
+                    Tip("이 구간에서 공격/강공격 입력으로 다음 콤보 액션 캔슬 가능");
                     notify.moveCancel = EditorGUILayout.Toggle("Move Cancel (이동)", notify.moveCancel);
+                    Tip("이 구간에서 이동 입력으로 Idle 상태 캔슬 가능");
                     notify.dodgeCancel = EditorGUILayout.Toggle("Dodge Cancel (회피)", notify.dodgeCancel);
+                    Tip("이 구간에서 회피 입력으로 Dodge 상태 캔슬 가능");
                     notify.counterCancel = EditorGUILayout.Toggle("Counter Cancel", notify.counterCancel);
-                    notify.nextAction = EditorGUILayout.TextField("Next Action", notify.nextAction);
+                    Tip("이 구간에서 카운터 입력으로 Counter 상태 캔슬 가능");
+
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField("입력별 캔슬 라우팅", EditorStyles.boldLabel);
+                    EditorGUILayout.HelpBox("비워두면 기본 액션으로 전이 (Dodge→Dodge, Counter→Counter 등)", MessageType.None);
+                    // ★ 각 캔슬 플래그가 켜져 있을 때만 해당 라우팅 필드 표시
+                    if (notify.skillCancel)
+                    {
+                        notify.nextAction = EditorGUILayout.TextField("Attack →", notify.nextAction);
+                        Tip("공격 캔슬 시 전이할 다음 액션 ID.\n비워두면 콤보 체인의 다음 타수로 자동 전이");
+                        notify.heavyNext = EditorGUILayout.TextField("Heavy →", notify.heavyNext);
+                        Tip("강공격 캔슬 시 전이할 액션 ID.\n비워두면 기본 Heavy 액션");
+                    }
+                    if (notify.dodgeCancel)
+                    {
+                        notify.dodgeNext = EditorGUILayout.TextField("Dodge →", notify.dodgeNext);
+                        Tip("회피 캔슬 시 전이할 액션 ID.\n비워두면 기본 Dodge 상태");
+                    }
+                    if (notify.counterCancel)
+                    {
+                        notify.counterNext = EditorGUILayout.TextField("Counter →", notify.counterNext);
+                        Tip("카운터 캔슬 시 전이할 액션 ID.\n비워두면 기본 Counter 상태");
+                    }
                     break;
 
                 case NotifyType.WARP:
@@ -1121,6 +1281,7 @@ namespace FreeFlowHero.Editor
                     // 워핑 시간
                     notify.warpDuration = Mathf.Max(0f,
                         EditorGUILayout.FloatField("Duration (초, 0=자동)", notify.warpDuration));
+                    Tip("워핑 소요 시간.\n0으로 설정하면 거리 비례 자동 계산 (Min~Max Duration 범위)");
                     if (Mathf.Approximately(notify.warpDuration, 0f))
                     {
                         EditorGUI.indentLevel++;
@@ -1141,7 +1302,9 @@ namespace FreeFlowHero.Editor
 
                     // 옵션
                     notify.warpInvincible = EditorGUILayout.Toggle("무적 (Invincible)", notify.warpInvincible);
+                    Tip("워핑 이동 중 무적 상태 부여.\n해제하면 워핑 중에도 피격 가능");
                     notify.warpAutoTarget = EditorGUILayout.Toggle("자동 타겟 (Auto Target)", notify.warpAutoTarget);
+                    Tip("타겟이 없을 때 자동으로 가장 가까운 적을 타겟으로 설정");
 
                     EditorGUILayout.Space(4);
 
@@ -1463,8 +1626,11 @@ namespace FreeFlowHero.Editor
             if (currentDragMode == DragMode.Scrub || isPreviewPlaying)
             {
                 int scrubFrame = Mathf.RoundToInt(previewFrame);
-                float scrubTime = scrubFrame * CombatConstants.FrameDuration;
-                string scrubLabel = $"F:{scrubFrame}  ({scrubTime:F2}s)";
+                float scrubRate = (action != null && action.playbackRate > 0f) ? action.playbackRate : 1f;
+                float scrubTime = scrubFrame * CombatConstants.FrameDuration / scrubRate;
+                string scrubLabel = showTimeAsSeconds
+                    ? $"{scrubTime:F2}s  (F:{scrubFrame})"
+                    : $"F:{scrubFrame}  ({scrubTime:F2}s)";
 
                 var labelStyle = new GUIStyle(EditorStyles.boldLabel)
                 {
@@ -1700,16 +1866,7 @@ namespace FreeFlowHero.Editor
         {
             EditorGUI.DrawRect(rulerRect, new Color(0.16f, 0.16f, 0.16f));
 
-            // ── 재생배율 != 1.0일 때 상단에 배율 표시 ──
-            if (Mathf.Abs(playbackRate - 1.0f) > 0.01f)
-            {
-                var rateStyle = new GUIStyle(EditorStyles.miniLabel);
-                rateStyle.normal.textColor = new Color(1f, 0.6f, 0.2f);
-                rateStyle.alignment = TextAnchor.UpperRight;
-                rateStyle.fontStyle = FontStyle.Bold;
-                GUI.Label(new Rect(rulerRect.xMax - 80, rulerRect.y, 78, 12),
-                    $"재생배율: {playbackRate:F1}x", rateStyle);
-            }
+            // (재생배율 표시는 타임라인 옵션 바 중앙으로 이동됨)
 
             // ── 줌 레벨에 따른 눈금 간격 결정 ──
             float pixelsPerFrame = rulerRect.width / Mathf.Max(totalFrames, 1);
@@ -1776,14 +1933,29 @@ namespace FreeFlowHero.Editor
                     labelX = ClampLabelX(x, labelW, labelMinX, labelMaxX);
                 }
 
-                // 프레임 번호 (상단)
-                string frameTxt = $"{f}f";
-                GUI.Label(new Rect(labelX, rulerRect.y + tickH - 1, labelW, 11), frameTxt, usedFrameLabel);
+                // ★ 재생배율 반영 시간 계산
+                //   실제 벽시계 시간 = 애니메이션 프레임 / (60fps * playbackRate)
+                //   playbackRate=0.5이면 1프레임이 실제로 2프레임 걸림 → 시간이 2배
+                float timeSec = f * CombatConstants.FrameDuration / Mathf.Max(playbackRate, 0.01f);
 
-                // 시간 표시 (하단)
-                float timeSec = f * CombatConstants.FrameDuration;
-                string timeTxt = timeSec < 1f ? $"{timeSec:F3}s" : $"{timeSec:F2}s";
-                GUI.Label(new Rect(labelX, rulerRect.y + tickH + 8, labelW, 10), timeTxt, usedTimeLabel);
+                if (showTimeAsSeconds)
+                {
+                    // 초 표시 모드: 초를 상단에, 프레임을 하단에
+                    string timeTxt = timeSec < 1f ? $"{timeSec:F2}s" : $"{timeSec:F2}s";
+                    GUI.Label(new Rect(labelX, rulerRect.y + tickH - 1, labelW, 11), timeTxt, usedFrameLabel);
+
+                    string frameTxt = $"{f}f";
+                    GUI.Label(new Rect(labelX, rulerRect.y + tickH + 8, labelW, 10), frameTxt, usedTimeLabel);
+                }
+                else
+                {
+                    // 프레임 표시 모드: 프레임을 상단에, 초를 하단에
+                    string frameTxt = $"{f}f";
+                    GUI.Label(new Rect(labelX, rulerRect.y + tickH - 1, labelW, 11), frameTxt, usedFrameLabel);
+
+                    string timeTxt = timeSec < 1f ? $"{timeSec:F2}s" : $"{timeSec:F2}s";
+                    GUI.Label(new Rect(labelX, rulerRect.y + tickH + 8, labelW, 10), timeTxt, usedTimeLabel);
+                }
             }
 
             // ── 액션 끝 프레임 (majorStep 배수가 아닌 경우 추가 표시) ──
@@ -1807,12 +1979,24 @@ namespace FreeFlowHero.Editor
                     normal = { textColor = new Color(0.7f, 0.6f, 0.3f) },
                     alignment = TextAnchor.UpperRight
                 };
-                GUI.Label(new Rect(endLabelX, rulerRect.y + tickH - 1, labelW, 11),
-                    $"{actionFrames}f", endFrameLabel);
-                float endTimeSec = actionFrames * CombatConstants.FrameDuration;
-                string endTimeTxt = endTimeSec < 1f ? $"{endTimeSec:F3}s" : $"{endTimeSec:F2}s";
-                GUI.Label(new Rect(endLabelX, rulerRect.y + tickH + 8, labelW, 10),
-                    endTimeTxt, endTimeLabel);
+                // ★ 재생배율 반영
+                float endTimeSec = actionFrames * CombatConstants.FrameDuration / Mathf.Max(playbackRate, 0.01f);
+                if (showTimeAsSeconds)
+                {
+                    string endTimeTxt = endTimeSec < 1f ? $"{endTimeSec:F2}s" : $"{endTimeSec:F2}s";
+                    GUI.Label(new Rect(endLabelX, rulerRect.y + tickH - 1, labelW, 11),
+                        endTimeTxt, endFrameLabel);
+                    GUI.Label(new Rect(endLabelX, rulerRect.y + tickH + 8, labelW, 10),
+                        $"{actionFrames}f", endTimeLabel);
+                }
+                else
+                {
+                    GUI.Label(new Rect(endLabelX, rulerRect.y + tickH - 1, labelW, 11),
+                        $"{actionFrames}f", endFrameLabel);
+                    string endTimeTxt = endTimeSec < 1f ? $"{endTimeSec:F2}s" : $"{endTimeSec:F2}s";
+                    GUI.Label(new Rect(endLabelX, rulerRect.y + tickH + 8, labelW, 10),
+                        endTimeTxt, endTimeLabel);
+                }
             }
         }
 
@@ -1975,11 +2159,14 @@ namespace FreeFlowHero.Editor
             float deltaX = e.mousePosition.x - dragMouseStartX;
             int deltaFrames = Mathf.RoundToInt(deltaX * framesPerPixel);
 
+            // ★ 타임라인 최대 프레임: 노티파이가 이 범위를 벗어나지 못하도록 클램프
+            int maxFrame = fixedTimelineFrames > 0 ? fixedTimelineFrames : totalFrames;
+
             switch (currentDragMode)
             {
                 case DragMode.Move:
                     int duration = dragEndFrame - dragStartFrame;
-                    int newStart = Mathf.Max(0, dragStartFrame + deltaFrames);
+                    int newStart = Mathf.Clamp(dragStartFrame + deltaFrames, 0, maxFrame - duration);
                     notify.startFrame = newStart;
                     notify.endFrame = newStart + duration;
                     break;
@@ -1989,7 +2176,7 @@ namespace FreeFlowHero.Editor
                     break;
 
                 case DragMode.ResizeRight:
-                    notify.endFrame = Mathf.Max(notify.startFrame + 1, dragEndFrame + deltaFrames);
+                    notify.endFrame = Mathf.Clamp(dragEndFrame + deltaFrames, notify.startFrame + 1, maxFrame);
                     break;
             }
 
@@ -2119,6 +2306,15 @@ namespace FreeFlowHero.Editor
                 SearchTag = "warp 워핑 후방 뒤 back behind 회전 돌아서",
                 OnSelected = () => AddNotifyToTrack(action,
                     ActionNotify.CreateWarp(clickedFrame, offsetX: 0.5f), targetTrack)
+            });
+
+            // ── PENDING_WINDOW ──
+            items.Add(new NotifySearchPopup.PopupItem
+            {
+                Label = "PENDING_WINDOW — 입력 수집 (캔슬 전 팔로스루)",
+                SearchTag = "pending 펜딩 윈도우 입력수집 팔로스루 follow through buffer 버퍼",
+                OnSelected = () => AddNotifyToTrack(action,
+                    ActionNotify.CreatePendingWindow(clickedFrame, clickedFrame + 5), targetTrack)
             });
 
             items.Add(new NotifySearchPopup.PopupItem { IsSeparator = true });
@@ -3130,9 +3326,15 @@ namespace FreeFlowHero.Editor
             if (previewInstance == null || clip == null) return;
             try
             {
-                int totalFrames = Mathf.Max(GetEffectiveTotalFrames(action), 1);
-                float normalizedTime = Mathf.Clamp01(previewFrame / totalFrames);
-                float sampleTime = normalizedTime * clip.length;
+                // ★ previewFrame은 애니메이션 프레임 공간 (60fps 기준)
+                //   클립 타임 = animFrame / 60
+                //
+                // ★ transitionIn 보정: 인게임에서는 Animator 크로스페이드 블렌딩 동안
+                //   클립 재생이 지연되므로, 에디터 프리뷰에서도 transitionIn만큼 빼서
+                //   인게임과 동일한 포즈를 표시한다.
+                //   transitionIn = 0이면 보정 없음 (기존 동작과 동일).
+                float transitionOffset = (action != null) ? action.transitionIn : 0f;
+                float sampleTime = Mathf.Clamp(previewFrame / 60f - transitionOffset, 0f, clip.length);
 
                 if (!AnimationMode.InAnimationMode())
                     AnimationMode.StartAnimationMode();

@@ -84,6 +84,8 @@ namespace FreeFlowHero.Combat.Player
         // 현재 액션의 JSON 데이터 참조
         private ActionEntry currentAction;
 
+        // (hadCancelWindowActive 제거됨 — 체인 전진은 캔슬 성공 시에만 HandleBufferedInput에서 처리)
+
         // ─── 인라인 워핑 상태 (WARP 노티파이로 트리거) ───
         private bool isWarpActive;
         private bool warpExecuted;  // ★ 이 액션에서 워핑이 이미 실행되었는지 (중복 발동 방지)
@@ -105,6 +107,7 @@ namespace FreeFlowHero.Combat.Player
             context.canCancel = false;      // ★ 이전 상태의 canCancel 잔류값 초기화
             isWarpActive = false;           // 인라인 워핑 초기화
             warpExecuted = false;           // 워핑 실행 플래그 초기화
+            // (hadCancelWindowActive 제거됨)
 
             // ─── 콤보 인덱스에 따른 액션 데이터 결정 ───
             int idx = Mathf.Clamp(context.comboChainIndex, 0, MaxComboChain - 1);
@@ -295,15 +298,31 @@ namespace FreeFlowHero.Combat.Player
                 UnsubscribeHitbox();
             }
 
+            // ── PENDING_WINDOW: 입력 수집 구간 (CANCEL_WINDOW 직전) ──
+            if (notifyProcessor.PendingWindowJustStarted)
+            {
+                // ★ 펜딩 윈도우 시작 → 이전 입력 폐기
+                //   광클 시 이 시점 이전에 쌓인 버퍼 입력을 폐기하고,
+                //   펜딩 윈도우 동안 새로 들어오는 입력만 버퍼에 저장한다.
+                //   → CANCEL_WINDOW가 열릴 때 펜딩 입력이 즉시 소비됨.
+                fsm.InputBuffer.Clear();
+            }
+
             // ── CANCEL_WINDOW: 캔슬 플래그 + isAttacking 해제 ──
             bool prevCanCancel = context.canCancel;
             context.canCancel = notifyProcessor.AnyCancelActive;
 
-            // ★ CANCEL_WINDOW 최초 진입 → isAttacking 해제 (공격 입력 잠금 풀림)
+            // ★ CANCEL_WINDOW 최초 진입 → isAttacking 해제
             if (context.canCancel && !prevCanCancel)
             {
                 isAttacking = false;
-                Debug.Log($"[Strike][DEBUG] CANCEL_WINDOW OPEN — wall:{frame} anim:{animFrame} isAttacking→false HasBuffer:{fsm.InputBuffer.HasInput} BufferPeek:{fsm.InputBuffer.Peek?.Type}");
+
+                // ★ 펜딩 윈도우가 있는 액션: 버퍼 클리어 안 함 (펜딩에서 수집한 입력 보존)
+                //   펜딩 윈도우가 없는 액션: 기존대로 버퍼 클리어 (하위 호환)
+                if (!notifyProcessor.HasPendingWindow)
+                {
+                    fsm.InputBuffer.Clear();
+                }
             }
 
             // 캔슬 가능하고 버퍼에 입력이 있으면 처리
@@ -313,47 +332,32 @@ namespace FreeFlowHero.Combat.Player
                 string inputKey = InputTypeToString(buffered.Type);
                 bool canCancelWith = notifyProcessor.CanCancelWith(inputKey);
 
-                Debug.Log($"[Strike][DEBUG] BUFFER CONSUME — wall:{frame} anim:{animFrame} Type:{buffered.Type} CanCancelWith({inputKey}):{canCancelWith} isAttacking:{isAttacking}");
-
                 if (canCancelWith)
                 {
                     // ★ isAttacking 중이면 공격 계열은 소비하지 않음 (아직 모션 진행 중)
                     if (IsAttackInput(buffered.Type) && isAttacking)
                     {
-                        Debug.Log($"[Strike][DEBUG] BUFFER RE-QUEUE — isAttacking guard blocked");
                         fsm.InputBuffer.BufferInput(buffered);
                     }
                     else
                     {
-                        Debug.Log($"[Strike][DEBUG] BUFFER → HandleBufferedInput — {buffered.Type}");
                         HandleBufferedInput(buffered);
                         return;
                     }
                 }
                 else
                 {
-                    Debug.Log($"[Strike][DEBUG] BUFFER RE-QUEUE — CanCancelWith false");
                     fsm.InputBuffer.BufferInput(buffered);
                 }
             }
-            else if (context.canCancel && !fsm.InputBuffer.HasInput)
-            {
-                // ★ 디버그: 캔슬 윈도우 열렸는데 버퍼가 비어있음 (만료 의심)
-                var peek = fsm.InputBuffer.Peek;
-                if (peek != null)
-                    Debug.Log($"[Strike][DEBUG] CANCEL_WINDOW ACTIVE but HasInput=false (버퍼 만료!) wall:{frame} anim:{animFrame} Peek:{peek.Type}");
-            }
 
-            // 프레임 완료 → 다음 체인 인덱스 전진 후 Idle
+            // 프레임 완료 → Idle 전환
             if (frame >= totalFrames)
             {
-                // ★ 콤보 액션 정상 완료 → 다음 공격을 위해 체인 인덱스 전진
-                // Idle 복귀 후 콤보 윈도우 내에 다시 공격하면 다음 타수(2타→3타 등)가 나감
-                int currentIdx = System.Array.IndexOf(ComboActionIds, currentAction?.id);
-                if (currentIdx >= 0)
-                {
-                    context.comboChainIndex = (currentIdx + 1) % MaxComboChain;
-                }
+                // ★ 자연 완료 시 comboChainIndex 전진 안 함
+                //   체인 전진은 캔슬이 실제로 성공했을 때(HandleBufferedInput)만 발생.
+                //   캔슬 윈도우가 열렸는데 입력이 없어서 자연 완료된 경우,
+                //   IDLE에서 다시 공격하면 같은 타수부터 시작하는 것이 올바름.
 
                 // ★ 콤보 윈도우 타이머 시작 (히트 여부 무관)
                 //   히트 시에는 IncrementCombo()에서 이미 시작되지만,
@@ -363,6 +367,13 @@ namespace FreeFlowHero.Combat.Player
                 {
                     context.comboWindowTimer = CombatConstants.ComboWindowDuration;
                 }
+
+                // ★ 자연 완료 시 버퍼 클리어
+                //   캔슬 윈도우를 놓치고 모션이 끝까지 재생된 경우,
+                //   광클로 쌓인 버퍼 입력이 Idle에서 즉시 소비되어
+                //   캔슬 윈도우를 우회하는 것을 방지한다.
+                //   → 캔슬 윈도우 내에서만 콤보 체인이 연결됨.
+                fsm.InputBuffer.Clear();
 
                 fsm.TransitionTo<IdleState>();
             }
@@ -414,6 +425,8 @@ namespace FreeFlowHero.Combat.Player
             // 프레임 완료 → defaultNext 또는 Idle
             if (frame >= totalFrames)
             {
+                // ★ 자연 완료 시 버퍼 클리어 (캔슬 윈도우 우회 방지)
+                fsm.InputBuffer.Clear();
                 fsm.TransitionTo<IdleState>();
             }
         }
@@ -437,7 +450,6 @@ namespace FreeFlowHero.Combat.Player
             // ★ 공격 계열 입력: isAttacking 중이면 무조건 버퍼 (모션 완주 보장)
             if (IsAttackInput(input.Type) && isAttacking)
             {
-                Debug.Log($"[Strike][DEBUG] HandleInput BUFFER — {input.Type} wall:{frame} anim:{animFrame} isAttacking:true canCancel:{context.canCancel}");
                 fsm.InputBuffer.BufferInput(input);
                 return;
             }
@@ -445,7 +457,6 @@ namespace FreeFlowHero.Combat.Player
             // 캔슬 윈도우가 아직 안 열렸으면 버퍼
             if (!context.canCancel)
             {
-                Debug.Log($"[Strike][DEBUG] HandleInput BUFFER — {input.Type} wall:{frame} anim:{animFrame} canCancel:false");
                 fsm.InputBuffer.BufferInput(input);
                 return;
             }
@@ -456,13 +467,11 @@ namespace FreeFlowHero.Combat.Player
                 string inputKey = InputTypeToString(input.Type);
                 if (!notifyProcessor.CanCancelWith(inputKey))
                 {
-                    Debug.Log($"[Strike][DEBUG] HandleInput BUFFER — {input.Type} wall:{frame} anim:{animFrame} CanCancelWith({inputKey}):false");
                     fsm.InputBuffer.BufferInput(input);
                     return;
                 }
             }
 
-            Debug.Log($"[Strike][DEBUG] HandleInput PASS → HandleBufferedInput — {input.Type} wall:{frame} anim:{animFrame}");
             HandleBufferedInput(input);
         }
 
@@ -472,33 +481,35 @@ namespace FreeFlowHero.Combat.Player
         /// </summary>
         private void HandleBufferedInput(InputData input)
         {
-            // ─── JSON 캔슬 경로 조회 ───
             string inputKey = InputTypeToString(input.Type);
-            string cancelTarget = currentAction?.GetCancelTarget(inputKey);
 
-            // 캔슬 경로가 정의되어 있으면 해당 액션으로 분기
-            if (cancelTarget != null)
+            // ─── 노티파이 기반 캔슬 라우팅 (C안: CANCEL_WINDOW에 통합) ───
+            if (useNotifyMode && notifyProcessor != null)
             {
-                Debug.Log($"[Strike][DEBUG] HandleBufferedInput — cancels[{inputKey}]→{cancelTarget}");
-                ResolveCancelTarget(cancelTarget, input);
-                return;
+                string cancelTarget = notifyProcessor.GetCancelTarget(inputKey);
+                if (cancelTarget != null)
+                {
+                    ResolveCancelTarget(cancelTarget, input);
+                    return;
+                }
             }
 
-            // ─── 노티파이 캔슬 윈도우의 nextAction 확인 ───
-            if (useNotifyMode && !string.IsNullOrEmpty(notifyProcessor?.CancelNextAction))
+            // ─── 레거시 폴백: 노티파이 모드가 아닌 경우 cancels[] 사용 ───
+            if (!useNotifyMode)
             {
-                Debug.Log($"[Strike][DEBUG] HandleBufferedInput — nextAction→{notifyProcessor.CancelNextAction}");
-                ResolveCancelTarget(notifyProcessor.CancelNextAction, input);
-                return;
+                string legacyTarget = currentAction?.GetCancelTarget(inputKey);
+                if (legacyTarget != null)
+                {
+                    ResolveCancelTarget(legacyTarget, input);
+                    return;
+                }
             }
 
-            Debug.Log($"[Strike][DEBUG] HandleBufferedInput — 기본 분기 (cancels 없음, nextAction 없음) input:{input.Type}");
-            // ─── 캔슬 경로 없으면 기본 분기 ───
+            // ─── 라우팅 없으면 기본 분기 ───
             switch (input.Type)
             {
                 case InputType.Attack:
                 case InputType.Heavy:
-                    // cancels[]에도 nextAction에도 없는 경우 → 기본 순환 증가
                     context.comboChainIndex = (context.comboChainIndex + 1) % MaxComboChain;
                     ResolveNextComboAttack(input);
                     break;
@@ -518,7 +529,7 @@ namespace FreeFlowHero.Combat.Player
         }
 
         /// <summary>
-        /// JSON 캔슬 경로에서 결정된 다음 액션으로 전환.
+        /// 캔슬 라우팅에서 결정된 다음 액션으로 전환.
         /// LightAtk 계열은 콤보 체인 인덱스를 갱신한 뒤 워핑 판정을 거침.
         /// Dodge, Counter 등은 직접 상태 전환.
         /// </summary>

@@ -1,0 +1,299 @@
+using UnityEngine;
+
+namespace FreeFlowHero.Combat.Core
+{
+    /// <summary>
+    /// 전투 시스템 공용 설정 데이터 에셋.
+    /// UE5의 DA_BATTLESETTINGS처럼 전투 규칙/수치를 한곳에서 관리한다.
+    /// CombatConstants의 하드코딩 값을 런타임에서 오버라이드할 수 있다.
+    ///
+    /// 생성: REPLACED > Setup > 4. Generate BattleSettings Asset
+    /// 위치: Assets/_Project/Data/CombatConfig/BattleSettings.asset
+    /// </summary>
+    [CreateAssetMenu(
+        fileName = "BattleSettings",
+        menuName = "REPLACED/Combat/BattleSettings",
+        order = 0)]
+    public class BattleSettings : ScriptableObject
+    {
+        // ════════════════════════════════════════════
+        //  싱글톤 접근자
+        // ════════════════════════════════════════════
+
+        private static BattleSettings _instance;
+
+        /// <summary>
+        /// 런타임/에디터에서 BattleSettings에 접근한다.
+        /// Resources 폴더가 아닌 직접 참조 방식 — CombatDirector 등에서 할당.
+        /// 할당되지 않으면 CombatConstants 기본값을 사용한다.
+        /// </summary>
+        public static BattleSettings Instance
+        {
+            get => _instance;
+            set => _instance = value;
+        }
+
+        /// <summary>인스턴스가 로드되어 있는지 확인</summary>
+        public static bool IsLoaded => _instance != null;
+
+        // ════════════════════════════════════════════
+        //  프레임 기본
+        // ════════════════════════════════════════════
+
+        [Header("프레임 기본")]
+
+        [Tooltip("목표 프레임 레이트. 전투 판정의 기준이 되는 FPS")]
+        public int targetFPS = CombatConstants.TargetFPS;
+
+        // ════════════════════════════════════════════
+        //  콤보 시스템
+        // ════════════════════════════════════════════
+
+        [Header("콤보 시스템")]
+
+        [Tooltip("마지막 히트 이후 다음 입력까지 콤보가 유지되는 시간 (초)")]
+        [Range(0.1f, 3.0f)]
+        public float comboWindowDuration = CombatConstants.ComboWindowDuration;
+
+        [Tooltip("콤보 최대 카운트 (999 = 사실상 무제한)")]
+        public int maxComboCount = CombatConstants.MaxComboCount;
+
+        [Header("콤보 보너스 임계치")]
+
+        [Tooltip("'Good' 등급 콤보 시작 히트 수")]
+        public int comboThresholdGood = CombatConstants.ComboThresholdGood;
+
+        [Tooltip("'Great' 등급 콤보 시작 히트 수")]
+        public int comboThresholdGreat = CombatConstants.ComboThresholdGreat;
+
+        [Tooltip("'Awesome' 등급 콤보 시작 히트 수")]
+        public int comboThresholdAwesome = CombatConstants.ComboThresholdAwesome;
+
+        [Tooltip("'Unstoppable' 등급 콤보 시작 히트 수")]
+        public int comboThresholdUnstoppable = CombatConstants.ComboThresholdUnstoppable;
+
+        // ════════════════════════════════════════════
+        //  인풋 버퍼
+        // ════════════════════════════════════════════
+
+        [Header("인풋 버퍼")]
+
+        [Tooltip("선입력이 유효한 시간 (초). 짧을수록 정밀한 입력 요구, 길수록 관대한 입력")]
+        [Range(0.05f, 0.5f)]
+        public float inputBufferDuration = CombatConstants.InputBufferDuration;
+
+        // ════════════════════════════════════════════
+        //  회피 (Dodge)
+        // ════════════════════════════════════════════
+
+        [Header("회피 (Dodge)")]
+
+        [Tooltip("회피 시 무적 프레임 수 (60fps 기준)")]
+        [Range(1, 30)]
+        public int dodgeIFrames = CombatConstants.DodgeIFrames;
+
+        [Tooltip("회피 이동 속도 (유닛/초)")]
+        public float dodgeSpeed = CombatConstants.DodgeSpeed;
+
+        // ════════════════════════════════════════════
+        //  카운터 (Counter)
+        // ════════════════════════════════════════════
+
+        [Header("카운터 (Counter)")]
+
+        [Tooltip("퍼펙트 카운터 판정 윈도우 (±프레임). 작을수록 엄격")]
+        [Range(1, 10)]
+        public int perfectCounterWindow = CombatConstants.PerfectCounterWindow;
+
+        [Tooltip("일반 카운터 판정 윈도우 (±프레임)")]
+        [Range(1, 20)]
+        public int normalCounterWindow = CombatConstants.NormalCounterWindow;
+
+        // ════════════════════════════════════════════
+        //  워핑 (Warp)
+        // ════════════════════════════════════════════
+
+        [Header("워핑 (Warp)")]
+
+        [Tooltip("워핑 시간 계산의 기준이 되는 최대 거리 (유닛)")]
+        public float maxWarpDistance = CombatConstants.MaxWarpDistance;
+
+        // ════════════════════════════════════════════
+        //  텔레그래프
+        // ════════════════════════════════════════════
+
+        [Header("텔레그래프")]
+
+        [Tooltip("적 공격 예고 신호의 최소 표시 시간 (초)")]
+        [Range(0.1f, 1.0f)]
+        public float telegraphMinDuration = CombatConstants.TelegraphMinDuration;
+
+        [Tooltip("적 공격 예고 신호의 최대 표시 시간 (초)")]
+        [Range(0.2f, 2.0f)]
+        public float telegraphMaxDuration = CombatConstants.TelegraphMaxDuration;
+
+        // ════════════════════════════════════════════
+        //  공격 턴 관리
+        // ════════════════════════════════════════════
+
+        [Header("공격 턴 관리")]
+
+        [Tooltip("플레이어를 동시에 공격할 수 있는 최대 적 수")]
+        [Range(1, 5)]
+        public int maxSimultaneousAttackers = CombatConstants.MaxSimultaneousAttackers;
+
+        [Tooltip("연속 공격 사이 최소 간격 (초). 플레이어에게 대응할 '숨 쉴 틈'을 준다")]
+        [Range(0.1f, 2.0f)]
+        public float breathingTime = CombatConstants.BreathingTime;
+
+        // ════════════════════════════════════════════
+        //  처형 (Execution)
+        // ════════════════════════════════════════════
+
+        [Header("처형 (Execution)")]
+
+        [Tooltip("처형 가능 HP 비율 (0.2 = HP 20% 이하에서 처형 가능)")]
+        [Range(0.05f, 0.5f)]
+        public float executionHPThreshold = CombatConstants.ExecutionHPThreshold;
+
+        [Tooltip("고콤보(x50+) 시 처형 HP 임계치 상향 (0.3 = 30%)")]
+        [Range(0.05f, 0.5f)]
+        public float executionHPThresholdHighCombo = CombatConstants.ExecutionHPThresholdHighCombo;
+
+        [Tooltip("처형 가능 거리 (유닛)")]
+        public float executionRange = CombatConstants.ExecutionRange;
+
+        // ════════════════════════════════════════════
+        //  헉슬리 건 (Huxley)
+        // ════════════════════════════════════════════
+
+        [Header("헉슬리 건 (Huxley)")]
+
+        [Tooltip("히트 1회당 헉슬리 게이지 충전량 (%)")]
+        public float huxleyBaseChargePerHit = CombatConstants.HuxleyBaseChargePerHit;
+
+        [Tooltip("헉슬리 게이지 최대치 (%)")]
+        public float huxleyMaxCharge = CombatConstants.HuxleyMaxCharge;
+
+        // ════════════════════════════════════════════
+        //  유틸리티
+        // ════════════════════════════════════════════
+
+        /// <summary>현재 설정의 프레임 지속 시간 (초)</summary>
+        public float FrameDuration => 1f / Mathf.Max(targetFPS, 1);
+
+        /// <summary>회피 무적 시간 (초)</summary>
+        public float DodgeIFrameDuration => dodgeIFrames * FrameDuration;
+
+        /// <summary>모든 값을 CombatConstants 기본값으로 리셋</summary>
+        public void ResetToDefaults()
+        {
+            targetFPS = CombatConstants.TargetFPS;
+            comboWindowDuration = CombatConstants.ComboWindowDuration;
+            maxComboCount = CombatConstants.MaxComboCount;
+            comboThresholdGood = CombatConstants.ComboThresholdGood;
+            comboThresholdGreat = CombatConstants.ComboThresholdGreat;
+            comboThresholdAwesome = CombatConstants.ComboThresholdAwesome;
+            comboThresholdUnstoppable = CombatConstants.ComboThresholdUnstoppable;
+            inputBufferDuration = CombatConstants.InputBufferDuration;
+            dodgeIFrames = CombatConstants.DodgeIFrames;
+            dodgeSpeed = CombatConstants.DodgeSpeed;
+            perfectCounterWindow = CombatConstants.PerfectCounterWindow;
+            normalCounterWindow = CombatConstants.NormalCounterWindow;
+            maxWarpDistance = CombatConstants.MaxWarpDistance;
+            telegraphMinDuration = CombatConstants.TelegraphMinDuration;
+            telegraphMaxDuration = CombatConstants.TelegraphMaxDuration;
+            maxSimultaneousAttackers = CombatConstants.MaxSimultaneousAttackers;
+            breathingTime = CombatConstants.BreathingTime;
+            executionHPThreshold = CombatConstants.ExecutionHPThreshold;
+            executionHPThresholdHighCombo = CombatConstants.ExecutionHPThresholdHighCombo;
+            executionRange = CombatConstants.ExecutionRange;
+            huxleyBaseChargePerHit = CombatConstants.HuxleyBaseChargePerHit;
+            huxleyMaxCharge = CombatConstants.HuxleyMaxCharge;
+        }
+
+        // ════════════════════════════════════════════
+        //  런타임 접근 헬퍼 (BattleSettings → CombatConstants 폴백)
+        // ════════════════════════════════════════════
+
+        /// <summary>콤보 윈도우 시간. SO 없으면 CombatConstants 기본값.</summary>
+        public static float GetComboWindowDuration()
+            => IsLoaded ? _instance.comboWindowDuration : CombatConstants.ComboWindowDuration;
+
+        /// <summary>인풋 버퍼 시간.</summary>
+        public static float GetInputBufferDuration()
+            => IsLoaded ? _instance.inputBufferDuration : CombatConstants.InputBufferDuration;
+
+        /// <summary>회피 무적 프레임 수.</summary>
+        public static int GetDodgeIFrames()
+            => IsLoaded ? _instance.dodgeIFrames : CombatConstants.DodgeIFrames;
+
+        /// <summary>회피 속도.</summary>
+        public static float GetDodgeSpeed()
+            => IsLoaded ? _instance.dodgeSpeed : CombatConstants.DodgeSpeed;
+
+        /// <summary>퍼펙트 카운터 윈도우.</summary>
+        public static int GetPerfectCounterWindow()
+            => IsLoaded ? _instance.perfectCounterWindow : CombatConstants.PerfectCounterWindow;
+
+        /// <summary>일반 카운터 윈도우.</summary>
+        public static int GetNormalCounterWindow()
+            => IsLoaded ? _instance.normalCounterWindow : CombatConstants.NormalCounterWindow;
+
+        /// <summary>최대 동시 공격자 수.</summary>
+        public static int GetMaxSimultaneousAttackers()
+            => IsLoaded ? _instance.maxSimultaneousAttackers : CombatConstants.MaxSimultaneousAttackers;
+
+        /// <summary>호흡 시간.</summary>
+        public static float GetBreathingTime()
+            => IsLoaded ? _instance.breathingTime : CombatConstants.BreathingTime;
+
+        /// <summary>처형 HP 임계치.</summary>
+        public static float GetExecutionHPThreshold()
+            => IsLoaded ? _instance.executionHPThreshold : CombatConstants.ExecutionHPThreshold;
+
+        /// <summary>고콤보 처형 HP 임계치.</summary>
+        public static float GetExecutionHPThresholdHighCombo()
+            => IsLoaded ? _instance.executionHPThresholdHighCombo : CombatConstants.ExecutionHPThresholdHighCombo;
+
+        /// <summary>처형 거리.</summary>
+        public static float GetExecutionRange()
+            => IsLoaded ? _instance.executionRange : CombatConstants.ExecutionRange;
+
+        /// <summary>헉슬리 히트당 충전량.</summary>
+        public static float GetHuxleyBaseChargePerHit()
+            => IsLoaded ? _instance.huxleyBaseChargePerHit : CombatConstants.HuxleyBaseChargePerHit;
+
+        /// <summary>헉슬리 최대 충전량.</summary>
+        public static float GetHuxleyMaxCharge()
+            => IsLoaded ? _instance.huxleyMaxCharge : CombatConstants.HuxleyMaxCharge;
+
+        /// <summary>텔레그래프 최소 시간.</summary>
+        public static float GetTelegraphMinDuration()
+            => IsLoaded ? _instance.telegraphMinDuration : CombatConstants.TelegraphMinDuration;
+
+        /// <summary>텔레그래프 최대 시간.</summary>
+        public static float GetTelegraphMaxDuration()
+            => IsLoaded ? _instance.telegraphMaxDuration : CombatConstants.TelegraphMaxDuration;
+
+        /// <summary>최대 워프 거리.</summary>
+        public static float GetMaxWarpDistance()
+            => IsLoaded ? _instance.maxWarpDistance : CombatConstants.MaxWarpDistance;
+
+        /// <summary>콤보 임계치 Good.</summary>
+        public static int GetComboThresholdGood()
+            => IsLoaded ? _instance.comboThresholdGood : CombatConstants.ComboThresholdGood;
+
+        /// <summary>콤보 임계치 Great.</summary>
+        public static int GetComboThresholdGreat()
+            => IsLoaded ? _instance.comboThresholdGreat : CombatConstants.ComboThresholdGreat;
+
+        /// <summary>콤보 임계치 Awesome.</summary>
+        public static int GetComboThresholdAwesome()
+            => IsLoaded ? _instance.comboThresholdAwesome : CombatConstants.ComboThresholdAwesome;
+
+        /// <summary>콤보 임계치 Unstoppable.</summary>
+        public static int GetComboThresholdUnstoppable()
+            => IsLoaded ? _instance.comboThresholdUnstoppable : CombatConstants.ComboThresholdUnstoppable;
+    }
+}

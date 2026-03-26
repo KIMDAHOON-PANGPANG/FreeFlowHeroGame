@@ -192,6 +192,7 @@ OnWarpEnd(Target)              — 워핑 완료
 | 처형 거리 | 2.0 유닛 | 근접 거리 |
 | 헉슬리 기본 충전 | 히트당 5% | comboMultiplier 적용 |
 | 워핑 시간 | 0.04~0.12초 | WARP 노티파이 (거리 비례 자동 또는 고정) |
+| 펜딩 윈도우 | 5f (anim) | COLLISION 종료 ~ CANCEL 시작 사이 입력 수집 구간 |
 
 ## 구현 로드맵
 
@@ -308,3 +309,7 @@ Assets/_Project/Scripts/Editor/
 | 2026-03-24 | StrikeState.cs | ResolveCancelTarget/ResolveNextComboAttack 분기 로그 4개 | 콤보 체인 진행 상세 불필요 |
 | 2026-03-24 | StrikeState.cs | CANCEL_WINDOW 진입/프레임 완료 상세 로그 2개 | Enter 로그로 충분 |
 | 2026-03-24 | StrikeState.cs | Active! 히트 판정 시작 로그 1개 | 매 공격마다 반복, HIT 로그로 대체 |
+| 2026-03-27 | StrikeState.cs | [Strike][DEBUG] 임시 로그 13개 (CANCEL_WINDOW OPEN, BUFFER CONSUME/RE-QUEUE, HandleInput BUFFER/PASS, HandleBufferedInput 라우팅 등) | C안 통합 디버깅 완료, 콘솔 과부하 방지 |
+| 2026-03-27 | StrikeState.cs | [Strike][CANCEL] 진단 로그 1개 (HandleBufferedInput 내 캔슬 발생 시 WallFrame/AnimFrame/WallTime/AnimTime 출력) | 캔슬 윈도우 타이밍 검증 완료, 정상 동작 확인 |
+| 2026-03-27 | StrikeState.cs | [InGame Anim] 진단 로그 1개 (10프레임마다 Animator 상태/클립타임/normalizedTime 출력) | 에디터↔인게임 포즈 불일치 원인 분석 완료 (트랜지션 블렌딩), transitionIn 보정 기능으로 해결 |
+| 2026-03-27 | ActionTableEditorWindow.cs | [Editor Preview] 진단 로그 1개 (프레임 변경 시 sampleTime/clipLength/playbackRate 출력) | 에디터↔인게임 포즈 불일치 원인 분석 완료, 진단 목적 달성 |

@@ -27,6 +27,16 @@ namespace FreeFlowHero.Combat.Core
 
         /// <summary>워핑 트리거 — 타겟에게 보간 이동. 인스턴스 모드(1회 발화) 전용.</summary>
         WARP = 3,
+
+        /// <summary>
+        /// 펜딩 윈도우 — CANCEL_WINDOW 직전 입력 수집 구간.
+        /// 이 구간이 시작되면 기존 입력 버퍼를 클리어하고,
+        /// 구간 동안 새로 들어오는 입력만 버퍼에 저장한다.
+        /// CANCEL_WINDOW는 PENDING_WINDOW 종료 후에만 활성화되어
+        /// 펜딩 입력으로 즉시 캔슬한다.
+        /// → "타격 팔로스루 강제 재생 + 입력 반응성 보존" 효과.
+        /// </summary>
+        PENDING_WINDOW = 4,
     }
 
     /// <summary>
@@ -86,7 +96,12 @@ namespace FreeFlowHero.Combat.Core
         public bool moveCancel;     // 이동 캔슬 허용
         public bool dodgeCancel;    // 회피 캔슬 허용
         public bool counterCancel;  // 카운터 캔슬 허용
-        public string nextAction;   // 스킬 캔슬 시 전이 대상 액션 ID (비어있으면 CancelRoute 참조)
+        public string nextAction;   // Attack 입력 시 전이 대상 액션 ID (= 콤보 다음 타수)
+        // ★ 입력별 캔슬 라우팅 (C안 통합): 각 입력 타입별 전이 대상 액션 ID
+        //   비어있으면 해당 캔슬 플래그가 true여도 기본 액션("Dodge", "Counter" 등)으로 전이
+        public string heavyNext;    // Heavy 입력 시 전이 대상 (기본: "HeavyAtk")
+        public string dodgeNext;    // Dodge 입력 시 전이 대상 (기본: "Dodge")
+        public string counterNext;  // Counter 입력 시 전이 대상 (기본: "Counter")
 
         // ─── WARP 파라미터 ───
         // ★ 데이터 튜닝: 액션별 워핑 느낌을 개별 조절 가능
@@ -239,7 +254,7 @@ namespace FreeFlowHero.Combat.Core
         /// <summary>CANCEL_WINDOW 노티파이 생성</summary>
         public static ActionNotify CreateCancelWindow(int start, int end,
             bool skill = true, bool move = true, bool dodge = true, bool counter = false,
-            string nextAction = "")
+            string nextAction = "", string heavyNext = "", string dodgeNext = "", string counterNext = "")
         {
             return new ActionNotify
             {
@@ -254,6 +269,9 @@ namespace FreeFlowHero.Combat.Core
                 dodgeCancel = dodge,
                 counterCancel = counter,
                 nextAction = nextAction,
+                heavyNext = heavyNext,
+                dodgeNext = dodgeNext,
+                counterNext = counterNext,
                 damageScale = 1f,
                 hitboxId = "",
                 moveSpeed = 0f,
@@ -287,6 +305,24 @@ namespace FreeFlowHero.Combat.Core
                 warpMaxRange = 0f,      // 0=무제한
                 warpSpeed = 0f,         // 0=Duration 기반
                 // 다른 타입 파라미터 기본값
+                damageScale = 1f,
+                hitboxId = "",
+                moveSpeed = 0f,
+                nextAction = "",
+            };
+        }
+
+        /// <summary>PENDING_WINDOW 노티파이 생성</summary>
+        public static ActionNotify CreatePendingWindow(int start, int end)
+        {
+            return new ActionNotify
+            {
+                type = NotifyType.PENDING_WINDOW.ToString(),
+                startFrame = start,
+                endFrame = end,
+                track = 4,
+                disabled = false,
+                isInstance = false,
                 damageScale = 1f,
                 hitboxId = "",
                 moveSpeed = 0f,
@@ -331,6 +367,7 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.COLLISION:      return new Color(0.9f, 0.3f, 0.2f, 0.8f);  // 빨강
                 case NotifyType.CANCEL_WINDOW:  return new Color(0.9f, 0.8f, 0.2f, 0.8f);  // 노랑
                 case NotifyType.WARP:           return new Color(0.2f, 0.9f, 0.5f, 0.8f);  // 초록
+                case NotifyType.PENDING_WINDOW: return new Color(0.9f, 0.5f, 0.2f, 0.8f);  // 주황
                 default:                        return new Color(0.5f, 0.5f, 0.5f, 0.8f);  // 회색
             }
         }
@@ -344,6 +381,7 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.COLLISION:      return "COLLISION";
                 case NotifyType.CANCEL_WINDOW:  return "CANCEL";
                 case NotifyType.WARP:           return "WARP";
+                case NotifyType.PENDING_WINDOW: return "PENDING";
                 default:                        return type.ToString();
             }
         }
@@ -357,7 +395,8 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.COLLISION:      return 1;
                 case NotifyType.CANCEL_WINDOW:  return 2;
                 case NotifyType.WARP:           return 3;
-                default:                        return 4;
+                case NotifyType.PENDING_WINDOW: return 4;
+                default:                        return 5;
             }
         }
 
@@ -370,6 +409,7 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.COLLISION:      return 8;
                 case NotifyType.CANCEL_WINDOW:  return 10;
                 case NotifyType.WARP:           return 3;  // 인스턴스: 시각 표시용 최소 길이
+                case NotifyType.PENDING_WINDOW: return 5;  // 팔로스루 강제 재생 구간
                 default:                        return 5;
             }
         }

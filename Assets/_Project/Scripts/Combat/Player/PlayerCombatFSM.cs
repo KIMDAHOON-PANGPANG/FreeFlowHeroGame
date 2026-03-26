@@ -358,6 +358,7 @@ namespace FreeFlowHero.Combat.Player
                 case "Hit":     stateColor = "<color=red>"; break;
                 case "Dodge":   stateColor = "<color=#44FF44>"; break;
                 case "Counter": stateColor = "<color=#FFAA00>"; break;
+                case "Walk":    stateColor = "<color=#88CCFF>"; break;
                 default:        stateColor = "<color=lime>"; break;
             }
             GUI.Label(new Rect(x, y, boxW, lineH),
@@ -435,10 +436,13 @@ namespace FreeFlowHero.Combat.Player
                 case "Dodge":   colorHex = "44FF44"; break; // 초록
                 case "Counter": colorHex = "FFAA00"; break; // 주황
                 case "Hit":     colorHex = "FF4444"; break; // 빨강
+                case "Walk":    colorHex = "88CCFF"; break; // 하늘색
                 default:        colorHex = "FFFFFF"; break; // 흰색
             }
 
-            string label = $"<color=#{colorHex}>attack num: {actionText}</color>";
+            // 경과 시간 (프레임 → 초)
+            float elapsed = context.stateFrameCounter * CombatConstants.FrameDuration;
+            string label = $"<color=#{colorHex}>{actionText}  {elapsed:F2}s  (f:{context.stateFrameCounter})</color>";
 
             // 배경 박스
             float labelW = 300;

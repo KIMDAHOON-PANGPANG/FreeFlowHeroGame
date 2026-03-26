@@ -125,6 +125,19 @@ namespace FreeFlowHero.Combat.Player
                 : "LClick:Attack | RClick:Heavy | Space:Dodge | L:Counter | U:Huxley";
 
             GUI.Label(new Rect(10, Screen.height - 40, 600, 30), text, style);
+
+            // ── 현재 상태 + 액션 표시 ──
+            var actionStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 22,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.UpperLeft
+            };
+            actionStyle.normal.textColor = Color.white;
+            string stateName = fsm.CurrentStateName;
+            string actionId = fsm.CurrentActionId;
+            string actionText = stateName == "Strike" ? $"{stateName} : {actionId}" : stateName;
+            GUI.Label(new Rect(10, 10, 400, 35), actionText, actionStyle);
         }
     }
 }

@@ -41,6 +41,10 @@ namespace FreeFlowHero.Combat.Core
         // ─── 재생 배율 ★ 데이터 튜닝 ───
         public float playbackRate = 1.0f;  // 애니메이션 재생 배율 (1.0 = 원본 속도)
 
+        // ─── 트랜지션 블렌딩 ★ 데이터 튜닝 ───
+        public float transitionIn = 0.0f;   // 이전 액션 → 이 액션 진입 블렌딩 시간 (초)
+        public float transitionOut = 0.0f;  // 이 액션 → 다음 액션 퇴장 블렌딩 시간 (초)
+
         // ─── 캔슬 설정 ───
         public float cancelRatio;    // Recovery 캔슬 비율 (0.0~1.0)
         public float moveSpeed;      // 액션 중 이동 속도
