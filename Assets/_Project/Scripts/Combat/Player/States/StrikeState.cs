@@ -621,12 +621,27 @@ namespace FreeFlowHero.Combat.Player
 
             Vector2 startPos = GetPos();
             Vector2 targetPos = (Vector2)context.currentTarget.position;
-
-            // 근접 거리 이내면 워핑 스킵, 방향만 전환
             float dist = Vector2.Distance(startPos, targetPos);
-            if (dist <= TargetSelector.MeleeRange)
+
+            // ★ 발동 거리 체크 (노티파이 파라미터)
+            float minRange = warpNotify.warpMinRange > 0f
+                ? warpNotify.warpMinRange : ActionNotify.DefaultWarpMinRange;
+            float maxRange = warpNotify.warpMaxRange;
+
+            // 최소 거리 이내 → 워핑 스킵, 방향만 전환
+            if (dist <= minRange)
             {
-                // 방향 전환만
+                float d = Mathf.Sign(targetPos.x - startPos.x);
+                Vector3 scale = context.playerTransform.localScale;
+                scale.x = Mathf.Abs(scale.x) * (d >= 0 ? 1f : -1f);
+                context.playerTransform.localScale = scale;
+                facing = d;
+                return;
+            }
+
+            // 최대 거리 밖 → 워핑 스킵 (0=무제한)
+            if (maxRange > 0f && dist > maxRange)
+            {
                 float d = Mathf.Sign(targetPos.x - startPos.x);
                 Vector3 scale = context.playerTransform.localScale;
                 scale.x = Mathf.Abs(scale.x) * (d >= 0 ? 1f : -1f);
@@ -659,9 +674,19 @@ namespace FreeFlowHero.Combat.Player
             context.playerTransform.localScale = sc;
             facing = dir;
 
-            // 워핑 시간 계산
-            if (warpNotify.warpDuration > 0f)
+            // 워핑 시간 계산 (우선순위: Speed > Duration > 자동)
+            float warpDist = Vector2.Distance(warpStartPos, warpEndPos);
+            if (warpNotify.warpSpeed > 0f)
             {
+                // ★ 속도 모드: 거리 / 속도 = 시간
+                activeWarpDuration = warpDist / warpNotify.warpSpeed;
+                float minD = warpNotify.warpMinDuration > 0f
+                    ? warpNotify.warpMinDuration : ActionNotify.DefaultWarpMinDuration;
+                activeWarpDuration = Mathf.Max(activeWarpDuration, minD);
+            }
+            else if (warpNotify.warpDuration > 0f)
+            {
+                // 고정 시간 모드
                 activeWarpDuration = warpNotify.warpDuration;
             }
             else
@@ -671,7 +696,6 @@ namespace FreeFlowHero.Combat.Player
                     ? warpNotify.warpMinDuration : ActionNotify.DefaultWarpMinDuration;
                 float maxD = warpNotify.warpMaxDuration > 0f
                     ? warpNotify.warpMaxDuration : ActionNotify.DefaultWarpMaxDuration;
-                float warpDist = Vector2.Distance(warpStartPos, warpEndPos);
                 activeWarpDuration = Mathf.Lerp(minD, maxD, warpDist / CombatConstants.MaxWarpDistance);
                 activeWarpDuration = Mathf.Max(activeWarpDuration, minD);
             }

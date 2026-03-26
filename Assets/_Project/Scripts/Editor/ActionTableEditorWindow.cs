@@ -1137,6 +1137,31 @@ namespace FreeFlowHero.Editor
                     // 옵션
                     notify.warpInvincible = EditorGUILayout.Toggle("무적 (Invincible)", notify.warpInvincible);
                     notify.warpAutoTarget = EditorGUILayout.Toggle("자동 타겟 (Auto Target)", notify.warpAutoTarget);
+
+                    EditorGUILayout.Space(4);
+
+                    // 발동 거리
+                    EditorGUILayout.LabelField("발동 거리", EditorStyles.boldLabel);
+                    notify.warpMinRange = Mathf.Max(0f,
+                        EditorGUILayout.FloatField("Min Range (이내=스킵)",
+                            notify.warpMinRange > 0f ? notify.warpMinRange : ActionNotify.DefaultWarpMinRange));
+                    notify.warpMaxRange = Mathf.Max(0f,
+                        EditorGUILayout.FloatField("Max Range (밖=스킵, 0=무제한)", notify.warpMaxRange));
+                    EditorGUILayout.HelpBox(
+                        "Min 이내: 이미 가까우므로 워핑 안 함\nMax 밖: 너무 멀어서 워핑 안 함 (0=제한 없음)",
+                        MessageType.None);
+
+                    EditorGUILayout.Space(4);
+
+                    // 워핑 속도
+                    notify.warpSpeed = Mathf.Max(0f,
+                        EditorGUILayout.FloatField("Speed (유닛/초, 0=Duration 사용)", notify.warpSpeed));
+                    if (notify.warpSpeed > 0f)
+                    {
+                        EditorGUILayout.HelpBox(
+                            "Speed 모드: 거리 ÷ 속도 = 워핑 시간\n멀수록 오래 걸리지만 체감 속도는 일정",
+                            MessageType.None);
+                    }
                     break;
             }
 

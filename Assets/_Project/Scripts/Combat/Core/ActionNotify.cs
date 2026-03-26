@@ -98,11 +98,15 @@ namespace FreeFlowHero.Combat.Core
         public float warpMaxDuration;  // 자동 계산 시 최대 시간 (초, 기본 0.12)
         public bool warpInvincible;    // 워핑 중 무적 (기본 true)
         public bool warpAutoTarget;    // 자동 타겟 재선택 (기본 true)
+        public float warpMinRange;     // 최소 발동 거리 (이 거리 이내면 워핑 스킵, 기본 1.5)
+        public float warpMaxRange;     // 최대 발동 거리 (이 거리 밖이면 워핑 스킵, 0=무제한, 기본 0)
+        public float warpSpeed;        // 워핑 속도 (유닛/초, 0=Duration 기반, 기본 0)
 
         // ─── 워핑 기본값 상수 ───
         public const float DefaultWarpOffsetX = -0.5f;
         public const float DefaultWarpMinDuration = 0.04f;
         public const float DefaultWarpMaxDuration = 0.12f;
+        public const float DefaultWarpMinRange = 1.5f;
 
         // ─── 히트박스 기본값 상수 ───
         public const float DefaultHitboxOffsetY = 0.8f;
@@ -279,6 +283,9 @@ namespace FreeFlowHero.Combat.Core
                 warpMaxDuration = DefaultWarpMaxDuration,
                 warpInvincible = invincible,
                 warpAutoTarget = autoTarget,
+                warpMinRange = DefaultWarpMinRange,
+                warpMaxRange = 0f,      // 0=무제한
+                warpSpeed = 0f,         // 0=Duration 기반
                 // 다른 타입 파라미터 기본값
                 damageScale = 1f,
                 hitboxId = "",
