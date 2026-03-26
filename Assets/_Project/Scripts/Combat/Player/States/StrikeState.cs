@@ -136,9 +136,18 @@ namespace FreeFlowHero.Combat.Player
                 int effectiveTotalFrames = Mathf.Max(notifyTotalFrames, Mathf.Max(legacyTotalFrames, clipFrames));
                 totalFrames = Mathf.CeilToInt(effectiveTotalFrames / currentPlaybackRate);
 
+                // ★ 노티파이 구간 요약 (런타임에서 실제 사용 중인 값 확인용)
+                string notifySummary = "";
+                if (currentAction.notifies != null)
+                {
+                    foreach (var n in currentAction.notifies)
+                    {
+                        if (n.disabled) continue;
+                        notifySummary += $" {n.type}[{n.startFrame}-{n.endFrame}]";
+                    }
+                }
                 Debug.Log($"[Strike] Enter — Action:{currentAction.id} Chain:{context.comboChainIndex} " +
-                    $"Notify:{notifyTotalFrames} Legacy:{legacyTotalFrames} Clip:{clipFrames} " +
-                    $"Effective:{effectiveTotalFrames} Wall:{totalFrames} Rate:{currentPlaybackRate:F2}");
+                    $"Wall:{totalFrames} Rate:{currentPlaybackRate:F2} Notifies:{notifySummary}");
             }
             else if (currentAction != null)
             {
