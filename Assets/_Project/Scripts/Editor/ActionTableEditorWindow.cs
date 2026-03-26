@@ -1057,23 +1057,23 @@ namespace FreeFlowHero.Editor
                     EditorGUILayout.LabelField("히트박스 트랜스폼", EditorStyles.boldLabel);
 
                     // 오프셋 (2D: X, Y만 — Z는 2D 횡스크롤이므로 제외)
-                    EditorGUILayout.LabelField("Offset (캐릭터 기준)", EditorStyles.miniLabel);
+                    EditorGUILayout.LabelField("Offset (캐릭터 기준, cm)", EditorStyles.miniLabel);
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.LabelField("X", GUILayout.Width(14));
-                    notify.hitboxOffsetX = EditorGUILayout.FloatField(notify.hitboxOffsetX);
+                    notify.hitboxOffsetX = CmField(notify.hitboxOffsetX);
                     EditorGUILayout.LabelField("Y", GUILayout.Width(14));
-                    notify.hitboxOffsetY = EditorGUILayout.FloatField(
+                    notify.hitboxOffsetY = CmField(
                         notify.hitboxOffsetY == 0f ? ActionNotify.DefaultHitboxOffsetY : notify.hitboxOffsetY);
                     EditorGUILayout.EndHorizontal();
 
                     // 크기 (2D: X, Y만)
-                    EditorGUILayout.LabelField("Size (박스 크기)", EditorStyles.miniLabel);
+                    EditorGUILayout.LabelField("Size (박스 크기, cm)", EditorStyles.miniLabel);
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.LabelField("X", GUILayout.Width(14));
-                    notify.hitboxSizeX = Mathf.Max(0.01f, EditorGUILayout.FloatField(
+                    notify.hitboxSizeX = Mathf.Max(0.01f, CmField(
                         notify.hitboxSizeX == 0f ? ActionNotify.DefaultHitboxSizeX : notify.hitboxSizeX));
                     EditorGUILayout.LabelField("Y", GUILayout.Width(14));
-                    notify.hitboxSizeY = Mathf.Max(0.01f, EditorGUILayout.FloatField(
+                    notify.hitboxSizeY = Mathf.Max(0.01f, CmField(
                         notify.hitboxSizeY == 0f ? ActionNotify.DefaultHitboxSizeY : notify.hitboxSizeY));
                     EditorGUILayout.EndHorizontal();
 
@@ -1099,16 +1099,16 @@ namespace FreeFlowHero.Editor
                     EditorGUILayout.LabelField("WARP 파라미터", EditorStyles.boldLabel);
 
                     // 도착 오프셋
-                    EditorGUILayout.LabelField("도착 오프셋 (적 기준)", EditorStyles.miniLabel);
+                    EditorGUILayout.LabelField("도착 오프셋 (적 기준, cm)", EditorStyles.miniLabel);
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.LabelField("X", GUILayout.Width(14));
-                    notify.warpOffsetX = EditorGUILayout.FloatField(
+                    notify.warpOffsetX = CmField(
                         Mathf.Approximately(notify.warpOffsetX, 0f) ? ActionNotify.DefaultWarpOffsetX : notify.warpOffsetX);
                     EditorGUILayout.LabelField("Y", GUILayout.Width(14));
-                    notify.warpOffsetY = EditorGUILayout.FloatField(notify.warpOffsetY);
+                    notify.warpOffsetY = CmField(notify.warpOffsetY);
                     EditorGUILayout.EndHorizontal();
                     EditorGUILayout.HelpBox(
-                        "X: 음수=적 앞쪽(기본 -0.5), 양수=적 뒤쪽\nY: 0=같은 높이",
+                        "X: 음수=적 앞쪽(기본 -50), 양수=적 뒤쪽\nY: 0=같은 높이",
                         MessageType.None);
 
                     EditorGUILayout.Space(4);
@@ -1141,12 +1141,11 @@ namespace FreeFlowHero.Editor
                     EditorGUILayout.Space(4);
 
                     // 발동 거리
-                    EditorGUILayout.LabelField("발동 거리", EditorStyles.boldLabel);
-                    notify.warpMinRange = Mathf.Max(0f,
-                        EditorGUILayout.FloatField("Min Range (이내=스킵)",
-                            notify.warpMinRange > 0f ? notify.warpMinRange : ActionNotify.DefaultWarpMinRange));
-                    notify.warpMaxRange = Mathf.Max(0f,
-                        EditorGUILayout.FloatField("Max Range (밖=스킵, 0=무제한)", notify.warpMaxRange));
+                    EditorGUILayout.LabelField("발동 거리 (cm)", EditorStyles.boldLabel);
+                    notify.warpMinRange = Mathf.Max(0f, CmField("Min Range (이내=스킵)",
+                        notify.warpMinRange > 0f ? notify.warpMinRange : ActionNotify.DefaultWarpMinRange));
+                    notify.warpMaxRange = Mathf.Max(0f, CmField("Max Range (밖=스킵, 0=무제한)",
+                        notify.warpMaxRange));
                     EditorGUILayout.HelpBox(
                         "Min 이내: 이미 가까우므로 워핑 안 함\nMax 밖: 너무 멀어서 워핑 안 함 (0=제한 없음)",
                         MessageType.None);
@@ -1154,8 +1153,8 @@ namespace FreeFlowHero.Editor
                     EditorGUILayout.Space(4);
 
                     // 워핑 속도
-                    notify.warpSpeed = Mathf.Max(0f,
-                        EditorGUILayout.FloatField("Speed (유닛/초, 0=Duration 사용)", notify.warpSpeed));
+                    notify.warpSpeed = Mathf.Max(0f, CmField("Speed (cm/초, 0=Duration 사용)",
+                        notify.warpSpeed));
                     if (notify.warpSpeed > 0f)
                     {
                         EditorGUILayout.HelpBox(
@@ -2182,6 +2181,28 @@ namespace FreeFlowHero.Editor
 
             // 최대 한도(10) 도달 → 그냥 선호 트랙에 배치 (예외적 허용)
             return preferredTrack;
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  cm ↔ 미터 변환 헬퍼
+        //  내부 저장: 미터 (Unity 기본 단위)
+        //  에디터 표시: cm (직관적 정수 단위)
+        // ═══════════════════════════════════════════════════════
+
+        /// <summary>cm 단위로 표시/입력하는 FloatField. 내부값은 미터.</summary>
+        private static float CmField(float meterValue)
+        {
+            float cmValue = meterValue * 100f;
+            float newCm = EditorGUILayout.FloatField(cmValue);
+            return newCm / 100f;
+        }
+
+        /// <summary>cm 단위로 표시/입력하는 FloatField (라벨 포함). 내부값은 미터.</summary>
+        private static float CmField(string label, float meterValue)
+        {
+            float cmValue = meterValue * 100f;
+            float newCm = EditorGUILayout.FloatField(label, cmValue);
+            return newCm / 100f;
         }
 
         /// <summary>노티파이의 최대 track 값에 맞춰 trackCount를 자동 확장</summary>
