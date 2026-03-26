@@ -1146,20 +1146,21 @@ namespace FreeFlowHero.Editor
                     EditorGUILayout.Space(4);
 
                     // 발동 거리
-                    EditorGUILayout.LabelField("발동 거리 (cm)", EditorStyles.boldLabel);
-                    notify.warpMinRange = Mathf.Max(0f, CmField("Min Range (이내=스킵)",
-                        notify.warpMinRange > 0f ? notify.warpMinRange : ActionNotify.DefaultWarpMinRange));
-                    notify.warpMaxRange = Mathf.Max(0f, CmField("Max Range (밖=스킵, 0=무제한)",
+                    EditorGUILayout.LabelField("워핑 범위 (cm)", EditorStyles.boldLabel);
+                    notify.warpMaxRange = Mathf.Max(0f, CmField("워핑 거리 (이 안에서만 워핑, 0=무제한)",
                         notify.warpMaxRange));
+                    notify.warpMinRange = Mathf.Max(0f, CmField("근접 무시 (이미 가까우면 스킵)",
+                        notify.warpMinRange > 0f ? notify.warpMinRange : ActionNotify.DefaultWarpMinRange));
                     {
-                        float minCm = notify.warpMinRange * 100f;
                         float maxCm = notify.warpMaxRange * 100f;
-                        string rangeInfo = $"Min {minCm:F0}cm = {notify.warpMinRange:F2}m 이내 → 워핑 안 함";
+                        float minCm = notify.warpMinRange * 100f;
+                        string rangeInfo = "";
                         if (notify.warpMaxRange > 0f)
-                            rangeInfo += $"\nMax {maxCm:F0}cm = {notify.warpMaxRange:F2}m 밖 → 워핑 안 함";
+                            rangeInfo += $"워핑 거리: {maxCm:F0}cm({notify.warpMaxRange:F2}m) 안에서만 워핑 발동";
                         else
-                            rangeInfo += "\nMax 0 = 거리 제한 없음";
-                        EditorGUILayout.HelpBox(rangeInfo, MessageType.None);
+                            rangeInfo += "워핑 거리: 무제한 (어디서든 워핑)";
+                        rangeInfo += $"\n근접 무시: {minCm:F0}cm({notify.warpMinRange:F2}m) 이내면 이미 가까워서 스킵";
+                        EditorGUILayout.HelpBox(rangeInfo, MessageType.Info);
                     }
 
                     EditorGUILayout.Space(4);
