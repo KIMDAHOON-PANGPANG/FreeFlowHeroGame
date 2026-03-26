@@ -1107,9 +1107,14 @@ namespace FreeFlowHero.Editor
                     EditorGUILayout.LabelField("Y", GUILayout.Width(14));
                     notify.warpOffsetY = CmField(notify.warpOffsetY);
                     EditorGUILayout.EndHorizontal();
-                    EditorGUILayout.HelpBox(
-                        "X: 음수=적 앞쪽(기본 -50), 양수=적 뒤쪽\nY: 0=같은 높이",
-                        MessageType.None);
+                    {
+                        float xCm = notify.warpOffsetX * 100f;
+                        float yCm = notify.warpOffsetY * 100f;
+                        EditorGUILayout.HelpBox(
+                            $"X: {xCm:F0}cm = {notify.warpOffsetX:F2}m (음수=앞, 양수=뒤)\n" +
+                            $"Y: {yCm:F0}cm = {notify.warpOffsetY:F2}m (0=같은 높이)",
+                            MessageType.None);
+                    }
 
                     EditorGUILayout.Space(4);
 
@@ -1146,9 +1151,16 @@ namespace FreeFlowHero.Editor
                         notify.warpMinRange > 0f ? notify.warpMinRange : ActionNotify.DefaultWarpMinRange));
                     notify.warpMaxRange = Mathf.Max(0f, CmField("Max Range (밖=스킵, 0=무제한)",
                         notify.warpMaxRange));
-                    EditorGUILayout.HelpBox(
-                        "Min 이내: 이미 가까우므로 워핑 안 함\nMax 밖: 너무 멀어서 워핑 안 함 (0=제한 없음)",
-                        MessageType.None);
+                    {
+                        float minCm = notify.warpMinRange * 100f;
+                        float maxCm = notify.warpMaxRange * 100f;
+                        string rangeInfo = $"Min {minCm:F0}cm = {notify.warpMinRange:F2}m 이내 → 워핑 안 함";
+                        if (notify.warpMaxRange > 0f)
+                            rangeInfo += $"\nMax {maxCm:F0}cm = {notify.warpMaxRange:F2}m 밖 → 워핑 안 함";
+                        else
+                            rangeInfo += "\nMax 0 = 거리 제한 없음";
+                        EditorGUILayout.HelpBox(rangeInfo, MessageType.None);
+                    }
 
                     EditorGUILayout.Space(4);
 
@@ -1157,8 +1169,9 @@ namespace FreeFlowHero.Editor
                         notify.warpSpeed));
                     if (notify.warpSpeed > 0f)
                     {
+                        float speedCm = notify.warpSpeed * 100f;
                         EditorGUILayout.HelpBox(
-                            "Speed 모드: 거리 ÷ 속도 = 워핑 시간\n멀수록 오래 걸리지만 체감 속도는 일정",
+                            $"Speed {speedCm:F0}cm/초 = {notify.warpSpeed:F2}m/초\n거리 ÷ 속도 = 워핑 시간",
                             MessageType.None);
                     }
                     break;
