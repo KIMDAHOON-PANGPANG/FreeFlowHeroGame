@@ -86,6 +86,7 @@ namespace FreeFlowHero.Combat.Player
 
         // ─── 인라인 워핑 상태 (WARP 노티파이로 트리거) ───
         private bool isWarpActive;
+        private bool warpExecuted;  // ★ 이 액션에서 워핑이 이미 실행되었는지 (중복 발동 방지)
         private Vector2 warpStartPos;
         private Vector2 warpEndPos;
         private float warpTimer;
@@ -103,6 +104,7 @@ namespace FreeFlowHero.Combat.Player
             isAttacking = true;             // ★ 공격 시작 → 공격 입력 잠금
             context.canCancel = false;      // ★ 이전 상태의 canCancel 잔류값 초기화
             isWarpActive = false;           // 인라인 워핑 초기화
+            warpExecuted = false;           // 워핑 실행 플래그 초기화
 
             // ─── 콤보 인덱스에 따른 액션 데이터 결정 ───
             int idx = Mathf.Clamp(context.comboChainIndex, 0, MaxComboChain - 1);
@@ -257,9 +259,10 @@ namespace FreeFlowHero.Combat.Player
                 // 워핑 완료 → 아래로 계속 진행
             }
 
-            // ── WARP 노티파이 트리거 감지 ──
-            if (notifyProcessor.IsWarpTriggered)
+            // ── WARP 노티파이 트리거 감지 (액션당 1회만) ──
+            if (notifyProcessor.IsWarpTriggered && !warpExecuted)
             {
+                warpExecuted = true;  // ★ 중복 발동 방지
                 StartInlineWarp(notifyProcessor.WarpNotify);
                 if (isWarpActive) return; // 워핑 시작됨 → 이번 프레임은 여기서 종료
             }
