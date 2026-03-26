@@ -628,6 +628,9 @@ namespace FreeFlowHero.Combat.Player
                 ? warpNotify.warpMinRange : ActionNotify.DefaultWarpMinRange;
             float maxRange = warpNotify.warpMaxRange;
 
+            Debug.Log($"[Strike] WARP 거리 체크 — dist:{dist:F3}m minRange:{minRange:F3}m({minRange*100f:F0}cm) " +
+                $"maxRange:{maxRange:F3}m({maxRange*100f:F0}cm) JSON.warpMinRange:{warpNotify.warpMinRange:F4}");
+
             // 최소 거리 이내 → 워핑 스킵, 방향만 전환
             if (dist <= minRange)
             {
