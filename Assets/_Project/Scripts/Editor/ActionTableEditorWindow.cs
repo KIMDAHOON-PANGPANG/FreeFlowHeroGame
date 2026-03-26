@@ -1150,7 +1150,7 @@ namespace FreeFlowHero.Editor
                     notify.warpMaxRange = Mathf.Max(0f, CmField("워핑 거리 (이 안에서만 워핑, 0=무제한)",
                         notify.warpMaxRange));
                     notify.warpMinRange = Mathf.Max(0f, CmField("근접 무시 (이미 가까우면 스킵)",
-                        notify.warpMinRange > 0f ? notify.warpMinRange : ActionNotify.DefaultWarpMinRange));
+                        notify.warpMinRange));
                     {
                         float maxCm = notify.warpMaxRange * 100f;
                         float minCm = notify.warpMinRange * 100f;
