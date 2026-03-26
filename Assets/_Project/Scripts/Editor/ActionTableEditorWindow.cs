@@ -1418,6 +1418,29 @@ namespace FreeFlowHero.Editor
             // 상단 삼각형 마커
             EditorGUI.DrawRect(new Rect(headX - 4, headTop - 3, 9, 3), Color.red);
 
+            // ── 스크러버 프레임 라벨 (노란색, 헤드 위에 표시) ──
+            if (currentDragMode == DragMode.Scrub || isPreviewPlaying)
+            {
+                int scrubFrame = Mathf.RoundToInt(previewFrame);
+                float scrubTime = scrubFrame * CombatConstants.FrameDuration;
+                string scrubLabel = $"F:{scrubFrame}  ({scrubTime:F2}s)";
+
+                var labelStyle = new GUIStyle(EditorStyles.boldLabel)
+                {
+                    normal = { textColor = Color.yellow },
+                    fontSize = 11,
+                    alignment = TextAnchor.MiddleCenter,
+                };
+                // 배경 박스
+                float labelW = labelStyle.CalcSize(new GUIContent(scrubLabel)).x + 8f;
+                float labelH = 16f;
+                float labelX = headX - labelW * 0.5f;
+                float labelY = headTop - labelH - 5f;
+                EditorGUI.DrawRect(new Rect(labelX, labelY, labelW, labelH),
+                    new Color(0f, 0f, 0f, 0.75f));
+                GUI.Label(new Rect(labelX, labelY, labelW, labelH), scrubLabel, labelStyle);
+            }
+
             // ── 시간 눈금 (paddedRect 기준, effectiveFrames로 눈금 표시) ──
             Rect paddedRulerRect = new Rect(paddedRect.x, rulerRect.y, paddedRect.width, rulerRect.height);
             float rulerPlaybackRate = (action != null && action.playbackRate > 0f) ? action.playbackRate : 1f;
@@ -2095,11 +2118,53 @@ namespace FreeFlowHero.Editor
             Repaint();
         }
 
-        /// <summary>노티파이를 생성하면서 클릭된 트랙 번호를 강제 지정</summary>
+        /// <summary>
+        /// 노티파이를 생성하면서 트랙에 배치.
+        /// ★ 트랙당 1개 원칙: 해당 트랙에 이미 노티파이가 있으면 빈 트랙을 탐색.
+        ///   빈 트랙이 없고 trackCount가 최대 미만이면 자동으로 트랙을 추가하여 배치.
+        /// </summary>
         private void AddNotifyToTrack(ActionEntry action, ActionNotify notify, int track)
         {
-            notify.track = track;
+            int targetTrack = FindAvailableTrack(action, track);
+            notify.track = targetTrack;
             AddNotify(action, notify);
+        }
+
+        /// <summary>지정 트랙부터 빈 트랙을 탐색. 없으면 자동 확장.</summary>
+        private int FindAvailableTrack(ActionEntry action, int preferredTrack)
+        {
+            // 선호 트랙이 비어있으면 바로 사용
+            if (!IsTrackOccupied(action, preferredTrack))
+                return preferredTrack;
+
+            // 다른 빈 트랙 탐색
+            for (int i = 0; i < trackCount; i++)
+            {
+                if (!IsTrackOccupied(action, i))
+                    return i;
+            }
+
+            // 모든 트랙이 꽉 참 → 자동 확장
+            if (trackCount < MaxTracksLimit)
+            {
+                int newTrack = trackCount;
+                trackCount++;
+                return newTrack;
+            }
+
+            // 최대 한도(10) 도달 → 그냥 선호 트랙에 배치 (예외적 허용)
+            return preferredTrack;
+        }
+
+        /// <summary>트랙에 노티파이가 이미 있는지 확인</summary>
+        private bool IsTrackOccupied(ActionEntry action, int track)
+        {
+            if (action.notifies == null) return false;
+            foreach (var n in action.notifies)
+            {
+                if (n.track == track) return true;
+            }
+            return false;
         }
 
         /// <summary>레거시 startup/active/recovery → 노티파이 3개로 자동 변환</summary>
