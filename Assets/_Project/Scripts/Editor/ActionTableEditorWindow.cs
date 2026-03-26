@@ -1180,6 +1180,9 @@ namespace FreeFlowHero.Editor
                 fixedTimelineFrames = Mathf.Max(baseFrames, 1);
                 timelineZoom = 4.0f;
 
+                // ★ trackCount 자동 확장: 노티파이의 최대 track 값 + 1 이상으로
+                EnsureTrackCountCoversNotifies(action);
+
                 lastRenderedActionIndex = selectedActionIndex;
             }
             int totalFrames = Mathf.Max(GetTimelineTotalFrames(action), 1);
@@ -2154,6 +2157,21 @@ namespace FreeFlowHero.Editor
 
             // 최대 한도(10) 도달 → 그냥 선호 트랙에 배치 (예외적 허용)
             return preferredTrack;
+        }
+
+        /// <summary>노티파이의 최대 track 값에 맞춰 trackCount를 자동 확장</summary>
+        private void EnsureTrackCountCoversNotifies(ActionEntry action)
+        {
+            if (action?.notifies == null) return;
+            int maxTrack = trackCount - 1;
+            foreach (var n in action.notifies)
+            {
+                if (n.track > maxTrack)
+                    maxTrack = n.track;
+            }
+            int needed = maxTrack + 1;
+            if (needed > trackCount)
+                trackCount = Mathf.Min(needed, MaxTracksLimit);
         }
 
         /// <summary>트랙에 노티파이가 이미 있는지 확인</summary>
