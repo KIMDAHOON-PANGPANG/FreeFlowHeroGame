@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 namespace FreeFlowHero.Combat.Core
@@ -6,6 +7,9 @@ namespace FreeFlowHero.Combat.Core
     /// <summary>
     /// 액션 테이블 매니저 (싱글톤).
     /// Resources/ActionTables/ 폴더의 모든 JSON을 로드하여 캐싱한다.
+    ///
+    /// ★ 핫 리로드: 플레이 중 에디터에서 JSON을 저장하면 FileSystemWatcher가
+    ///   파일 변경을 감지하고 자동으로 리로드한다. 다음 공격부터 새 데이터 적용.
     ///
     /// 사용법:
     ///   var action = ActionTableManager.Instance.GetAction("PC_Hero", "LightAtk1");
@@ -37,6 +41,13 @@ namespace FreeFlowHero.Combat.Core
 
         // ─── 경로 ───
         private const string ResourceFolder = "ActionTables";
+        private const string DiskSubPath = "_Project/Resources/ActionTables";
+
+        // ─── 핫 리로드 ───
+        private FileSystemWatcher fileWatcher;
+        private volatile bool hotReloadPending;  // 메인 스레드에서 처리하기 위한 플래그
+        private float hotReloadCooldown;         // 연속 변경 방지 쿨다운
+        private const float HotReloadDelay = 0.3f;
 
         private void Awake()
         {
@@ -49,9 +60,35 @@ namespace FreeFlowHero.Combat.Core
             DontDestroyOnLoad(gameObject);
 
             LoadAll();
+            SetupFileWatcher();
         }
 
-        /// <summary>Resources/ActionTables/ 하위 모든 JSON 로드</summary>
+        private void OnDestroy()
+        {
+            CleanupFileWatcher();
+        }
+
+        private void Update()
+        {
+            // ★ 핫 리로드: FileSystemWatcher 콜백은 별도 스레드이므로
+            //   메인 스레드(Update)에서 실제 리로드 수행
+            if (hotReloadPending)
+            {
+                hotReloadCooldown -= Time.unscaledDeltaTime;
+                if (hotReloadCooldown <= 0f)
+                {
+                    hotReloadPending = false;
+                    LoadAllFromDisk();
+                    Debug.Log($"<color=cyan>[ActionTable] ★ 핫 리로드 완료 — {tables.Count}개 액터 갱신</color>");
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  로드
+        // ═══════════════════════════════════════════════════════
+
+        /// <summary>Resources/ActionTables/ 하위 모든 JSON 로드 (초기 로드용)</summary>
         public void LoadAll()
         {
             tables.Clear();
@@ -59,36 +96,126 @@ namespace FreeFlowHero.Combat.Core
             var textAssets = Resources.LoadAll<TextAsset>(ResourceFolder);
             foreach (var asset in textAssets)
             {
+                ParseAndAddTable(asset.text, asset.name);
+            }
+
+            isLoaded = true;
+        }
+
+        /// <summary>디스크에서 직접 JSON 파일 로드 (핫 리로드용, Resources 캐시 우회)</summary>
+        public void LoadAllFromDisk()
+        {
+            string folderPath = Path.Combine(Application.dataPath, DiskSubPath);
+            if (!Directory.Exists(folderPath))
+            {
+                Debug.LogWarning($"[ActionTable] 핫 리로드 폴더 없음: {folderPath}");
+                return;
+            }
+
+            tables.Clear();
+
+            string[] jsonFiles = Directory.GetFiles(folderPath, "*.json");
+            foreach (string filePath in jsonFiles)
+            {
                 try
                 {
-                    var table = JsonUtility.FromJson<ActorActionTable>(asset.text);
-                    if (table != null && !string.IsNullOrEmpty(table.actorId))
-                    {
-                        // 필드 방어: playbackRate 미설정(0)→1.0, notifies null→빈배열
-                        if (table.actions != null)
-                        {
-                            for (int i = 0; i < table.actions.Length; i++)
-                            {
-                                if (table.actions[i].playbackRate <= 0f)
-                                    table.actions[i].playbackRate = 1.0f;
-                                if (table.actions[i].notifies == null)
-                                    table.actions[i].notifies = System.Array.Empty<ActionNotify>();
-                            }
-                        }
-                        table.BuildMap();
-                        tables[table.actorId] = table;
-
-                    }
+                    string json = File.ReadAllText(filePath);
+                    string fileName = Path.GetFileNameWithoutExtension(filePath);
+                    ParseAndAddTable(json, fileName);
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogError($"[ActionTable] Failed to parse {asset.name}.json: {e.Message}");
+                    Debug.LogError($"[ActionTable] 핫 리로드 파싱 오류 {filePath}: {e.Message}");
                 }
             }
 
             isLoaded = true;
-
         }
+
+        /// <summary>JSON 문자열을 파싱하여 테이블에 등록</summary>
+        private void ParseAndAddTable(string json, string sourceName)
+        {
+            try
+            {
+                var table = JsonUtility.FromJson<ActorActionTable>(json);
+                if (table != null && !string.IsNullOrEmpty(table.actorId))
+                {
+                    // 필드 방어: playbackRate 미설정(0)→1.0, notifies null→빈배열
+                    if (table.actions != null)
+                    {
+                        for (int i = 0; i < table.actions.Length; i++)
+                        {
+                            if (table.actions[i].playbackRate <= 0f)
+                                table.actions[i].playbackRate = 1.0f;
+                            if (table.actions[i].notifies == null)
+                                table.actions[i].notifies = System.Array.Empty<ActionNotify>();
+                        }
+                    }
+                    table.BuildMap();
+                    tables[table.actorId] = table;
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[ActionTable] Failed to parse {sourceName}: {e.Message}");
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  핫 리로드 (FileSystemWatcher)
+        // ═══════════════════════════════════════════════════════
+
+        private void SetupFileWatcher()
+        {
+            string folderPath = Path.Combine(Application.dataPath, DiskSubPath);
+            if (!Directory.Exists(folderPath))
+            {
+                Debug.LogWarning($"[ActionTable] FileWatcher 대상 폴더 없음: {folderPath}");
+                return;
+            }
+
+            try
+            {
+                fileWatcher = new FileSystemWatcher(folderPath, "*.json")
+                {
+                    NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size,
+                    EnableRaisingEvents = true,
+                };
+
+                fileWatcher.Changed += OnFileChanged;
+                fileWatcher.Created += OnFileChanged;
+                fileWatcher.Deleted += OnFileChanged;
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[ActionTable] FileWatcher 초기화 실패: {e.Message}");
+            }
+        }
+
+        private void CleanupFileWatcher()
+        {
+            if (fileWatcher != null)
+            {
+                fileWatcher.EnableRaisingEvents = false;
+                fileWatcher.Changed -= OnFileChanged;
+                fileWatcher.Created -= OnFileChanged;
+                fileWatcher.Deleted -= OnFileChanged;
+                fileWatcher.Dispose();
+                fileWatcher = null;
+            }
+        }
+
+        /// <summary>파일 변경 콜백 (별도 스레드에서 호출됨)</summary>
+        private void OnFileChanged(object sender, FileSystemEventArgs e)
+        {
+            // 쿨다운 리셋 (연속 저장 시 마지막 변경 후 0.3초 대기)
+            hotReloadCooldown = HotReloadDelay;
+            hotReloadPending = true;
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  조회 API
+        // ═══════════════════════════════════════════════════════
 
         /// <summary>
         /// 특정 액터의 특정 액션 데이터 조회.
@@ -128,11 +255,10 @@ namespace FreeFlowHero.Combat.Core
             return tables.ContainsKey(actorId);
         }
 
-        /// <summary>런타임 리로드 (핫 리로드용)</summary>
+        /// <summary>런타임 리로드 (수동 호출용)</summary>
         public void Reload()
         {
-
-            LoadAll();
+            LoadAllFromDisk();
         }
 
         // ─── 에디터 전용: 파일 경로에서 직접 로드 ───
@@ -142,7 +268,7 @@ namespace FreeFlowHero.Combat.Core
         {
             try
             {
-                string json = System.IO.File.ReadAllText(filePath);
+                string json = File.ReadAllText(filePath);
                 var table = JsonUtility.FromJson<ActorActionTable>(json);
                 if (table?.actions != null)
                 {
@@ -170,8 +296,7 @@ namespace FreeFlowHero.Combat.Core
             try
             {
                 string json = JsonUtility.ToJson(table, true);
-                System.IO.File.WriteAllText(filePath, json);
-
+                File.WriteAllText(filePath, json);
             }
             catch (System.Exception e)
             {
