@@ -56,9 +56,13 @@ namespace FreeFlowHero.Combat.Player
         public bool canCancel;
 
         // ─── 프레임 ───
+        // ★ 시간 기반 프레임 카운터: 실제 FPS에 관계없이 60fps 기준 프레임을 산출
+        //   30fps에서도 0.2초 후 stateFrameCounter = 12가 됨
         [Header("프레임")]
-        public int stateFrameCounter;       // 현재 상태 진입 후 경과 프레임
-        public int globalFrameCounter;      // 전체 프레임 카운터
+        public int stateFrameCounter;       // 현재 상태 진입 후 경과 프레임 (60fps 환산)
+        public int globalFrameCounter;      // 전체 프레임 카운터 (60fps 환산)
+        [System.NonSerialized] public float stateTimeAccumulator;  // 상태 시간 누적 (초)
+        [System.NonSerialized] public float globalTimeAccumulator; // 글로벌 시간 누적 (초)
 
         // ─── 참조 ───
         [Header("참조")]
@@ -125,13 +129,20 @@ namespace FreeFlowHero.Combat.Player
         public void ResetStateFrame()
         {
             stateFrameCounter = 0;
+            stateTimeAccumulator = 0f;
         }
 
-        /// <summary>글로벌 프레임 틱</summary>
-        public void TickFrame()
+        /// <summary>
+        /// 시간 기반 프레임 틱.
+        /// deltaTime을 누적하여 60fps 기준 프레임 수로 환산한다.
+        /// 30fps에서도 60fps PC와 동일한 타이밍에 상태 전환이 일어남.
+        /// </summary>
+        public void TickFrame(float deltaTime)
         {
-            stateFrameCounter++;
-            globalFrameCounter++;
+            stateTimeAccumulator += deltaTime;
+            globalTimeAccumulator += deltaTime;
+            stateFrameCounter = Mathf.FloorToInt(stateTimeAccumulator / CombatConstants.FrameDuration);
+            globalFrameCounter = Mathf.FloorToInt(globalTimeAccumulator / CombatConstants.FrameDuration);
         }
     }
 }
