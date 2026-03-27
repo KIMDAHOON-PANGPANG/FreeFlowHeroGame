@@ -2,1068 +2,1198 @@
     "actorId": "PC_Hero",
     "actorName": "주인공",
     "actions": [
-        {
-            "id": "Idle",
-            "name": "대기",
-            "clip": "Fight_Idle",
-            "clipPath": "Assets/Martial Art Animations Sample/Animations/Fight_Idle.fbx",
-            "startup": 0,
-            "active": 0,
-            "recovery": 0,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 0.0,
-            "moveSpeed": 0.0,
-            "cancels": [
-                {
-                    "input": "Attack",
-                    "next": "LightAtk1"
-                },
-                {
-                    "input": "Heavy",
-                    "next": "HeavyAtk"
-                },
-                {
-                    "input": "Dodge",
-                    "next": "Dodge"
-                },
-                {
-                    "input": "Counter",
-                    "next": "Counter"
-                },
-                {
-                    "input": "Huxley",
-                    "next": "HuxleyShot"
-                }
-            ],
-            "defaultNext": "",
-            "tags": [
-                "idle"
-            ],
-            "notifies": []
-        },
-        {
-            "id": "LightAtk1",
-            "name": "기본공격 1타",
-            "clip": "Atk_P_1",
-            "clipPath": "Assets/Martial Art Animations Sample/Animations/Atk_P_1.fbx",
-            "startup": 5,
-            "active": 8,
-            "recovery": 12,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 0.0,
-            "moveSpeed": 6.0,
-            "cancels": [
-                {
-                    "input": "Attack",
-                    "next": "LightAtk2"
-                },
-                {
-                    "input": "Heavy",
-                    "next": "HeavyAtk"
-                },
-                {
-                    "input": "Dodge",
-                    "next": "Dodge"
-                },
-                {
-                    "input": "Counter",
-                    "next": "Counter"
-                }
-            ],
-            "defaultNext": "Idle",
-            "tags": [
-                "light",
-                "combo",
-                "chain1"
-            ],
-            "notifies": [
-                {
-                    "type": "COLLISION",
-                    "startFrame": 11,
-                    "endFrame": 15,
-                    "track": 0,
-                    "disabled": false,
-                    "isInstance": false,
-                    "moveSpeed": 0.0,
-                    "hitboxId": "default",
-                    "damageScale": 1.0,
-                    "hitboxOffsetX": 0.8529999256134033,
-                    "hitboxOffsetY": 0.8669999837875366,
-                    "hitboxOffsetZ": 0.0,
-                    "hitboxSizeX": 0.8870000243186951,
-                    "hitboxSizeY": 1.6089999675750733,
-                    "hitboxSizeZ": 0.0,
-                    "skillCancel": false,
-                    "moveCancel": false,
-                    "dodgeCancel": false,
-                    "counterCancel": false,
-                    "nextAction": "",
-                    "heavyNext": "",
-                    "dodgeNext": "",
-                    "counterNext": "",
-                    "warpOffsetX": 0.0,
-                    "warpOffsetY": 0.0,
-                    "warpDuration": 0.0,
-                    "warpEaseType": 0,
-                    "warpMinDuration": 0.0,
-                    "warpMaxDuration": 0.0,
-                    "warpInvincible": false,
-                    "warpAutoTarget": false,
-                    "warpMinRange": 0.0,
-                    "warpMaxRange": 0.0,
-                    "warpSpeed": 0.0
-                },
-                {
-                    "type": "PENDING_WINDOW",
-                    "startFrame": 7,
-                    "endFrame": 18,
-                    "track": 4,
-                    "disabled": false,
-                    "isInstance": false,
-                    "moveSpeed": 0.0,
-                    "hitboxId": "",
-                    "damageScale": 1.0,
-                    "hitboxOffsetX": 0.0,
-                    "hitboxOffsetY": 0.0,
-                    "hitboxOffsetZ": 0.0,
-                    "hitboxSizeX": 0.0,
-                    "hitboxSizeY": 0.0,
-                    "hitboxSizeZ": 0.0,
-                    "skillCancel": false,
-                    "moveCancel": false,
-                    "dodgeCancel": false,
-                    "counterCancel": false,
-                    "nextAction": "",
-                    "heavyNext": "",
-                    "dodgeNext": "",
-                    "counterNext": "",
-                    "warpOffsetX": 0.0,
-                    "warpOffsetY": 0.0,
-                    "warpDuration": 0.0,
-                    "warpEaseType": 0,
-                    "warpMinDuration": 0.0,
-                    "warpMaxDuration": 0.0,
-                    "warpInvincible": false,
-                    "warpAutoTarget": false,
-                    "warpMinRange": 0.0,
-                    "warpMaxRange": 0.0,
-                    "warpSpeed": 0.0
-                },
-                {
-                    "type": "CANCEL_WINDOW",
-                    "startFrame": 18,
-                    "endFrame": 24,
-                    "track": 1,
-                    "disabled": false,
-                    "isInstance": false,
-                    "moveSpeed": 0.0,
-                    "hitboxId": "",
-                    "damageScale": 1.0,
-                    "hitboxOffsetX": 0.0,
-                    "hitboxOffsetY": 0.0,
-                    "hitboxOffsetZ": 0.0,
-                    "hitboxSizeX": 0.0,
-                    "hitboxSizeY": 0.0,
-                    "hitboxSizeZ": 0.0,
-                    "skillCancel": true,
-                    "moveCancel": true,
-                    "dodgeCancel": true,
-                    "counterCancel": true,
-                    "nextAction": "LightAtk2",
-                    "heavyNext": "",
-                    "dodgeNext": "",
-                    "counterNext": "",
-                    "warpOffsetX": 0.0,
-                    "warpOffsetY": 0.0,
-                    "warpDuration": 0.0,
-                    "warpEaseType": 0,
-                    "warpMinDuration": 0.0,
-                    "warpMaxDuration": 0.0,
-                    "warpInvincible": false,
-                    "warpAutoTarget": false,
-                    "warpMinRange": 0.0,
-                    "warpMaxRange": 0.0,
-                    "warpSpeed": 0.0
-                },
-                {
-                    "type": "WARP",
-                    "startFrame": 2,
-                    "endFrame": 10,
-                    "track": 2,
-                    "disabled": false,
-                    "isInstance": false,
-                    "moveSpeed": 0.0,
-                    "hitboxId": "",
-                    "damageScale": 1.0,
-                    "hitboxOffsetX": 0.0,
-                    "hitboxOffsetY": 0.0,
-                    "hitboxOffsetZ": 0.0,
-                    "hitboxSizeX": 0.0,
-                    "hitboxSizeY": 0.0,
-                    "hitboxSizeZ": 0.0,
-                    "skillCancel": false,
-                    "moveCancel": false,
-                    "dodgeCancel": false,
-                    "counterCancel": false,
-                    "nextAction": "",
-                    "heavyNext": "",
-                    "dodgeNext": "",
-                    "counterNext": "",
-                    "warpOffsetX": -0.30000001192092898,
-                    "warpOffsetY": 0.0,
-                    "warpDuration": 0.0,
-                    "warpEaseType": 0,
-                    "warpMinDuration": 0.03999999910593033,
-                    "warpMaxDuration": 0.11999999731779099,
-                    "warpInvincible": true,
-                    "warpAutoTarget": true,
-                    "warpMinRange": 0.0,
-                    "warpMaxRange": 3.0,
-                    "warpSpeed": 0.0
-                }
-            ]
-        },
-        {
-            "id": "LightAtk2",
-            "name": "기본공격 2타",
-            "clip": "Atk_P_2",
-            "clipPath": "Assets/Martial Art Animations Sample/Animations/Atk_P_2.fbx",
-            "startup": 4,
-            "active": 7,
-            "recovery": 6,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 0.0,
-            "moveSpeed": 6.0,
-            "cancels": [
-                {
-                    "input": "Attack",
-                    "next": "LightAtk3"
-                },
-                {
-                    "input": "Heavy",
-                    "next": "HeavyAtk"
-                },
-                {
-                    "input": "Dodge",
-                    "next": "Dodge"
-                },
-                {
-                    "input": "Counter",
-                    "next": "Counter"
-                }
-            ],
-            "defaultNext": "Idle",
-            "tags": [
-                "light",
-                "combo",
-                "chain2"
-            ],
-            "notifies": [
-                {
-                    "type": "COLLISION",
-                    "startFrame": 12,
-                    "endFrame": 17,
-                    "track": 0,
-                    "disabled": false,
-                    "isInstance": false,
-                    "moveSpeed": 0.0,
-                    "hitboxId": "default",
-                    "damageScale": 1.0,
-                    "hitboxOffsetX": 0.5759999752044678,
-                    "hitboxOffsetY": 0.8970000147819519,
-                    "hitboxOffsetZ": 0.0,
-                    "hitboxSizeX": 0.7369999885559082,
-                    "hitboxSizeY": 1.7120000123977662,
-                    "hitboxSizeZ": 0.0,
-                    "skillCancel": false,
-                    "moveCancel": false,
-                    "dodgeCancel": false,
-                    "counterCancel": false,
-                    "nextAction": "",
-                    "heavyNext": "",
-                    "dodgeNext": "",
-                    "counterNext": "",
-                    "warpOffsetX": 0.0,
-                    "warpOffsetY": 0.0,
-                    "warpDuration": 0.0,
-                    "warpEaseType": 0,
-                    "warpMinDuration": 0.0,
-                    "warpMaxDuration": 0.0,
-                    "warpInvincible": false,
-                    "warpAutoTarget": false,
-                    "warpMinRange": 0.0,
-                    "warpMaxRange": 0.0,
-                    "warpSpeed": 0.0
-                },
-                {
-                    "type": "PENDING_WINDOW",
-                    "startFrame": 8,
-                    "endFrame": 20,
-                    "track": 4,
-                    "disabled": false,
-                    "isInstance": false,
-                    "moveSpeed": 0.0,
-                    "hitboxId": "",
-                    "damageScale": 1.0,
-                    "hitboxOffsetX": 0.0,
-                    "hitboxOffsetY": 0.0,
-                    "hitboxOffsetZ": 0.0,
-                    "hitboxSizeX": 0.0,
-                    "hitboxSizeY": 0.0,
-                    "hitboxSizeZ": 0.0,
-                    "skillCancel": false,
-                    "moveCancel": false,
-                    "dodgeCancel": false,
-                    "counterCancel": false,
-                    "nextAction": "",
-                    "heavyNext": "",
-                    "dodgeNext": "",
-                    "counterNext": "",
-                    "warpOffsetX": 0.0,
-                    "warpOffsetY": 0.0,
-                    "warpDuration": 0.0,
-                    "warpEaseType": 0,
-                    "warpMinDuration": 0.0,
-                    "warpMaxDuration": 0.0,
-                    "warpInvincible": false,
-                    "warpAutoTarget": false,
-                    "warpMinRange": 0.0,
-                    "warpMaxRange": 0.0,
-                    "warpSpeed": 0.0
-                },
-                {
-                    "type": "CANCEL_WINDOW",
-                    "startFrame": 20,
-                    "endFrame": 29,
-                    "track": 1,
-                    "disabled": false,
-                    "isInstance": false,
-                    "moveSpeed": 0.0,
-                    "hitboxId": "",
-                    "damageScale": 1.0,
-                    "hitboxOffsetX": 0.0,
-                    "hitboxOffsetY": 0.0,
-                    "hitboxOffsetZ": 0.0,
-                    "hitboxSizeX": 0.0,
-                    "hitboxSizeY": 0.0,
-                    "hitboxSizeZ": 0.0,
-                    "skillCancel": true,
-                    "moveCancel": true,
-                    "dodgeCancel": true,
-                    "counterCancel": true,
-                    "nextAction": "LightAtk3",
-                    "heavyNext": "",
-                    "dodgeNext": "",
-                    "counterNext": "",
-                    "warpOffsetX": 0.0,
-                    "warpOffsetY": 0.0,
-                    "warpDuration": 0.0,
-                    "warpEaseType": 0,
-                    "warpMinDuration": 0.0,
-                    "warpMaxDuration": 0.0,
-                    "warpInvincible": false,
-                    "warpAutoTarget": false,
-                    "warpMinRange": 0.0,
-                    "warpMaxRange": 0.0,
-                    "warpSpeed": 0.0
-                },
-                {
-                    "type": "WARP",
-                    "startFrame": 1,
-                    "endFrame": 7,
-                    "track": 2,
-                    "disabled": false,
-                    "isInstance": false,
-                    "moveSpeed": 0.0,
-                    "hitboxId": "",
-                    "damageScale": 1.0,
-                    "hitboxOffsetX": 0.0,
-                    "hitboxOffsetY": 0.0,
-                    "hitboxOffsetZ": 0.0,
-                    "hitboxSizeX": 0.0,
-                    "hitboxSizeY": 0.0,
-                    "hitboxSizeZ": 0.0,
-                    "skillCancel": false,
-                    "moveCancel": false,
-                    "dodgeCancel": false,
-                    "counterCancel": false,
-                    "nextAction": "",
-                    "heavyNext": "",
-                    "dodgeNext": "",
-                    "counterNext": "",
-                    "warpOffsetX": -0.30000001192092898,
-                    "warpOffsetY": 0.0,
-                    "warpDuration": 0.0,
-                    "warpEaseType": 0,
-                    "warpMinDuration": 0.03999999910593033,
-                    "warpMaxDuration": 0.11999999731779099,
-                    "warpInvincible": true,
-                    "warpAutoTarget": true,
-                    "warpMinRange": 0.0,
-                    "warpMaxRange": 3.0,
-                    "warpSpeed": 0.0
-                }
-            ]
-        },
-        {
-            "id": "LightAtk3",
-            "name": "기본공격 3타",
-            "clip": "Atk_K_1",
-            "clipPath": "Assets/Martial Art Animations Sample/Animations/Atk_K_1.fbx",
-            "startup": 5,
-            "active": 9,
-            "recovery": 14,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 0.30000001192092898,
-            "moveSpeed": 6.0,
-            "cancels": [
-                {
-                    "input": "Attack",
-                    "next": "LightAtk4"
-                },
-                {
-                    "input": "Heavy",
-                    "next": "HeavyAtk"
-                },
-                {
-                    "input": "Dodge",
-                    "next": "Dodge"
-                },
-                {
-                    "input": "Counter",
-                    "next": "Counter"
-                }
-            ],
-            "defaultNext": "Idle",
-            "tags": [
-                "light",
-                "combo",
-                "chain3"
-            ],
-            "notifies": [
-                {
-                    "type": "COLLISION",
-                    "startFrame": 16,
-                    "endFrame": 21,
-                    "track": 0,
-                    "disabled": false,
-                    "isInstance": false,
-                    "moveSpeed": 0.0,
-                    "hitboxId": "default",
-                    "damageScale": 1.2000000476837159,
-                    "hitboxOffsetX": 0.8600000143051148,
-                    "hitboxOffsetY": 0.8080000281333923,
-                    "hitboxOffsetZ": 0.0,
-                    "hitboxSizeX": 0.699999988079071,
-                    "hitboxSizeY": 1.4830000400543213,
-                    "hitboxSizeZ": 0.0,
-                    "skillCancel": false,
-                    "moveCancel": false,
-                    "dodgeCancel": false,
-                    "counterCancel": false,
-                    "nextAction": "",
-                    "heavyNext": "",
-                    "dodgeNext": "",
-                    "counterNext": "",
-                    "warpOffsetX": 0.0,
-                    "warpOffsetY": 0.0,
-                    "warpDuration": 0.0,
-                    "warpEaseType": 0,
-                    "warpMinDuration": 0.0,
-                    "warpMaxDuration": 0.0,
-                    "warpInvincible": false,
-                    "warpAutoTarget": false,
-                    "warpMinRange": 0.0,
-                    "warpMaxRange": 0.0,
-                    "warpSpeed": 0.0
-                },
-                {
-                    "type": "PENDING_WINDOW",
-                    "startFrame": 6,
-                    "endFrame": 24,
-                    "track": 4,
-                    "disabled": false,
-                    "isInstance": false,
-                    "moveSpeed": 0.0,
-                    "hitboxId": "",
-                    "damageScale": 1.0,
-                    "hitboxOffsetX": 0.0,
-                    "hitboxOffsetY": 0.0,
-                    "hitboxOffsetZ": 0.0,
-                    "hitboxSizeX": 0.0,
-                    "hitboxSizeY": 0.0,
-                    "hitboxSizeZ": 0.0,
-                    "skillCancel": false,
-                    "moveCancel": false,
-                    "dodgeCancel": false,
-                    "counterCancel": false,
-                    "nextAction": "",
-                    "heavyNext": "",
-                    "dodgeNext": "",
-                    "counterNext": "",
-                    "warpOffsetX": 0.0,
-                    "warpOffsetY": 0.0,
-                    "warpDuration": 0.0,
-                    "warpEaseType": 0,
-                    "warpMinDuration": 0.0,
-                    "warpMaxDuration": 0.0,
-                    "warpInvincible": false,
-                    "warpAutoTarget": false,
-                    "warpMinRange": 0.0,
-                    "warpMaxRange": 0.0,
-                    "warpSpeed": 0.0
-                },
-                {
-                    "type": "CANCEL_WINDOW",
-                    "startFrame": 24,
-                    "endFrame": 35,
-                    "track": 1,
-                    "disabled": false,
-                    "isInstance": false,
-                    "moveSpeed": 0.0,
-                    "hitboxId": "",
-                    "damageScale": 1.0,
-                    "hitboxOffsetX": 0.0,
-                    "hitboxOffsetY": 0.0,
-                    "hitboxOffsetZ": 0.0,
-                    "hitboxSizeX": 0.0,
-                    "hitboxSizeY": 0.0,
-                    "hitboxSizeZ": 0.0,
-                    "skillCancel": true,
-                    "moveCancel": true,
-                    "dodgeCancel": true,
-                    "counterCancel": true,
-                    "nextAction": "LightAtk4",
-                    "heavyNext": "",
-                    "dodgeNext": "",
-                    "counterNext": "",
-                    "warpOffsetX": 0.0,
-                    "warpOffsetY": 0.0,
-                    "warpDuration": 0.0,
-                    "warpEaseType": 0,
-                    "warpMinDuration": 0.0,
-                    "warpMaxDuration": 0.0,
-                    "warpInvincible": false,
-                    "warpAutoTarget": false,
-                    "warpMinRange": 0.0,
-                    "warpMaxRange": 0.0,
-                    "warpSpeed": 0.0
-                },
-                {
-                    "type": "WARP",
-                    "startFrame": 1,
-                    "endFrame": 6,
-                    "track": 2,
-                    "disabled": false,
-                    "isInstance": false,
-                    "moveSpeed": 0.0,
-                    "hitboxId": "",
-                    "damageScale": 1.0,
-                    "hitboxOffsetX": 0.0,
-                    "hitboxOffsetY": 0.0,
-                    "hitboxOffsetZ": 0.0,
-                    "hitboxSizeX": 0.0,
-                    "hitboxSizeY": 0.0,
-                    "hitboxSizeZ": 0.0,
-                    "skillCancel": false,
-                    "moveCancel": false,
-                    "dodgeCancel": false,
-                    "counterCancel": false,
-                    "nextAction": "",
-                    "heavyNext": "",
-                    "dodgeNext": "",
-                    "counterNext": "",
-                    "warpOffsetX": -0.30000001192092898,
-                    "warpOffsetY": 0.0,
-                    "warpDuration": 0.0,
-                    "warpEaseType": 0,
-                    "warpMinDuration": 0.03999999910593033,
-                    "warpMaxDuration": 0.11999999731779099,
-                    "warpInvincible": true,
-                    "warpAutoTarget": true,
-                    "warpMinRange": 0.0,
-                    "warpMaxRange": 3.0,
-                    "warpSpeed": 0.0
-                }
-            ]
-        },
-        {
-            "id": "LightAtk4",
-            "name": "기본공격 4타 (니킥)",
-            "clip": "knee strike",
-            "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/knee strike.fbx",
-            "startup": 5,
-            "active": 8,
-            "recovery": 12,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 0.30000001192092898,
-            "moveSpeed": 5.0,
-            "cancels": [
-                {
-                    "input": "Attack",
-                    "next": "LightAtk1"
-                },
-                {
-                    "input": "Dodge",
-                    "next": "Dodge"
-                }
-            ],
-            "defaultNext": "Idle",
-            "tags": [
-                "light",
-                "combo",
-                "chain4"
-            ],
-            "notifies": [
-                {
-                    "type": "COLLISION",
-                    "startFrame": 21,
-                    "endFrame": 27,
-                    "track": 0,
-                    "disabled": false,
-                    "isInstance": false,
-                    "moveSpeed": 0.0,
-                    "hitboxId": "default",
-                    "damageScale": 1.0,
-                    "hitboxOffsetX": 0.9959999918937683,
-                    "hitboxOffsetY": 0.8690000176429749,
-                    "hitboxOffsetZ": 0.0,
-                    "hitboxSizeX": 0.8349999785423279,
-                    "hitboxSizeY": 1.4500000476837159,
-                    "hitboxSizeZ": 0.0,
-                    "skillCancel": false,
-                    "moveCancel": false,
-                    "dodgeCancel": false,
-                    "counterCancel": false,
-                    "nextAction": "",
-                    "heavyNext": "",
-                    "dodgeNext": "",
-                    "counterNext": "",
-                    "warpOffsetX": 0.0,
-                    "warpOffsetY": 0.0,
-                    "warpDuration": 0.0,
-                    "warpEaseType": 0,
-                    "warpMinDuration": 0.0,
-                    "warpMaxDuration": 0.0,
-                    "warpInvincible": false,
-                    "warpAutoTarget": false,
-                    "warpMinRange": 0.0,
-                    "warpMaxRange": 0.0,
-                    "warpSpeed": 0.0
-                },
-                {
-                    "type": "PENDING_WINDOW",
-                    "startFrame": 6,
-                    "endFrame": 30,
-                    "track": 4,
-                    "disabled": false,
-                    "isInstance": false,
-                    "moveSpeed": 0.0,
-                    "hitboxId": "",
-                    "damageScale": 1.0,
-                    "hitboxOffsetX": 0.0,
-                    "hitboxOffsetY": 0.0,
-                    "hitboxOffsetZ": 0.0,
-                    "hitboxSizeX": 0.0,
-                    "hitboxSizeY": 0.0,
-                    "hitboxSizeZ": 0.0,
-                    "skillCancel": false,
-                    "moveCancel": false,
-                    "dodgeCancel": false,
-                    "counterCancel": false,
-                    "nextAction": "",
-                    "heavyNext": "",
-                    "dodgeNext": "",
-                    "counterNext": "",
-                    "warpOffsetX": 0.0,
-                    "warpOffsetY": 0.0,
-                    "warpDuration": 0.0,
-                    "warpEaseType": 0,
-                    "warpMinDuration": 0.0,
-                    "warpMaxDuration": 0.0,
-                    "warpInvincible": false,
-                    "warpAutoTarget": false,
-                    "warpMinRange": 0.0,
-                    "warpMaxRange": 0.0,
-                    "warpSpeed": 0.0
-                },
-                {
-                    "type": "CANCEL_WINDOW",
-                    "startFrame": 30,
-                    "endFrame": 39,
-                    "track": 1,
-                    "disabled": false,
-                    "isInstance": false,
-                    "moveSpeed": 0.0,
-                    "hitboxId": "",
-                    "damageScale": 1.0,
-                    "hitboxOffsetX": 0.0,
-                    "hitboxOffsetY": 0.0,
-                    "hitboxOffsetZ": 0.0,
-                    "hitboxSizeX": 0.0,
-                    "hitboxSizeY": 0.0,
-                    "hitboxSizeZ": 0.0,
-                    "skillCancel": true,
-                    "moveCancel": true,
-                    "dodgeCancel": true,
-                    "counterCancel": false,
-                    "nextAction": "LightAtk1",
-                    "heavyNext": "",
-                    "dodgeNext": "",
-                    "counterNext": "",
-                    "warpOffsetX": 0.0,
-                    "warpOffsetY": 0.0,
-                    "warpDuration": 0.0,
-                    "warpEaseType": 0,
-                    "warpMinDuration": 0.0,
-                    "warpMaxDuration": 0.0,
-                    "warpInvincible": false,
-                    "warpAutoTarget": false,
-                    "warpMinRange": 0.0,
-                    "warpMaxRange": 0.0,
-                    "warpSpeed": 0.0
-                }
-            ]
-        },
-        {
-            "id": "LightAtkDown",
-            "name": "다운 공격",
-            "clip": "low kick",
-            "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/low kick.fbx",
-            "startup": 4,
-            "active": 10,
-            "recovery": 14,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 0.5,
-            "moveSpeed": 3.0,
-            "cancels": [
-                {
-                    "input": "Attack",
-                    "next": "LightAtk1"
-                }
-            ],
-            "defaultNext": "Idle",
-            "tags": [
-                "light",
-                "down"
-            ],
-            "notifies": []
-        },
-        {
-            "id": "HeavyAtk",
-            "name": "강공격 (아머 파괴)",
-            "clip": "charge fist",
-            "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/charge fist.fbx",
-            "startup": 10,
-            "active": 12,
-            "recovery": 18,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 0.6000000238418579,
-            "moveSpeed": 4.0,
-            "cancels": [
-                {
-                    "input": "Dodge",
-                    "next": "Dodge"
-                }
-            ],
-            "defaultNext": "Idle",
-            "tags": [
-                "heavy",
-                "armorBreak"
-            ],
-            "notifies": []
-        },
-        {
-            "id": "Dodge",
-            "name": "회피",
-            "clip": "",
-            "clipPath": "",
-            "startup": 2,
-            "active": 12,
-            "recovery": 8,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 0.4000000059604645,
-            "moveSpeed": 12.0,
-            "cancels": [
-                {
-                    "input": "Attack",
-                    "next": "DodgeCounterAtk"
-                }
-            ],
-            "defaultNext": "Idle",
-            "tags": [
-                "dodge",
-                "iFrame"
-            ],
-            "notifies": []
-        },
-        {
-            "id": "DodgeCounterAtk",
-            "name": "회피 후속 공격",
-            "clip": "front sweep",
-            "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/front sweep.fbx",
-            "startup": 3,
-            "active": 10,
-            "recovery": 12,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 0.30000001192092898,
-            "moveSpeed": 5.0,
-            "cancels": [
-                {
-                    "input": "Attack",
-                    "next": "LightAtk2"
-                },
-                {
-                    "input": "Dodge",
-                    "next": "Dodge"
-                }
-            ],
-            "defaultNext": "Idle",
-            "tags": [
-                "light",
-                "dodgeFollow"
-            ],
-            "notifies": []
-        },
-        {
-            "id": "Counter",
-            "name": "카운터 반격",
-            "clip": "spinning elbow",
-            "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/spinning elbow.fbx",
-            "startup": 3,
-            "active": 8,
-            "recovery": 12,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 0.30000001192092898,
-            "moveSpeed": 5.0,
-            "cancels": [
-                {
-                    "input": "Attack",
-                    "next": "LightAtk2"
-                },
-                {
-                    "input": "Dodge",
-                    "next": "Dodge"
-                }
-            ],
-            "defaultNext": "Idle",
-            "tags": [
-                "counter"
-            ],
-            "notifies": []
-        },
-        {
-            "id": "PerfectCounter",
-            "name": "퍼펙트 카운터 강화 반격",
-            "clip": "back kick",
-            "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/back kick.fbx",
-            "startup": 2,
-            "active": 10,
-            "recovery": 14,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 0.4000000059604645,
-            "moveSpeed": 6.0,
-            "cancels": [
-                {
-                    "input": "Attack",
-                    "next": "LightAtk1"
-                },
-                {
-                    "input": "Dodge",
-                    "next": "Dodge"
-                }
-            ],
-            "defaultNext": "Idle",
-            "tags": [
-                "counter",
-                "perfect"
-            ],
-            "notifies": []
-        },
-        {
-            "id": "Launch",
-            "name": "띄우기 공격",
-            "clip": "jumping uppercut",
-            "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/jumping uppercut.fbx",
-            "startup": 6,
-            "active": 10,
-            "recovery": 16,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 0.5,
-            "moveSpeed": 4.0,
-            "cancels": [
-                {
-                    "input": "Attack",
-                    "next": "AirComboFinisher"
-                }
-            ],
-            "defaultNext": "Idle",
-            "tags": [
-                "launch",
-                "airCombo"
-            ],
-            "notifies": []
-        },
-        {
-            "id": "AirComboFinisher",
-            "name": "에어 콤보 피니셔",
-            "clip": "jumping side kick",
-            "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/jumping side kick.fbx",
-            "startup": 4,
-            "active": 8,
-            "recovery": 18,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 0.699999988079071,
-            "moveSpeed": 3.0,
-            "cancels": [],
-            "defaultNext": "Idle",
-            "tags": [
-                "airCombo",
-                "finisher"
-            ],
-            "notifies": []
-        },
-        {
-            "id": "Execution1",
-            "name": "처형 모션 1",
-            "clip": "cressent kick",
-            "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/cressent kick.fbx",
-            "startup": 8,
-            "active": 14,
-            "recovery": 20,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 1.0,
-            "moveSpeed": 0.0,
-            "cancels": [],
-            "defaultNext": "Idle",
-            "tags": [
-                "execution",
-                "cinematic"
-            ],
-            "notifies": []
-        },
-        {
-            "id": "Execution2",
-            "name": "처형 모션 2",
-            "clip": "axe kick",
-            "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/axe kick.fbx",
-            "startup": 8,
-            "active": 14,
-            "recovery": 20,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 1.0,
-            "moveSpeed": 0.0,
-            "cancels": [],
-            "defaultNext": "Idle",
-            "tags": [
-                "execution",
-                "cinematic"
-            ],
-            "notifies": []
-        },
-        {
-            "id": "Execution3",
-            "name": "처형 모션 3 (화려)",
-            "clip": "spinning axe kick",
-            "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/spinning axe kick.fbx",
-            "startup": 10,
-            "active": 16,
-            "recovery": 24,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 1.0,
-            "moveSpeed": 0.0,
-            "cancels": [],
-            "defaultNext": "Idle",
-            "tags": [
-                "execution",
-                "cinematic",
-                "highCombo"
-            ],
-            "notifies": []
-        },
-        {
-            "id": "HuxleyShot",
-            "name": "헉슬리 건 발사",
-            "clip": "super blast",
-            "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/super blast.fbx",
-            "startup": 6,
-            "active": 4,
-            "recovery": 14,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 0.5,
-            "moveSpeed": 0.0,
-            "cancels": [
-                {
-                    "input": "Attack",
-                    "next": "LightAtk1"
-                },
-                {
-                    "input": "Dodge",
-                    "next": "Dodge"
-                }
-            ],
-            "defaultNext": "Idle",
-            "tags": [
-                "huxley",
-                "ranged"
-            ],
-            "notifies": []
-        },
-        {
-            "id": "HuxleyFinisher",
-            "name": "헉슬리 100% 피니셔",
-            "clip": "webster side kick",
-            "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/webster side kick.fbx",
-            "startup": 8,
-            "active": 16,
-            "recovery": 24,
-            "playbackRate": 1.0,
-            "transitionIn": 0.0,
-            "transitionOut": 0.0,
-            "cancelRatio": 1.0,
-            "moveSpeed": 0.0,
-            "cancels": [],
-            "defaultNext": "Idle",
-            "tags": [
-                "huxley",
-                "finisher",
-                "cinematic"
-            ],
-            "notifies": []
-        }
-    ]
+                    {
+                        "id": "Idle",
+                        "name": "대기",
+                        "clip": "Fight_Idle",
+                        "clipPath": "Assets/Martial Art Animations Sample/Animations/Fight_Idle.fbx",
+                        "startup": 0,
+                        "active": 0,
+                        "recovery": 0,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 0.0,
+                        "moveSpeed": 0.0,
+                        "cancels": [
+                                        {
+                                            "input": "Attack",
+                                            "next": "LightAtk1"
+                                        },
+                                        {
+                                            "input": "Heavy",
+                                            "next": "HeavyAtk"
+                                        },
+                                        {
+                                            "input": "Dodge",
+                                            "next": "Dodge"
+                                        },
+                                        {
+                                            "input": "Counter",
+                                            "next": "Counter"
+                                        },
+                                        {
+                                            "input": "Huxley",
+                                            "next": "HuxleyShot"
+                                        }
+                                    ],
+                        "defaultNext": "",
+                        "tags": [
+                                     "idle"
+                                 ],
+                        "notifies": [
+
+                                     ]
+                    },
+                    {
+                        "id": "LightAtk1",
+                        "name": "기본공격 1타",
+                        "clip": "Atk_P_1",
+                        "clipPath": "Assets/Martial Art Animations Sample/Animations/Atk_P_1.fbx",
+                        "startup": 5,
+                        "active": 8,
+                        "recovery": 12,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 0.0,
+                        "moveSpeed": 6.0,
+                        "cancels": [
+                                        {
+                                            "input": "Attack",
+                                            "next": "LightAtk2"
+                                        },
+                                        {
+                                            "input": "Heavy",
+                                            "next": "HeavyAtk"
+                                        },
+                                        {
+                                            "input": "Dodge",
+                                            "next": "Dodge"
+                                        },
+                                        {
+                                            "input": "Counter",
+                                            "next": "Counter"
+                                        }
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "light",
+                                     "combo",
+                                     "chain1"
+                                 ],
+                        "notifies": [
+                                         {
+                                             "type": "COLLISION",
+                                             "startFrame": 11,
+                                             "endFrame": 15,
+                                             "track": 0,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "moveSpeed": 0.0,
+                                             "hitboxId": "default",
+                                             "damageScale": 1.0,
+                                             "hitboxOffsetX": 0.8529999256134033,
+                                             "hitboxOffsetY": 0.8669999837875366,
+                                             "hitboxOffsetZ": 0.0,
+                                             "hitboxSizeX": 0.8870000243186951,
+                                             "hitboxSizeY": 1.6089999675750733,
+                                             "hitboxSizeZ": 0.0,
+                                             "skillCancel": false,
+                                             "moveCancel": false,
+                                             "dodgeCancel": false,
+                                             "counterCancel": false,
+                                             "nextAction": "",
+                                             "heavyNext": "",
+                                             "dodgeNext": "",
+                                             "counterNext": "",
+                                             "warpOffsetX": 0.0,
+                                             "warpOffsetY": 0.0,
+                                             "warpDuration": 0.0,
+                                             "warpEaseType": 0,
+                                             "warpMinDuration": 0.0,
+                                             "warpMaxDuration": 0.0,
+                                             "warpInvincible": false,
+                                             "warpAutoTarget": false,
+                                             "warpMinRange": 0.0,
+                                             "warpMaxRange": 0.0,
+                                             "warpSpeed": 0.0
+                                         },
+                                         {
+                                             "type": "PENDING_WINDOW",
+                                             "startFrame": 7,
+                                             "endFrame": 18,
+                                             "track": 4,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "moveSpeed": 0.0,
+                                             "hitboxId": "",
+                                             "damageScale": 1.0,
+                                             "hitboxOffsetX": 0.0,
+                                             "hitboxOffsetY": 0.0,
+                                             "hitboxOffsetZ": 0.0,
+                                             "hitboxSizeX": 0.0,
+                                             "hitboxSizeY": 0.0,
+                                             "hitboxSizeZ": 0.0,
+                                             "skillCancel": false,
+                                             "moveCancel": false,
+                                             "dodgeCancel": false,
+                                             "counterCancel": false,
+                                             "nextAction": "",
+                                             "heavyNext": "",
+                                             "dodgeNext": "",
+                                             "counterNext": "",
+                                             "warpOffsetX": 0.0,
+                                             "warpOffsetY": 0.0,
+                                             "warpDuration": 0.0,
+                                             "warpEaseType": 0,
+                                             "warpMinDuration": 0.0,
+                                             "warpMaxDuration": 0.0,
+                                             "warpInvincible": false,
+                                             "warpAutoTarget": false,
+                                             "warpMinRange": 0.0,
+                                             "warpMaxRange": 0.0,
+                                             "warpSpeed": 0.0
+                                         },
+                                         {
+                                             "type": "CANCEL_WINDOW",
+                                             "startFrame": 18,
+                                             "endFrame": 24,
+                                             "track": 1,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "moveSpeed": 0.0,
+                                             "hitboxId": "",
+                                             "damageScale": 1.0,
+                                             "hitboxOffsetX": 0.0,
+                                             "hitboxOffsetY": 0.0,
+                                             "hitboxOffsetZ": 0.0,
+                                             "hitboxSizeX": 0.0,
+                                             "hitboxSizeY": 0.0,
+                                             "hitboxSizeZ": 0.0,
+                                             "skillCancel": true,
+                                             "moveCancel": true,
+                                             "dodgeCancel": true,
+                                             "counterCancel": true,
+                                             "nextAction": "LightAtk2",
+                                             "heavyNext": "",
+                                             "dodgeNext": "",
+                                             "counterNext": "",
+                                             "warpOffsetX": 0.0,
+                                             "warpOffsetY": 0.0,
+                                             "warpDuration": 0.0,
+                                             "warpEaseType": 0,
+                                             "warpMinDuration": 0.0,
+                                             "warpMaxDuration": 0.0,
+                                             "warpInvincible": false,
+                                             "warpAutoTarget": false,
+                                             "warpMinRange": 0.0,
+                                             "warpMaxRange": 0.0,
+                                             "warpSpeed": 0.0
+                                         },
+                                         {
+                                             "type": "WARP",
+                                             "startFrame": 2,
+                                             "endFrame": 10,
+                                             "track": 2,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "moveSpeed": 0.0,
+                                             "hitboxId": "",
+                                             "damageScale": 1.0,
+                                             "hitboxOffsetX": 0.0,
+                                             "hitboxOffsetY": 0.0,
+                                             "hitboxOffsetZ": 0.0,
+                                             "hitboxSizeX": 0.0,
+                                             "hitboxSizeY": 0.0,
+                                             "hitboxSizeZ": 0.0,
+                                             "skillCancel": false,
+                                             "moveCancel": false,
+                                             "dodgeCancel": false,
+                                             "counterCancel": false,
+                                             "nextAction": "",
+                                             "heavyNext": "",
+                                             "dodgeNext": "",
+                                             "counterNext": "",
+                                             "warpOffsetX": -0.30000001192092898,
+                                             "warpOffsetY": 0.0,
+                                             "warpDuration": 0.0,
+                                             "warpEaseType": 0,
+                                             "warpMinDuration": 0.03999999910593033,
+                                             "warpMaxDuration": 0.11999999731779099,
+                                             "warpInvincible": true,
+                                             "warpAutoTarget": true,
+                                             "warpMinRange": 0.0,
+                                             "warpMaxRange": 3.0,
+                                             "warpSpeed": 0.0
+                                         },
+                                         {
+                                             "type": "ROOT_MOTION",
+                                             "startFrame": 0,
+                                             "endFrame": 29,
+                                             "track": 5,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "rootMotionKeys": [
+                                                                    0,
+                                                                    0,
+                                                                    0.15,
+                                                                    4,
+                                                                    0.35,
+                                                                    7,
+                                                                    0.55,
+                                                                    5,
+                                                                    0.75,
+                                                                    2,
+                                                                    1,
+                                                                    0
+                                                                ],
+                                             "rootMotionScale": 1
+                                         }
+                                     ]
+                    },
+                    {
+                        "id": "LightAtk2",
+                        "name": "기본공격 2타",
+                        "clip": "Atk_P_2",
+                        "clipPath": "Assets/Martial Art Animations Sample/Animations/Atk_P_2.fbx",
+                        "startup": 4,
+                        "active": 7,
+                        "recovery": 6,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 0.0,
+                        "moveSpeed": 6.0,
+                        "cancels": [
+                                        {
+                                            "input": "Attack",
+                                            "next": "LightAtk3"
+                                        },
+                                        {
+                                            "input": "Heavy",
+                                            "next": "HeavyAtk"
+                                        },
+                                        {
+                                            "input": "Dodge",
+                                            "next": "Dodge"
+                                        },
+                                        {
+                                            "input": "Counter",
+                                            "next": "Counter"
+                                        }
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "light",
+                                     "combo",
+                                     "chain2"
+                                 ],
+                        "notifies": [
+                                         {
+                                             "type": "COLLISION",
+                                             "startFrame": 12,
+                                             "endFrame": 17,
+                                             "track": 0,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "moveSpeed": 0.0,
+                                             "hitboxId": "default",
+                                             "damageScale": 1.0,
+                                             "hitboxOffsetX": 0.5759999752044678,
+                                             "hitboxOffsetY": 0.8970000147819519,
+                                             "hitboxOffsetZ": 0.0,
+                                             "hitboxSizeX": 0.7369999885559082,
+                                             "hitboxSizeY": 1.7120000123977662,
+                                             "hitboxSizeZ": 0.0,
+                                             "skillCancel": false,
+                                             "moveCancel": false,
+                                             "dodgeCancel": false,
+                                             "counterCancel": false,
+                                             "nextAction": "",
+                                             "heavyNext": "",
+                                             "dodgeNext": "",
+                                             "counterNext": "",
+                                             "warpOffsetX": 0.0,
+                                             "warpOffsetY": 0.0,
+                                             "warpDuration": 0.0,
+                                             "warpEaseType": 0,
+                                             "warpMinDuration": 0.0,
+                                             "warpMaxDuration": 0.0,
+                                             "warpInvincible": false,
+                                             "warpAutoTarget": false,
+                                             "warpMinRange": 0.0,
+                                             "warpMaxRange": 0.0,
+                                             "warpSpeed": 0.0
+                                         },
+                                         {
+                                             "type": "PENDING_WINDOW",
+                                             "startFrame": 8,
+                                             "endFrame": 20,
+                                             "track": 4,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "moveSpeed": 0.0,
+                                             "hitboxId": "",
+                                             "damageScale": 1.0,
+                                             "hitboxOffsetX": 0.0,
+                                             "hitboxOffsetY": 0.0,
+                                             "hitboxOffsetZ": 0.0,
+                                             "hitboxSizeX": 0.0,
+                                             "hitboxSizeY": 0.0,
+                                             "hitboxSizeZ": 0.0,
+                                             "skillCancel": false,
+                                             "moveCancel": false,
+                                             "dodgeCancel": false,
+                                             "counterCancel": false,
+                                             "nextAction": "",
+                                             "heavyNext": "",
+                                             "dodgeNext": "",
+                                             "counterNext": "",
+                                             "warpOffsetX": 0.0,
+                                             "warpOffsetY": 0.0,
+                                             "warpDuration": 0.0,
+                                             "warpEaseType": 0,
+                                             "warpMinDuration": 0.0,
+                                             "warpMaxDuration": 0.0,
+                                             "warpInvincible": false,
+                                             "warpAutoTarget": false,
+                                             "warpMinRange": 0.0,
+                                             "warpMaxRange": 0.0,
+                                             "warpSpeed": 0.0
+                                         },
+                                         {
+                                             "type": "CANCEL_WINDOW",
+                                             "startFrame": 20,
+                                             "endFrame": 29,
+                                             "track": 1,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "moveSpeed": 0.0,
+                                             "hitboxId": "",
+                                             "damageScale": 1.0,
+                                             "hitboxOffsetX": 0.0,
+                                             "hitboxOffsetY": 0.0,
+                                             "hitboxOffsetZ": 0.0,
+                                             "hitboxSizeX": 0.0,
+                                             "hitboxSizeY": 0.0,
+                                             "hitboxSizeZ": 0.0,
+                                             "skillCancel": true,
+                                             "moveCancel": true,
+                                             "dodgeCancel": true,
+                                             "counterCancel": true,
+                                             "nextAction": "LightAtk3",
+                                             "heavyNext": "",
+                                             "dodgeNext": "",
+                                             "counterNext": "",
+                                             "warpOffsetX": 0.0,
+                                             "warpOffsetY": 0.0,
+                                             "warpDuration": 0.0,
+                                             "warpEaseType": 0,
+                                             "warpMinDuration": 0.0,
+                                             "warpMaxDuration": 0.0,
+                                             "warpInvincible": false,
+                                             "warpAutoTarget": false,
+                                             "warpMinRange": 0.0,
+                                             "warpMaxRange": 0.0,
+                                             "warpSpeed": 0.0
+                                         },
+                                         {
+                                             "type": "WARP",
+                                             "startFrame": 1,
+                                             "endFrame": 7,
+                                             "track": 2,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "moveSpeed": 0.0,
+                                             "hitboxId": "",
+                                             "damageScale": 1.0,
+                                             "hitboxOffsetX": 0.0,
+                                             "hitboxOffsetY": 0.0,
+                                             "hitboxOffsetZ": 0.0,
+                                             "hitboxSizeX": 0.0,
+                                             "hitboxSizeY": 0.0,
+                                             "hitboxSizeZ": 0.0,
+                                             "skillCancel": false,
+                                             "moveCancel": false,
+                                             "dodgeCancel": false,
+                                             "counterCancel": false,
+                                             "nextAction": "",
+                                             "heavyNext": "",
+                                             "dodgeNext": "",
+                                             "counterNext": "",
+                                             "warpOffsetX": -0.30000001192092898,
+                                             "warpOffsetY": 0.0,
+                                             "warpDuration": 0.0,
+                                             "warpEaseType": 0,
+                                             "warpMinDuration": 0.03999999910593033,
+                                             "warpMaxDuration": 0.11999999731779099,
+                                             "warpInvincible": true,
+                                             "warpAutoTarget": true,
+                                             "warpMinRange": 0.0,
+                                             "warpMaxRange": 3.0,
+                                             "warpSpeed": 0.0
+                                         },
+                                         {
+                                             "type": "ROOT_MOTION",
+                                             "startFrame": 0,
+                                             "endFrame": 38,
+                                             "track": 5,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "rootMotionKeys": [
+                                                                    0,
+                                                                    0,
+                                                                    0.15,
+                                                                    4,
+                                                                    0.35,
+                                                                    7,
+                                                                    0.55,
+                                                                    5,
+                                                                    0.75,
+                                                                    2,
+                                                                    1,
+                                                                    0
+                                                                ],
+                                             "rootMotionScale": 1
+                                         }
+                                     ]
+                    },
+                    {
+                        "id": "LightAtk3",
+                        "name": "기본공격 3타",
+                        "clip": "Atk_K_1",
+                        "clipPath": "Assets/Martial Art Animations Sample/Animations/Atk_K_1.fbx",
+                        "startup": 5,
+                        "active": 9,
+                        "recovery": 14,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 0.30000001192092898,
+                        "moveSpeed": 6.0,
+                        "cancels": [
+                                        {
+                                            "input": "Attack",
+                                            "next": "LightAtk4"
+                                        },
+                                        {
+                                            "input": "Heavy",
+                                            "next": "HeavyAtk"
+                                        },
+                                        {
+                                            "input": "Dodge",
+                                            "next": "Dodge"
+                                        },
+                                        {
+                                            "input": "Counter",
+                                            "next": "Counter"
+                                        }
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "light",
+                                     "combo",
+                                     "chain3"
+                                 ],
+                        "notifies": [
+                                         {
+                                             "type": "COLLISION",
+                                             "startFrame": 16,
+                                             "endFrame": 21,
+                                             "track": 0,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "moveSpeed": 0.0,
+                                             "hitboxId": "default",
+                                             "damageScale": 1.2000000476837159,
+                                             "hitboxOffsetX": 0.8600000143051148,
+                                             "hitboxOffsetY": 0.8080000281333923,
+                                             "hitboxOffsetZ": 0.0,
+                                             "hitboxSizeX": 0.699999988079071,
+                                             "hitboxSizeY": 1.4830000400543213,
+                                             "hitboxSizeZ": 0.0,
+                                             "skillCancel": false,
+                                             "moveCancel": false,
+                                             "dodgeCancel": false,
+                                             "counterCancel": false,
+                                             "nextAction": "",
+                                             "heavyNext": "",
+                                             "dodgeNext": "",
+                                             "counterNext": "",
+                                             "warpOffsetX": 0.0,
+                                             "warpOffsetY": 0.0,
+                                             "warpDuration": 0.0,
+                                             "warpEaseType": 0,
+                                             "warpMinDuration": 0.0,
+                                             "warpMaxDuration": 0.0,
+                                             "warpInvincible": false,
+                                             "warpAutoTarget": false,
+                                             "warpMinRange": 0.0,
+                                             "warpMaxRange": 0.0,
+                                             "warpSpeed": 0.0
+                                         },
+                                         {
+                                             "type": "PENDING_WINDOW",
+                                             "startFrame": 6,
+                                             "endFrame": 24,
+                                             "track": 4,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "moveSpeed": 0.0,
+                                             "hitboxId": "",
+                                             "damageScale": 1.0,
+                                             "hitboxOffsetX": 0.0,
+                                             "hitboxOffsetY": 0.0,
+                                             "hitboxOffsetZ": 0.0,
+                                             "hitboxSizeX": 0.0,
+                                             "hitboxSizeY": 0.0,
+                                             "hitboxSizeZ": 0.0,
+                                             "skillCancel": false,
+                                             "moveCancel": false,
+                                             "dodgeCancel": false,
+                                             "counterCancel": false,
+                                             "nextAction": "",
+                                             "heavyNext": "",
+                                             "dodgeNext": "",
+                                             "counterNext": "",
+                                             "warpOffsetX": 0.0,
+                                             "warpOffsetY": 0.0,
+                                             "warpDuration": 0.0,
+                                             "warpEaseType": 0,
+                                             "warpMinDuration": 0.0,
+                                             "warpMaxDuration": 0.0,
+                                             "warpInvincible": false,
+                                             "warpAutoTarget": false,
+                                             "warpMinRange": 0.0,
+                                             "warpMaxRange": 0.0,
+                                             "warpSpeed": 0.0
+                                         },
+                                         {
+                                             "type": "CANCEL_WINDOW",
+                                             "startFrame": 24,
+                                             "endFrame": 35,
+                                             "track": 1,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "moveSpeed": 0.0,
+                                             "hitboxId": "",
+                                             "damageScale": 1.0,
+                                             "hitboxOffsetX": 0.0,
+                                             "hitboxOffsetY": 0.0,
+                                             "hitboxOffsetZ": 0.0,
+                                             "hitboxSizeX": 0.0,
+                                             "hitboxSizeY": 0.0,
+                                             "hitboxSizeZ": 0.0,
+                                             "skillCancel": true,
+                                             "moveCancel": true,
+                                             "dodgeCancel": true,
+                                             "counterCancel": true,
+                                             "nextAction": "LightAtk4",
+                                             "heavyNext": "",
+                                             "dodgeNext": "",
+                                             "counterNext": "",
+                                             "warpOffsetX": 0.0,
+                                             "warpOffsetY": 0.0,
+                                             "warpDuration": 0.0,
+                                             "warpEaseType": 0,
+                                             "warpMinDuration": 0.0,
+                                             "warpMaxDuration": 0.0,
+                                             "warpInvincible": false,
+                                             "warpAutoTarget": false,
+                                             "warpMinRange": 0.0,
+                                             "warpMaxRange": 0.0,
+                                             "warpSpeed": 0.0
+                                         },
+                                         {
+                                             "type": "WARP",
+                                             "startFrame": 1,
+                                             "endFrame": 6,
+                                             "track": 2,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "moveSpeed": 0.0,
+                                             "hitboxId": "",
+                                             "damageScale": 1.0,
+                                             "hitboxOffsetX": 0.0,
+                                             "hitboxOffsetY": 0.0,
+                                             "hitboxOffsetZ": 0.0,
+                                             "hitboxSizeX": 0.0,
+                                             "hitboxSizeY": 0.0,
+                                             "hitboxSizeZ": 0.0,
+                                             "skillCancel": false,
+                                             "moveCancel": false,
+                                             "dodgeCancel": false,
+                                             "counterCancel": false,
+                                             "nextAction": "",
+                                             "heavyNext": "",
+                                             "dodgeNext": "",
+                                             "counterNext": "",
+                                             "warpOffsetX": -0.30000001192092898,
+                                             "warpOffsetY": 0.0,
+                                             "warpDuration": 0.0,
+                                             "warpEaseType": 0,
+                                             "warpMinDuration": 0.03999999910593033,
+                                             "warpMaxDuration": 0.11999999731779099,
+                                             "warpInvincible": true,
+                                             "warpAutoTarget": true,
+                                             "warpMinRange": 0.0,
+                                             "warpMaxRange": 3.0,
+                                             "warpSpeed": 0.0
+                                         },
+                                         {
+                                             "type": "ROOT_MOTION",
+                                             "startFrame": 0,
+                                             "endFrame": 43,
+                                             "track": 5,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "rootMotionKeys": [
+                                                                    0,
+                                                                    0,
+                                                                    0.15,
+                                                                    4,
+                                                                    0.35,
+                                                                    7,
+                                                                    0.55,
+                                                                    5,
+                                                                    0.75,
+                                                                    2,
+                                                                    1,
+                                                                    0
+                                                                ],
+                                             "rootMotionScale": 1
+                                         }
+                                     ]
+                    },
+                    {
+                        "id": "LightAtk4",
+                        "name": "기본공격 4타 (니킥)",
+                        "clip": "knee strike",
+                        "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/knee strike.fbx",
+                        "startup": 5,
+                        "active": 8,
+                        "recovery": 12,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 0.30000001192092898,
+                        "moveSpeed": 5.0,
+                        "cancels": [
+                                        {
+                                            "input": "Attack",
+                                            "next": "LightAtk1"
+                                        },
+                                        {
+                                            "input": "Dodge",
+                                            "next": "Dodge"
+                                        }
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "light",
+                                     "combo",
+                                     "chain4"
+                                 ],
+                        "notifies": [
+                                         {
+                                             "type": "COLLISION",
+                                             "startFrame": 21,
+                                             "endFrame": 27,
+                                             "track": 0,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "moveSpeed": 0.0,
+                                             "hitboxId": "default",
+                                             "damageScale": 1.0,
+                                             "hitboxOffsetX": 0.9959999918937683,
+                                             "hitboxOffsetY": 0.8690000176429749,
+                                             "hitboxOffsetZ": 0.0,
+                                             "hitboxSizeX": 0.8349999785423279,
+                                             "hitboxSizeY": 1.4500000476837159,
+                                             "hitboxSizeZ": 0.0,
+                                             "skillCancel": false,
+                                             "moveCancel": false,
+                                             "dodgeCancel": false,
+                                             "counterCancel": false,
+                                             "nextAction": "",
+                                             "heavyNext": "",
+                                             "dodgeNext": "",
+                                             "counterNext": "",
+                                             "warpOffsetX": 0.0,
+                                             "warpOffsetY": 0.0,
+                                             "warpDuration": 0.0,
+                                             "warpEaseType": 0,
+                                             "warpMinDuration": 0.0,
+                                             "warpMaxDuration": 0.0,
+                                             "warpInvincible": false,
+                                             "warpAutoTarget": false,
+                                             "warpMinRange": 0.0,
+                                             "warpMaxRange": 0.0,
+                                             "warpSpeed": 0.0
+                                         },
+                                         {
+                                             "type": "PENDING_WINDOW",
+                                             "startFrame": 6,
+                                             "endFrame": 30,
+                                             "track": 4,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "moveSpeed": 0.0,
+                                             "hitboxId": "",
+                                             "damageScale": 1.0,
+                                             "hitboxOffsetX": 0.0,
+                                             "hitboxOffsetY": 0.0,
+                                             "hitboxOffsetZ": 0.0,
+                                             "hitboxSizeX": 0.0,
+                                             "hitboxSizeY": 0.0,
+                                             "hitboxSizeZ": 0.0,
+                                             "skillCancel": false,
+                                             "moveCancel": false,
+                                             "dodgeCancel": false,
+                                             "counterCancel": false,
+                                             "nextAction": "",
+                                             "heavyNext": "",
+                                             "dodgeNext": "",
+                                             "counterNext": "",
+                                             "warpOffsetX": 0.0,
+                                             "warpOffsetY": 0.0,
+                                             "warpDuration": 0.0,
+                                             "warpEaseType": 0,
+                                             "warpMinDuration": 0.0,
+                                             "warpMaxDuration": 0.0,
+                                             "warpInvincible": false,
+                                             "warpAutoTarget": false,
+                                             "warpMinRange": 0.0,
+                                             "warpMaxRange": 0.0,
+                                             "warpSpeed": 0.0
+                                         },
+                                         {
+                                             "type": "CANCEL_WINDOW",
+                                             "startFrame": 30,
+                                             "endFrame": 39,
+                                             "track": 1,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "moveSpeed": 0.0,
+                                             "hitboxId": "",
+                                             "damageScale": 1.0,
+                                             "hitboxOffsetX": 0.0,
+                                             "hitboxOffsetY": 0.0,
+                                             "hitboxOffsetZ": 0.0,
+                                             "hitboxSizeX": 0.0,
+                                             "hitboxSizeY": 0.0,
+                                             "hitboxSizeZ": 0.0,
+                                             "skillCancel": true,
+                                             "moveCancel": true,
+                                             "dodgeCancel": true,
+                                             "counterCancel": false,
+                                             "nextAction": "LightAtk1",
+                                             "heavyNext": "",
+                                             "dodgeNext": "",
+                                             "counterNext": "",
+                                             "warpOffsetX": 0.0,
+                                             "warpOffsetY": 0.0,
+                                             "warpDuration": 0.0,
+                                             "warpEaseType": 0,
+                                             "warpMinDuration": 0.0,
+                                             "warpMaxDuration": 0.0,
+                                             "warpInvincible": false,
+                                             "warpAutoTarget": false,
+                                             "warpMinRange": 0.0,
+                                             "warpMaxRange": 0.0,
+                                             "warpSpeed": 0.0
+                                         },
+                                         {
+                                             "type": "ROOT_MOTION",
+                                             "startFrame": 0,
+                                             "endFrame": 48,
+                                             "track": 5,
+                                             "disabled": false,
+                                             "isInstance": false,
+                                             "rootMotionKeys": [
+                                                                    0,
+                                                                    0,
+                                                                    0.15,
+                                                                    4,
+                                                                    0.35,
+                                                                    7,
+                                                                    0.55,
+                                                                    5,
+                                                                    0.75,
+                                                                    2,
+                                                                    1,
+                                                                    0
+                                                                ],
+                                             "rootMotionScale": 1
+                                         }
+                                     ]
+                    },
+                    {
+                        "id": "LightAtkDown",
+                        "name": "다운 공격",
+                        "clip": "low kick",
+                        "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/low kick.fbx",
+                        "startup": 4,
+                        "active": 10,
+                        "recovery": 14,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 0.5,
+                        "moveSpeed": 3.0,
+                        "cancels": [
+                                        {
+                                            "input": "Attack",
+                                            "next": "LightAtk1"
+                                        }
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "light",
+                                     "down"
+                                 ],
+                        "notifies": [
+
+                                     ]
+                    },
+                    {
+                        "id": "HeavyAtk",
+                        "name": "강공격 (아머 파괴)",
+                        "clip": "charge fist",
+                        "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/charge fist.fbx",
+                        "startup": 10,
+                        "active": 12,
+                        "recovery": 18,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 0.6000000238418579,
+                        "moveSpeed": 4.0,
+                        "cancels": [
+                                        {
+                                            "input": "Dodge",
+                                            "next": "Dodge"
+                                        }
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "heavy",
+                                     "armorBreak"
+                                 ],
+                        "notifies": [
+
+                                     ]
+                    },
+                    {
+                        "id": "Dodge",
+                        "name": "회피",
+                        "clip": "",
+                        "clipPath": "",
+                        "startup": 2,
+                        "active": 12,
+                        "recovery": 8,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 0.4000000059604645,
+                        "moveSpeed": 12.0,
+                        "cancels": [
+                                        {
+                                            "input": "Attack",
+                                            "next": "DodgeCounterAtk"
+                                        }
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "dodge",
+                                     "iFrame"
+                                 ],
+                        "notifies": [
+
+                                     ]
+                    },
+                    {
+                        "id": "DodgeCounterAtk",
+                        "name": "회피 후속 공격",
+                        "clip": "front sweep",
+                        "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/front sweep.fbx",
+                        "startup": 3,
+                        "active": 10,
+                        "recovery": 12,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 0.30000001192092898,
+                        "moveSpeed": 5.0,
+                        "cancels": [
+                                        {
+                                            "input": "Attack",
+                                            "next": "LightAtk2"
+                                        },
+                                        {
+                                            "input": "Dodge",
+                                            "next": "Dodge"
+                                        }
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "light",
+                                     "dodgeFollow"
+                                 ],
+                        "notifies": [
+
+                                     ]
+                    },
+                    {
+                        "id": "Counter",
+                        "name": "카운터 반격",
+                        "clip": "spinning elbow",
+                        "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/spinning elbow.fbx",
+                        "startup": 3,
+                        "active": 8,
+                        "recovery": 12,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 0.30000001192092898,
+                        "moveSpeed": 5.0,
+                        "cancels": [
+                                        {
+                                            "input": "Attack",
+                                            "next": "LightAtk2"
+                                        },
+                                        {
+                                            "input": "Dodge",
+                                            "next": "Dodge"
+                                        }
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "counter"
+                                 ],
+                        "notifies": [
+
+                                     ]
+                    },
+                    {
+                        "id": "PerfectCounter",
+                        "name": "퍼펙트 카운터 강화 반격",
+                        "clip": "back kick",
+                        "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/back kick.fbx",
+                        "startup": 2,
+                        "active": 10,
+                        "recovery": 14,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 0.4000000059604645,
+                        "moveSpeed": 6.0,
+                        "cancels": [
+                                        {
+                                            "input": "Attack",
+                                            "next": "LightAtk1"
+                                        },
+                                        {
+                                            "input": "Dodge",
+                                            "next": "Dodge"
+                                        }
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "counter",
+                                     "perfect"
+                                 ],
+                        "notifies": [
+
+                                     ]
+                    },
+                    {
+                        "id": "Launch",
+                        "name": "띄우기 공격",
+                        "clip": "jumping uppercut",
+                        "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/jumping uppercut.fbx",
+                        "startup": 6,
+                        "active": 10,
+                        "recovery": 16,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 0.5,
+                        "moveSpeed": 4.0,
+                        "cancels": [
+                                        {
+                                            "input": "Attack",
+                                            "next": "AirComboFinisher"
+                                        }
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "launch",
+                                     "airCombo"
+                                 ],
+                        "notifies": [
+
+                                     ]
+                    },
+                    {
+                        "id": "AirComboFinisher",
+                        "name": "에어 콤보 피니셔",
+                        "clip": "jumping side kick",
+                        "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/jumping side kick.fbx",
+                        "startup": 4,
+                        "active": 8,
+                        "recovery": 18,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 0.699999988079071,
+                        "moveSpeed": 3.0,
+                        "cancels": [
+
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "airCombo",
+                                     "finisher"
+                                 ],
+                        "notifies": [
+
+                                     ]
+                    },
+                    {
+                        "id": "Execution1",
+                        "name": "처형 모션 1",
+                        "clip": "cressent kick",
+                        "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/cressent kick.fbx",
+                        "startup": 8,
+                        "active": 14,
+                        "recovery": 20,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 1.0,
+                        "moveSpeed": 0.0,
+                        "cancels": [
+
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "execution",
+                                     "cinematic"
+                                 ],
+                        "notifies": [
+
+                                     ]
+                    },
+                    {
+                        "id": "Execution2",
+                        "name": "처형 모션 2",
+                        "clip": "axe kick",
+                        "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/axe kick.fbx",
+                        "startup": 8,
+                        "active": 14,
+                        "recovery": 20,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 1.0,
+                        "moveSpeed": 0.0,
+                        "cancels": [
+
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "execution",
+                                     "cinematic"
+                                 ],
+                        "notifies": [
+
+                                     ]
+                    },
+                    {
+                        "id": "Execution3",
+                        "name": "처형 모션 3 (화려)",
+                        "clip": "spinning axe kick",
+                        "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/spinning axe kick.fbx",
+                        "startup": 10,
+                        "active": 16,
+                        "recovery": 24,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 1.0,
+                        "moveSpeed": 0.0,
+                        "cancels": [
+
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "execution",
+                                     "cinematic",
+                                     "highCombo"
+                                 ],
+                        "notifies": [
+
+                                     ]
+                    },
+                    {
+                        "id": "HuxleyShot",
+                        "name": "헉슬리 건 발사",
+                        "clip": "super blast",
+                        "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/super blast.fbx",
+                        "startup": 6,
+                        "active": 4,
+                        "recovery": 14,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 0.5,
+                        "moveSpeed": 0.0,
+                        "cancels": [
+                                        {
+                                            "input": "Attack",
+                                            "next": "LightAtk1"
+                                        },
+                                        {
+                                            "input": "Dodge",
+                                            "next": "Dodge"
+                                        }
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "huxley",
+                                     "ranged"
+                                 ],
+                        "notifies": [
+
+                                     ]
+                    },
+                    {
+                        "id": "HuxleyFinisher",
+                        "name": "헉슬리 100% 피니셔",
+                        "clip": "webster side kick",
+                        "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/webster side kick.fbx",
+                        "startup": 8,
+                        "active": 16,
+                        "recovery": 24,
+                        "playbackRate": 1.0,
+                        "transitionIn": 0.0,
+                        "transitionOut": 0.0,
+                        "cancelRatio": 1.0,
+                        "moveSpeed": 0.0,
+                        "cancels": [
+
+                                    ],
+                        "defaultNext": "Idle",
+                        "tags": [
+                                     "huxley",
+                                     "finisher",
+                                     "cinematic"
+                                 ],
+                        "notifies": [
+
+                                     ]
+                    }
+                ]
 }

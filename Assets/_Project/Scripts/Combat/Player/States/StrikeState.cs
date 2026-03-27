@@ -279,8 +279,13 @@ namespace FreeFlowHero.Combat.Player
                 if (isWarpActive) return; // 워핑 시작됨 → 이번 프레임은 여기서 종료
             }
 
-            // ── STARTUP: 이동 속도 적용 ──
-            if (notifyProcessor.IsStartupActive && notifyProcessor.StartupMoveSpeed > 0f)
+            // ── ROOT_MOTION: 커브 기반 이동 (우선순위 최상) ──
+            if (notifyProcessor.IsRootMotionActive && Mathf.Abs(notifyProcessor.RootMotionSpeed) > 0.01f)
+            {
+                MoveHorizontal(facing * notifyProcessor.RootMotionSpeed * deltaTime);
+            }
+            // ── STARTUP: 이동 속도 적용 (ROOT_MOTION이 없을 때 폴백) ──
+            else if (notifyProcessor.IsStartupActive && notifyProcessor.StartupMoveSpeed > 0f)
             {
                 MoveHorizontal(facing * notifyProcessor.StartupMoveSpeed * deltaTime);
             }

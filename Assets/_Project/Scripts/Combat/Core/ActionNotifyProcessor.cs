@@ -94,6 +94,17 @@ namespace FreeFlowHero.Combat.Core
         /// <summary>활성 STARTUP 노티파이의 moveSpeed</summary>
         public float StartupMoveSpeed { get; private set; }
 
+        // ─── ROOT_MOTION 상태 (스테이트 모드) ───
+        /// <summary>현재 프레임에 ROOT_MOTION 노티파이가 활성인지</summary>
+        public bool IsRootMotionActive { get; private set; }
+
+        /// <summary>현재 프레임의 루트모션 이동 속도 (커브 보간값 * scale)</summary>
+        public float RootMotionSpeed { get; private set; }
+
+        // ─── ROOT_MOTION 내부 캐시 ───
+        private AnimationCurve rootMotionCurve;
+        private ActionNotify activeRootMotionNotify;
+
         // ─── WARP 상태 (인스턴스 모드) ───
         /// <summary>이번 프레임에 WARP 노티파이가 발화되었는지</summary>
         public bool IsWarpTriggered { get; private set; }
@@ -178,6 +189,8 @@ namespace FreeFlowHero.Combat.Core
             CancelCounterNext = "";
             IsStartupActive = false;
             StartupMoveSpeed = 0f;
+            IsRootMotionActive = false;
+            RootMotionSpeed = 0f;
             IsWarpTriggered = false;
             WarpNotify = null;
 
@@ -253,6 +266,23 @@ namespace FreeFlowHero.Combat.Core
 
                 case NotifyType.PENDING_WINDOW:
                     IsPendingWindowActive = true;
+                    break;
+
+                case NotifyType.ROOT_MOTION:
+                    IsRootMotionActive = true;
+                    // 커브 캐시: 같은 노티파이면 재빌드 안 함
+                    if (activeRootMotionNotify != n)
+                    {
+                        activeRootMotionNotify = n;
+                        rootMotionCurve = n.BuildRootMotionCurve();
+                    }
+                    // normalized time 계산 → 커브 보간
+                    if (rootMotionCurve != null && rootMotionCurve.length > 0 && n.Duration > 0)
+                    {
+                        float t = (float)(lastFrame - n.startFrame) / n.Duration;
+                        t = Mathf.Clamp01(t);
+                        RootMotionSpeed = rootMotionCurve.Evaluate(t) * n.rootMotionScale;
+                    }
                     break;
 
                 case NotifyType.WARP:

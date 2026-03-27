@@ -154,6 +154,12 @@ namespace FreeFlowHero.Combat.Core
                                 table.actions[i].playbackRate = 1.0f;
                             if (table.actions[i].notifies == null)
                                 table.actions[i].notifies = System.Array.Empty<ActionNotify>();
+                            // rootMotionScale 방어: JSON 누락(0) → 1.0
+                            foreach (var n in table.actions[i].notifies)
+                            {
+                                if (n.type == "ROOT_MOTION" && n.rootMotionScale <= 0f)
+                                    n.rootMotionScale = 1f;
+                            }
                         }
                     }
                     table.BuildMap();

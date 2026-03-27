@@ -1384,6 +1384,36 @@ namespace FreeFlowHero.Editor
                             MessageType.None);
                     }
                     break;
+
+                case NotifyType.ROOT_MOTION:
+                    EditorGUILayout.LabelField("ROOT_MOTION 파라미터", EditorStyles.boldLabel);
+
+                    // 커브 에디터
+                    EditorGUILayout.LabelField("이동 속도 커브 (X=시간 0~1, Y=속도 units/sec)");
+                    AnimationCurve rmCurve = notify.BuildRootMotionCurve();
+                    var newCurve = EditorGUILayout.CurveField("속도 커브", rmCurve,
+                        Color.magenta, new Rect(0, -2, 1, 15), GUILayout.Height(60));
+                    // 커브 변경 감지
+                    if (newCurve.length != rmCurve.length || !CurvesEqual(newCurve, rmCurve))
+                    {
+                        notify.SetRootMotionCurve(newCurve);
+                        isDirty = true;
+                    }
+
+                    notify.rootMotionScale = EditorGUILayout.Slider("스케일 배율", notify.rootMotionScale, 0.1f, 5f);
+                    Tip("커브 전체에 곱해지는 배율. 1.0 = 커브 원본 속도 사용");
+
+                    EditorGUILayout.Space(4);
+
+                    // ★ 루트모션 동기화 버튼
+                    GUI.backgroundColor = new Color(0.7f, 0.3f, 0.9f);
+                    if (GUILayout.Button("루트모션 동기화 (FBX에서 추출)", GUILayout.Height(28)))
+                    {
+                        SyncRootMotionFromFBX(notify);
+                    }
+                    GUI.backgroundColor = Color.white;
+                    Tip("현재 액션의 FBX 클립에서 루트 본 이동량을 분석하여 커브를 자동 생성합니다");
+                    break;
             }
 
             EditorGUILayout.Space(4);
@@ -3388,6 +3418,130 @@ namespace FreeFlowHero.Editor
 
             currentPreviewClip = null;
             return null;
+        }
+
+        /// <summary>두 AnimationCurve가 동일한지 비교 (키 단위)</summary>
+        private static bool CurvesEqual(AnimationCurve a, AnimationCurve b)
+        {
+            if (a.length != b.length) return false;
+            for (int i = 0; i < a.length; i++)
+            {
+                if (!Mathf.Approximately(a[i].time, b[i].time) ||
+                    !Mathf.Approximately(a[i].value, b[i].value))
+                    return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// FBX 클립에서 루트 본 X 이동량을 추출하여 ROOT_MOTION 커브를 자동 생성.
+        /// "루트모션 동기화" 버튼에서 호출.
+        /// </summary>
+        private void SyncRootMotionFromFBX(ActionNotify notify)
+        {
+            if (currentAction == null) return;
+
+            AnimationClip clip = FindClipForAction(currentAction);
+            if (clip == null)
+            {
+                EditorUtility.DisplayDialog("루트모션 동기화 실패",
+                    "현재 액션에 연결된 AnimationClip을 찾을 수 없습니다.\nclipPath 또는 clip 이름을 확인하세요.", "확인");
+                return;
+            }
+
+            // 클립 프레임 수 계산
+            float sampleRate = clip.frameRate > 0 ? clip.frameRate : 60f;
+            int totalFrames = Mathf.CeilToInt(clip.length * sampleRate);
+            if (totalFrames < 2)
+            {
+                EditorUtility.DisplayDialog("루트모션 동기화 실패",
+                    $"클립 프레임 수가 너무 적습니다 ({totalFrames}프레임).", "확인");
+                return;
+            }
+
+            // 루트 본 X 위치 샘플링 (EditorCurveBinding으로 루트 위치 추출)
+            // HumanoidRootMotion 또는 "RootT.x" 바인딩 검색
+            float[] positions = new float[totalFrames + 1];
+            bool foundRootCurve = false;
+
+            // Humanoid 클립의 경우: RootT.x 바인딩
+            var bindings = AnimationUtility.GetCurveBindings(clip);
+            foreach (var binding in bindings)
+            {
+                // 루트 본 X 위치 후보: RootT.x, m_LocalPosition.x (첫 번째 본)
+                if (binding.propertyName.Contains("RootT.x") ||
+                    (binding.propertyName == "m_LocalPosition.x" && string.IsNullOrEmpty(binding.path)))
+                {
+                    var curve = AnimationUtility.GetEditorCurve(clip, binding);
+                    if (curve != null)
+                    {
+                        for (int f = 0; f <= totalFrames; f++)
+                        {
+                            float time = (float)f / sampleRate;
+                            positions[f] = curve.Evaluate(time);
+                        }
+                        foundRootCurve = true;
+                        break;
+                    }
+                }
+            }
+
+            // Generic 클립의 경우: 첫 번째 본의 m_LocalPosition.x
+            if (!foundRootCurve)
+            {
+                foreach (var binding in bindings)
+                {
+                    if (binding.propertyName == "m_LocalPosition.x")
+                    {
+                        var curve = AnimationUtility.GetEditorCurve(clip, binding);
+                        if (curve != null)
+                        {
+                            for (int f = 0; f <= totalFrames; f++)
+                            {
+                                float time = (float)f / sampleRate;
+                                positions[f] = curve.Evaluate(time);
+                            }
+                            foundRootCurve = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!foundRootCurve)
+            {
+                // 루트 본 커브가 없으면 기본 선형 커브 생성
+                EditorUtility.DisplayDialog("루트모션 동기화",
+                    "FBX에서 루트 본 위치 데이터를 찾을 수 없습니다.\n기본 커브(선형 전진)를 생성합니다.", "확인");
+
+                notify.startFrame = 0;
+                notify.endFrame = currentAction.NotifyTotalFrames;
+                notify.rootMotionKeys = new float[] { 0f, 0f, 0.2f, 4f, 0.5f, 6f, 0.8f, 3f, 1f, 0f };
+                notify.rootMotionScale = 1f;
+                isDirty = true;
+                return;
+            }
+
+            // 프레임간 delta 계산 → 속도 커브 생성
+            var speedCurve = new AnimationCurve();
+            float frameTime = 1f / sampleRate;
+
+            for (int f = 0; f < totalFrames; f++)
+            {
+                float t = (float)f / totalFrames; // normalized time
+                float delta = positions[f + 1] - positions[f];
+                float speed = Mathf.Abs(delta / frameTime); // units/sec
+                speedCurve.AddKey(t, speed);
+            }
+
+            // 노티파이에 적용
+            notify.startFrame = 0;
+            notify.endFrame = currentAction.NotifyTotalFrames;
+            notify.SetRootMotionCurve(speedCurve);
+            notify.rootMotionScale = 1f;
+            isDirty = true;
+
+            Debug.Log($"[루트모션 동기화] {currentAction.id}: {totalFrames}프레임에서 커브 생성 완료 ({speedCurve.length}키)");
         }
 
         private void SamplePreviewAnimation(AnimationClip clip, ActionEntry action)

@@ -37,6 +37,14 @@ namespace FreeFlowHero.Combat.Core
         /// → "타격 팔로스루 강제 재생 + 입력 반응성 보존" 효과.
         /// </summary>
         PENDING_WINDOW = 4,
+
+        /// <summary>
+        /// 루트모션 — 커브 기반 이동 속도 제어.
+        /// startFrame~endFrame 구간 동안 rootMotionKeys 커브를 평가하여
+        /// 캐릭터를 facing 방향으로 이동시킨다.
+        /// Unity 루트모션 대체: 2D Kinematic 환경에서 스크립트 기반 구현.
+        /// </summary>
+        ROOT_MOTION = 5,
     }
 
     /// <summary>
@@ -116,6 +124,44 @@ namespace FreeFlowHero.Combat.Core
         public float warpMinRange;     // 최소 발동 거리 (이 거리 이내면 워핑 스킵, 기본 1.5)
         public float warpMaxRange;     // 최대 발동 거리 (이 거리 밖이면 워핑 스킵, 0=무제한, 기본 0)
         public float warpSpeed;        // 워핑 속도 (유닛/초, 0=Duration 기반, 기본 0)
+
+        // ─── ROOT_MOTION 파라미터 ───
+        // ★ 커브 데이터: [time0, value0, time1, value1, ...] 쌍으로 저장
+        //   time: 0.0~1.0 (normalized, 0=startFrame, 1=endFrame)
+        //   value: 해당 시점의 이동 속도 (units/sec)
+        //   런타임에서 AnimationCurve로 변환 → Evaluate(t)로 보간
+        //   바이브 코딩: JSON 배열 직접 수정 / GUI: CurveField로 드래그 편집
+        public float[] rootMotionKeys;      // 커브 키프레임 배열
+        public float rootMotionScale = 1f;  // 전체 스케일 배율 (★ 데이터 튜닝)
+
+        /// <summary>rootMotionKeys 배열을 AnimationCurve로 변환</summary>
+        public AnimationCurve BuildRootMotionCurve()
+        {
+            var curve = new AnimationCurve();
+            if (rootMotionKeys == null || rootMotionKeys.Length < 2) return curve;
+            for (int i = 0; i + 1 < rootMotionKeys.Length; i += 2)
+            {
+                curve.AddKey(rootMotionKeys[i], rootMotionKeys[i + 1]);
+            }
+            return curve;
+        }
+
+        /// <summary>AnimationCurve를 rootMotionKeys 배열로 변환 (에디터 저장용)</summary>
+        public void SetRootMotionCurve(AnimationCurve curve)
+        {
+            if (curve == null || curve.length == 0)
+            {
+                rootMotionKeys = System.Array.Empty<float>();
+                return;
+            }
+            rootMotionKeys = new float[curve.length * 2];
+            for (int i = 0; i < curve.length; i++)
+            {
+                var key = curve[i];
+                rootMotionKeys[i * 2] = key.time;
+                rootMotionKeys[i * 2 + 1] = key.value;
+            }
+        }
 
         // ─── 워핑 기본값 상수 ───
         public const float DefaultWarpOffsetX = -0.5f;
@@ -330,6 +376,27 @@ namespace FreeFlowHero.Combat.Core
             };
         }
 
+        /// <summary>ROOT_MOTION 노티파이 생성</summary>
+        public static ActionNotify CreateRootMotion(int start, int end,
+            float[] keys = null, float scale = 1f)
+        {
+            return new ActionNotify
+            {
+                type = NotifyType.ROOT_MOTION.ToString(),
+                startFrame = start,
+                endFrame = end,
+                track = 5,
+                disabled = false,
+                isInstance = false,
+                rootMotionKeys = keys ?? new float[] { 0f, 0f, 0.3f, 6f, 0.6f, 4f, 1f, 0f },
+                rootMotionScale = scale,
+                damageScale = 1f,
+                hitboxId = "",
+                moveSpeed = 0f,
+                nextAction = "",
+            };
+        }
+
         /// <summary>워핑 이징 커브 적용</summary>
         public static float ApplyWarpEasing(float t, int easeType)
         {
@@ -368,6 +435,7 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.CANCEL_WINDOW:  return new Color(0.9f, 0.8f, 0.2f, 0.8f);  // 노랑
                 case NotifyType.WARP:           return new Color(0.2f, 0.9f, 0.5f, 0.8f);  // 초록
                 case NotifyType.PENDING_WINDOW: return new Color(0.9f, 0.5f, 0.2f, 0.8f);  // 주황
+                case NotifyType.ROOT_MOTION:    return new Color(0.7f, 0.3f, 0.9f, 0.8f);  // 보라
                 default:                        return new Color(0.5f, 0.5f, 0.5f, 0.8f);  // 회색
             }
         }
@@ -382,6 +450,7 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.CANCEL_WINDOW:  return "CANCEL";
                 case NotifyType.WARP:           return "WARP";
                 case NotifyType.PENDING_WINDOW: return "PENDING";
+                case NotifyType.ROOT_MOTION:    return "ROOT_MOTION";
                 default:                        return type.ToString();
             }
         }
@@ -396,7 +465,8 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.CANCEL_WINDOW:  return 2;
                 case NotifyType.WARP:           return 3;
                 case NotifyType.PENDING_WINDOW: return 4;
-                default:                        return 5;
+                case NotifyType.ROOT_MOTION:    return 5;
+                default:                        return 6;
             }
         }
 
@@ -410,6 +480,7 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.CANCEL_WINDOW:  return 10;
                 case NotifyType.WARP:           return 3;  // 인스턴스: 시각 표시용 최소 길이
                 case NotifyType.PENDING_WINDOW: return 5;  // 팔로스루 강제 재생 구간
+                case NotifyType.ROOT_MOTION:    return 20; // 액션 전체 범위 (동기화 시 자동 설정)
                 default:                        return 5;
             }
         }
