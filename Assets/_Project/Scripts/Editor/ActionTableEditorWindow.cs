@@ -3554,7 +3554,8 @@ namespace FreeFlowHero.Editor
                     "FBX에서 루트 본 위치 데이터를 찾을 수 없습니다.\n기본 커브(선형 전진)를 생성합니다.", "확인");
 
                 notify.startFrame = 0;
-                notify.endFrame = currentAction.NotifyTotalFrames;
+                // +1: ContainsFrame이 endFrame을 exclusive로 처리하므로 마지막 프레임까지 커버
+                notify.endFrame = currentAction.NotifyTotalFrames + 1;
                 notify.rootMotionKeys = new float[] { 0f, 0f, 0.2f, 4f, 0.5f, 6f, 0.8f, 3f, 1f, 0f };
                 notify.rootMotionScale = 1f;
                 isDirty = true;
@@ -3575,7 +3576,9 @@ namespace FreeFlowHero.Editor
 
             // 노티파이에 적용
             notify.startFrame = 0;
-            notify.endFrame = currentAction.NotifyTotalFrames;
+            // totalFrames: FBX 클립의 실제 프레임 수 기준 (NotifyTotalFrames가 클립보다 짧을 수 있음)
+            // ContainsFrame exclusive 보정 불필요 — totalFrames가 이미 클립 전체 범위
+            notify.endFrame = totalFrames;
             notify.SetRootMotionCurve(speedCurve);
             notify.rootMotionScale = 1f;
             isDirty = true;
