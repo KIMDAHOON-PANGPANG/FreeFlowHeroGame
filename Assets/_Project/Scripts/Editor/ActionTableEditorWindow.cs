@@ -124,6 +124,11 @@ namespace FreeFlowHero.Editor
         private int dragEndFrame;
         private float dragMouseStartX;
 
+        // ─── 패널 최소화 ───
+        private bool isActionListCollapsed = false;  // 좌측 액션 목록 최소화
+        private bool isInspectorCollapsed = false;   // 우측 인스펙터 최소화
+        private const float CollapsedPanelWidth = 24f;
+
         // ─── 리사이즈 가능 패널 크기 ───
         private float leftPanelWidth = 220f;       // 좌측 액션 목록
         private float rightPanelWidth = 280f;      // 우측 인스펙터
@@ -820,13 +825,28 @@ namespace FreeFlowHero.Editor
 
         private void DrawActionList()
         {
-            EditorGUILayout.BeginVertical(GUILayout.Width(leftPanelWidth));
+            float panelW = isActionListCollapsed ? CollapsedPanelWidth : leftPanelWidth;
+            EditorGUILayout.BeginVertical(GUILayout.Width(panelW));
 
+            // ── 최소화 토글 버튼 ──
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-            searchFilter = EditorGUILayout.TextField(searchFilter, EditorStyles.toolbarSearchField);
-            if (GUILayout.Button("✕", EditorStyles.toolbarButton, GUILayout.Width(20)))
-                searchFilter = "";
+            string collapseLabel = isActionListCollapsed ? "▶" : "◀";
+            if (GUILayout.Button(collapseLabel, EditorStyles.toolbarButton, GUILayout.Width(20)))
+                isActionListCollapsed = !isActionListCollapsed;
+
+            if (!isActionListCollapsed)
+            {
+                searchFilter = EditorGUILayout.TextField(searchFilter, EditorStyles.toolbarSearchField);
+                if (GUILayout.Button("✕", EditorStyles.toolbarButton, GUILayout.Width(20)))
+                    searchFilter = "";
+            }
             EditorGUILayout.EndHorizontal();
+
+            if (isActionListCollapsed)
+            {
+                EditorGUILayout.EndVertical();
+                return;
+            }
 
             leftScroll = EditorGUILayout.BeginScrollView(leftScroll);
 
@@ -978,7 +998,24 @@ namespace FreeFlowHero.Editor
 
         private void DrawInspectorPanel()
         {
-            EditorGUILayout.BeginVertical(GUILayout.Width(rightPanelWidth));
+            float panelW = isInspectorCollapsed ? CollapsedPanelWidth : rightPanelWidth;
+            EditorGUILayout.BeginVertical(GUILayout.Width(panelW));
+
+            // ── 최소화 토글 버튼 ──
+            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
+            string collapseLabel = isInspectorCollapsed ? "◀" : "▶";
+            if (GUILayout.Button(collapseLabel, EditorStyles.toolbarButton, GUILayout.Width(20)))
+                isInspectorCollapsed = !isInspectorCollapsed;
+            if (!isInspectorCollapsed)
+                EditorGUILayout.LabelField("인스펙터", EditorStyles.boldLabel);
+            EditorGUILayout.EndHorizontal();
+
+            if (isInspectorCollapsed)
+            {
+                EditorGUILayout.EndVertical();
+                return;
+            }
+
             inspectorScroll = EditorGUILayout.BeginScrollView(inspectorScroll);
 
             if (selectedActionIndex < 0 || currentTable?.actions == null ||
@@ -3439,7 +3476,9 @@ namespace FreeFlowHero.Editor
         /// </summary>
         private void SyncRootMotionFromFBX(ActionNotify notify)
         {
-            if (currentAction == null) return;
+            if (selectedActionIndex < 0 || currentTable?.actions == null ||
+                selectedActionIndex >= currentTable.actions.Length) return;
+            var currentAction = currentTable.actions[selectedActionIndex];
 
             AnimationClip clip = FindClipForAction(currentAction);
             if (clip == null)
