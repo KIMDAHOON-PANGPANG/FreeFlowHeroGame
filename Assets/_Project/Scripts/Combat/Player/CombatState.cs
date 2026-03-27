@@ -42,7 +42,7 @@ namespace FreeFlowHero.Combat.Player
         /// <summary>매 프레임 업데이트</summary>
         public virtual void Update(float deltaTime)
         {
-            context.TickFrame();
+            context.TickFrame(deltaTime);
         }
 
         /// <summary>FixedUpdate (물리)</summary>

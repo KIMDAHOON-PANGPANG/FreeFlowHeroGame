@@ -305,7 +305,12 @@ namespace FreeFlowHero.Combat.Player
                 //   광클 시 이 시점 이전에 쌓인 버퍼 입력을 폐기하고,
                 //   펜딩 윈도우 동안 새로 들어오는 입력만 버퍼에 저장한다.
                 //   → CANCEL_WINDOW가 열릴 때 펜딩 입력이 즉시 소비됨.
+                Debug.Log($"[Strike][FLOW] PENDING START — Action:{currentAction?.id} animF:{animFrame} wallF:{frame} buffer:{(fsm.InputBuffer.HasInput ? "有" : "無")} → Clear");
                 fsm.InputBuffer.Clear();
+            }
+            if (notifyProcessor.PendingWindowJustEnded)
+            {
+                Debug.Log($"[Strike][FLOW] PENDING END — Action:{currentAction?.id} animF:{animFrame} buffer:{(fsm.InputBuffer.HasInput ? "有→캔슬대기" : "無")}");
             }
 
             // ── CANCEL_WINDOW: 캔슬 플래그 + isAttacking 해제 ──
@@ -323,6 +328,8 @@ namespace FreeFlowHero.Combat.Player
                 {
                     fsm.InputBuffer.Clear();
                 }
+
+                Debug.Log($"[Strike][FLOW] CANCEL_WINDOW OPEN — Action:{currentAction?.id} animF:{animFrame} wallF:{frame} buffer:{(fsm.InputBuffer.HasInput ? "有→즉시소비" : "無→입력대기")}");
             }
 
             // 캔슬 가능하고 버퍼에 입력이 있으면 처리
@@ -341,6 +348,7 @@ namespace FreeFlowHero.Combat.Player
                     }
                     else
                     {
+                        Debug.Log($"[Strike][FLOW] CANCEL! — Action:{currentAction?.id}→{inputKey} animF:{animFrame} wallF:{frame}");
                         HandleBufferedInput(buffered);
                         return;
                     }
@@ -440,6 +448,7 @@ namespace FreeFlowHero.Combat.Player
             // 워핑 중 입력은 버퍼에만 저장
             if (isWarpActive)
             {
+                Debug.Log($"[Strike][FLOW] INPUT {input.Type} → 버퍼(워핑중) wallF:{context.stateFrameCounter}");
                 fsm.InputBuffer.BufferInput(input);
                 return;
             }
@@ -450,6 +459,8 @@ namespace FreeFlowHero.Combat.Player
             // ★ 공격 계열 입력: isAttacking 중이면 무조건 버퍼 (모션 완주 보장)
             if (IsAttackInput(input.Type) && isAttacking)
             {
+                bool isPending = notifyProcessor != null && notifyProcessor.IsPendingWindowActive;
+                Debug.Log($"[Strike][FLOW] INPUT {input.Type} → 버퍼(isAttacking) wallF:{frame} animF:{animFrame} pending:{(isPending ? "Y" : "N")}");
                 fsm.InputBuffer.BufferInput(input);
                 return;
             }
@@ -457,6 +468,7 @@ namespace FreeFlowHero.Combat.Player
             // 캔슬 윈도우가 아직 안 열렸으면 버퍼
             if (!context.canCancel)
             {
+                Debug.Log($"[Strike][FLOW] INPUT {input.Type} → 버퍼(캔슬불가) wallF:{frame} animF:{animFrame}");
                 fsm.InputBuffer.BufferInput(input);
                 return;
             }
