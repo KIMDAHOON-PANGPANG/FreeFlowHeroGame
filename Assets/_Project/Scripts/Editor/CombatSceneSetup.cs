@@ -88,6 +88,10 @@ namespace FreeFlowHero.Editor
                 var sr = player.GetComponent<SpriteRenderer>();
                 if (sr != null && sr.sprite == null)
                     sr.sprite = CreateWhiteSprite();
+
+                // ★ AnimatorClipOverrider: JSON clipPath 기반 런타임 클립 교체
+                if (player.GetComponent<FreeFlowHero.Combat.Core.AnimatorClipOverrider>() == null)
+                    player.AddComponent<FreeFlowHero.Combat.Core.AnimatorClipOverrider>();
             }
             else
             {

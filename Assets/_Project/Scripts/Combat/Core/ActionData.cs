@@ -31,7 +31,8 @@ namespace FreeFlowHero.Combat.Core
     {
         public string id;            // 고유 ID (예: "LightAtk1")
         public string name;          // 표시 이름 (예: "기본공격 1타")
-        public string clip;          // 애니메이션 클립 이름 (EEJANAI FBX 매핑)
+        public string clip;          // 애니메이션 클립 이름 (검색 폴백용)
+        public string clipPath;      // FBX 에셋 경로 (Override용, 예: "Assets/.../Atk_P_1.fbx")
 
         // ─── 프레임 데이터 (60fps 기준) ───
         public int startup;          // 선딜 프레임

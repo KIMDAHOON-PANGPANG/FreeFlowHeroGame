@@ -1005,6 +1005,51 @@ namespace FreeFlowHero.Editor
             if (prevClip != action.clip)
                 InvalidateClipFramesCache(action.id); // ★ 클립 변경 시 해당 액션 캐시 무효화
 
+            // ── Clip Asset (ObjectField로 드래그/드롭) ──
+            AnimationClip currentClipObj = null;
+            if (!string.IsNullOrEmpty(action.clipPath))
+            {
+                // clipPath에서 현재 클립 로드 (ObjectField 표시용)
+                var assets = AssetDatabase.LoadAllAssetsAtPath(action.clipPath);
+                if (assets != null)
+                {
+                    foreach (var a in assets)
+                    {
+                        if (a is AnimationClip c && !c.name.StartsWith("__preview__"))
+                        { currentClipObj = c; break; }
+                    }
+                }
+            }
+            var newClipObj = (AnimationClip)EditorGUILayout.ObjectField(
+                "Clip Asset", currentClipObj, typeof(AnimationClip), false);
+            Tip("FBX를 드래그하여 클립 에셋 직접 선택. clipPath + clip 이름이 자동 갱신됨");
+
+            // ObjectField 변경 감지 → clipPath + clip 자동 갱신
+            if (newClipObj != currentClipObj)
+            {
+                if (newClipObj != null)
+                {
+                    action.clipPath = AssetDatabase.GetAssetPath(newClipObj);
+                    action.clip = newClipObj.name;
+                }
+                else
+                {
+                    action.clipPath = "";
+                }
+                InvalidateClipFramesCache(action.id);
+                cachedClipName = "";          // FindClipForAction 캐시 무효화
+                currentPreviewClip = null;
+                isDirty = true;
+            }
+
+            // clipPath 읽기 전용 표시
+            if (!string.IsNullOrEmpty(action.clipPath))
+            {
+                EditorGUI.BeginDisabledGroup(true);
+                EditorGUILayout.TextField("Clip Path", action.clipPath);
+                EditorGUI.EndDisabledGroup();
+            }
+
             EditorGUILayout.Space(6);
 
             // ── 재생 배율 ──
@@ -3283,6 +3328,30 @@ namespace FreeFlowHero.Editor
 
         private AnimationClip FindClipForAction(ActionEntry action)
         {
+            // ★ 1순위: clipPath가 있으면 직접 FBX 로드 (이름 검색 없이 즉시)
+            if (!string.IsNullOrEmpty(action.clipPath))
+            {
+                // clipPath 기반 캐시 확인
+                if (action.clipPath == cachedClipName && currentPreviewClip != null)
+                    return currentPreviewClip;
+
+                var pathAssets = AssetDatabase.LoadAllAssetsAtPath(action.clipPath);
+                if (pathAssets != null)
+                {
+                    foreach (var asset in pathAssets)
+                    {
+                        if (asset is AnimationClip pathClip && !pathClip.name.StartsWith("__preview__"))
+                        {
+                            cachedClipName = action.clipPath;
+                            currentPreviewClip = pathClip;
+                            return pathClip;
+                        }
+                    }
+                }
+                // clipPath가 있지만 로드 실패 → 이름 검색 폴백
+            }
+
+            // ★ 2순위: clip 이름으로 검색 (기존 로직)
             if (string.IsNullOrEmpty(action.clip)) return null;
             if (action.clip == cachedClipName && currentPreviewClip != null)
                 return currentPreviewClip;

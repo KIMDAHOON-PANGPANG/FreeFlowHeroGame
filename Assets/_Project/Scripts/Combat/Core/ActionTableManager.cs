@@ -39,6 +39,9 @@ namespace FreeFlowHero.Combat.Core
         private Dictionary<string, ActorActionTable> tables = new(System.StringComparer.OrdinalIgnoreCase);
         private bool isLoaded;
 
+        /// <summary>테이블 로드/리로드 완료 시 발행. AnimatorClipOverrider 등이 구독.</summary>
+        public event System.Action OnReloaded;
+
         // ─── 경로 ───
         private const string ResourceFolder = "ActionTables";
         private const string DiskSubPath = "_Project/Resources/ActionTables";
@@ -100,6 +103,7 @@ namespace FreeFlowHero.Combat.Core
             }
 
             isLoaded = true;
+            OnReloaded?.Invoke();
         }
 
         /// <summary>디스크에서 직접 JSON 파일 로드 (핫 리로드용, Resources 캐시 우회)</summary>
@@ -130,6 +134,7 @@ namespace FreeFlowHero.Combat.Core
             }
 
             isLoaded = true;
+            OnReloaded?.Invoke();
         }
 
         /// <summary>JSON 문자열을 파싱하여 테이블에 등록</summary>

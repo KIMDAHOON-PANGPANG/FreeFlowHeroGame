@@ -28,7 +28,7 @@ namespace FreeFlowHero.Editor
         private const string MartialArtRoot = "Assets/Martial Art Animations Sample/Animations";
         private const string Atk1FBX = MartialArtRoot + "/Atk_P_1.fbx";
         private const string Atk2FBX = MartialArtRoot + "/Atk_P_2.fbx";
-        private const string Atk3FBX = MartialArtRoot + "/Atk_P_3.fbx";
+        private const string Atk3FBX = MartialArtRoot + "/Atk_K_1.fbx";
 
         // ─── 4타 (EEJANAI knee strike) ───
         private const string Atk4FBX = FBXFolder + "/knee strike.fbx";
