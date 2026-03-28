@@ -254,5 +254,20 @@ namespace FreeFlowHero.Combat.HitReaction
                 rb.position = new Vector2(rb.position.x, knockdownBaseY);
             }
         }
+
+        private void LateUpdate()
+        {
+            // ★ 체공 중 메쉬 이탈 방지
+            // Animator가 Update 이후 본을 평가하면서 Knock_A 클립의 루트 본 이동량이
+            // 자식 메쉬의 localPosition에 반영되어 루트(rb.position)에서 시각적으로 이탈함.
+            // LateUpdate에서 메쉬를 루트 원점에 강제 고정하여 rb.position 기반 포물선만 보이게 한다.
+            if (!knockdownActive) return;
+            if (animator == null) return;
+
+            var meshT = animator.transform;
+            if (meshT == transform) return; // 메쉬가 루트 자체면 스킵
+
+            meshT.localPosition = Vector3.zero;
+        }
     }
 }
