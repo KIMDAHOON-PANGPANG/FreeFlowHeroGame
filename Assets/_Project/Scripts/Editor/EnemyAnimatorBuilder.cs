@@ -15,6 +15,7 @@ namespace FreeFlowHero.Editor
 
         // Martial Art Animations Sample 클립
         private const string IdleFBX = "Assets/Martial Art Animations Sample/Animations/Fight_Idle.fbx";
+        private const string WalkFBX = "Assets/Martial Art Animations Sample/Animations/Walk_F.fbx";
 
         // 히트 리액션 클립
         private const string FlinchFBX = "Assets/Martial Art Animations Sample/Animations/Hit_A.fbx";
@@ -69,6 +70,31 @@ namespace FreeFlowHero.Editor
                 toIdle.hasExitTime = false;
                 toIdle.duration = 0.15f;
                 toIdle.canTransitionToSelf = true;
+            }
+
+            // ─── Walk 상태 ───
+            AnimationClip walkClip = LoadClipFromFBX(WalkFBX);
+            AnimatorState walkState = sm.AddState("Walk", new Vector3(250, 0, 0));
+            if (walkClip != null)
+            {
+                walkState.motion = walkClip;
+                clipCount++;
+                Debug.Log($"[EnemyAnimBuilder] ✓ Walk 클립: {walkClip.name}");
+            }
+
+            // Idle → Walk: Speed > 0.1
+            {
+                var toWalk = idleState.AddTransition(walkState);
+                toWalk.AddCondition(AnimatorConditionMode.Greater, 0.1f, "Speed");
+                toWalk.hasExitTime = false;
+                toWalk.duration = 0.15f;
+            }
+            // Walk → Idle: Speed < 0.1
+            {
+                var toIdle = walkState.AddTransition(idleState);
+                toIdle.AddCondition(AnimatorConditionMode.Less, 0.1f, "Speed");
+                toIdle.hasExitTime = false;
+                toIdle.duration = 0.15f;
             }
 
             // ─── 공격 상태들 ───

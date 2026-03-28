@@ -363,6 +363,7 @@ namespace FreeFlowHero.Combat.Enemy
             {
                 case AIState.Idle:
                     stateTimer = 0.5f;
+                    SafeSetFloat("Speed", 0f);
                     break;
 
                 case AIState.Patrol:
@@ -380,6 +381,7 @@ namespace FreeFlowHero.Combat.Enemy
                     isTelegraphing = true;
                     currentTelegraph = telegraphType;
                     telegraphStartFrame = Time.frameCount;
+                    SafeSetFloat("Speed", 0f);
 
                     // 시각: 텔레그래프 색상
                     if (spriteRenderer != null)
@@ -403,6 +405,7 @@ namespace FreeFlowHero.Combat.Enemy
                 case AIState.Attack:
                     stateTimer = 0.3f; // 공격 지속
                     cooldownTimer = attackCooldown + Random.Range(-0.3f, 0.5f);
+                    SafeSetFloat("Speed", 0f);
 
                     // 애니메이션: 랜덤 공격 인덱스 선택 (Punch=0, Kick=1)
                     currentAttackIndex = Random.Range(0, 2);
@@ -418,6 +421,7 @@ namespace FreeFlowHero.Combat.Enemy
                     float freezeRemaining = (reactionHandler != null) ? reactionHandler.FreezeTimeRemaining : 0f;
                     stateTimer = Mathf.Max(freezeRemaining, hitStunDuration);
                     isTelegraphing = false;
+                    SafeSetFloat("Speed", 0f);
                     currentTelegraph = TelegraphType.None;
                     if (spriteRenderer != null)
                         spriteRenderer.color = HitStunColor;
@@ -429,6 +433,7 @@ namespace FreeFlowHero.Combat.Enemy
                 case AIState.Knockdown:
                     stateTimer = 5f; // 안전장치: 최대 5초 후 강제 복귀
                     isTelegraphing = false;
+                    SafeSetFloat("Speed", 0f);
                     currentTelegraph = TelegraphType.None;
                     if (spriteRenderer != null)
                         spriteRenderer.color = HitStunColor;
@@ -439,6 +444,7 @@ namespace FreeFlowHero.Combat.Enemy
 
                 case AIState.Dead:
                     isTelegraphing = false;
+                    SafeSetFloat("Speed", 0f);
 
                     // 콜라이더 비활성화 (사망 후 히트 판정에 안 잡히도록)
                     if (cachedCapsule != null)
@@ -491,12 +497,14 @@ namespace FreeFlowHero.Combat.Enemy
             if (stateTimer > 0f)
             {
                 // 대기 중
+                SafeSetFloat("Speed", 0f);
                 return;
             }
 
             // 이동 (충돌 검사 포함)
             MoveHorizontal(patrolDir * patrolSpeed * Time.deltaTime);
             FaceDirection(patrolDir);
+            SafeSetFloat("Speed", patrolSpeed);
         }
 
         private void UpdateChase()
@@ -531,6 +539,7 @@ namespace FreeFlowHero.Combat.Enemy
             if (dist > attackRange)
             {
                 MoveHorizontal(dir * chaseSpeed * Time.deltaTime);
+                SafeSetFloat("Speed", chaseSpeed);
             }
             else if (cooldownTimer > 0f)
             {
@@ -538,13 +547,19 @@ namespace FreeFlowHero.Combat.Enemy
                 if (dist < attackRange * 0.5f)
                 {
                     MoveHorizontal(-dir * patrolSpeed * 0.6f * Time.deltaTime);
+                    SafeSetFloat("Speed", patrolSpeed * 0.6f);
                 }
-                // else: 제자리 대기 (이동 없음)
+                else
+                {
+                    // 제자리 대기
+                    SafeSetFloat("Speed", 0f);
+                }
             }
             else
             {
                 // 범위 안 + 쿨다운 없음 → 접근
                 MoveHorizontal(dir * chaseSpeed * 0.5f * Time.deltaTime);
+                SafeSetFloat("Speed", chaseSpeed * 0.5f);
             }
         }
 
@@ -810,6 +825,13 @@ namespace FreeFlowHero.Combat.Enemy
             catch (System.Exception e) { Debug.LogWarning($"[EnemyAI] Animator 오류 무시: {e.Message}"); }
         }
 
+        private void SafeSetFloat(string paramName, float value)
+        {
+            if (animator == null || animator.runtimeAnimatorController == null) return;
+            try { animator.SetFloat(paramName, value); }
+            catch (System.Exception e) { Debug.LogWarning($"[EnemyAI] Animator 오류 무시: {e.Message}"); }
+        }
+
         // ────────────────────────────
         //  발 위치 보정 (LateUpdate)
         // ────────────────────────────
@@ -844,14 +866,16 @@ namespace FreeFlowHero.Combat.Enemy
 
             // ★ 안정적 오프셋 계산 (피드백 루프 없음):
             // footBoneLocalY = footWorldY - parentWorldY - meshLocalY
-            // 원하는 결과: 발이 parentWorldY에 위치 → newMeshLocalY = -footBoneLocalY
+            // 원하는 결과: 발바닥이 parentWorldY에 위치
+            // soleOffset: 발목 본 → 발바닥까지의 두께 보정
+            const float soleOffset = 0.08f;
             float parentWorldY = transform.position.y;
             float currentMeshLocalY = meshT.localPosition.y;
             float lowestFootWorldY = Mathf.Min(cachedLeftFoot.position.y, cachedRightFoot.position.y);
             float footBoneLocalY = lowestFootWorldY - parentWorldY - currentMeshLocalY;
 
-            // 발이 지면 아래일 때만 보정 (위로만 밀어올림)
-            float neededOffsetY = Mathf.Max(0f, -footBoneLocalY);
+            // 발바닥이 지면에 맞도록 보정 (발목 본 + sole 두께)
+            float neededOffsetY = Mathf.Max(0f, -footBoneLocalY + soleOffset);
 
             meshT.localPosition = new Vector3(
                 meshT.localPosition.x,
