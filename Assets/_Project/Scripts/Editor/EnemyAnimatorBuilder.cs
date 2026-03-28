@@ -15,7 +15,8 @@ namespace FreeFlowHero.Editor
 
         // Martial Art Animations Sample 클립
         private const string IdleFBX = "Assets/Martial Art Animations Sample/Animations/Fight_Idle.fbx";
-        private const string WalkFBX = "Assets/Martial Art Animations Sample/Animations/Walk_F.fbx";
+        private const string WalkForwardFBX = "Assets/Martial Art Animations Sample/Animations/Walk_F.fbx";
+        private const string WalkBackFBX = "Assets/Martial Art Animations Sample/Animations/Walk_B.fbx";
 
         // 히트 리액션 클립
         private const string FlinchFBX = "Assets/Martial Art Animations Sample/Animations/Hit_A.fbx";
@@ -72,34 +73,73 @@ namespace FreeFlowHero.Editor
                 toIdle.canTransitionToSelf = true;
             }
 
-            // ─── Walk 상태 ───
-            AnimationClip walkClip = LoadClipFromFBX(WalkFBX);
-            AnimatorState walkState = sm.AddState("Walk", new Vector3(250, 0, 0));
-            if (walkClip != null)
+            int stateCount = 0;
+            int clipCount = 0;
+
+            // ─── WalkForward 상태 (전진) ───
+            AnimationClip walkFClip = LoadClipFromFBX(WalkForwardFBX);
+            AnimatorState walkForwardState = sm.AddState("WalkForward", new Vector3(250, 0, 0));
+            if (walkFClip != null)
             {
-                walkState.motion = walkClip;
+                walkForwardState.motion = walkFClip;
                 clipCount++;
-                Debug.Log($"[EnemyAnimBuilder] ✓ Walk 클립: {walkClip.name}");
+                Debug.Log($"[EnemyAnimBuilder] ✓ WalkForward 클립: {walkFClip.name}");
             }
 
-            // Idle → Walk: Speed > 0.1
+            // ─── WalkBack 상태 (후퇴 — PC를 바라보며 뒤로 이동) ───
+            AnimationClip walkBClip = LoadClipFromFBX(WalkBackFBX);
+            AnimatorState walkBackState = sm.AddState("WalkBack", new Vector3(500, 0, 0));
+            if (walkBClip != null)
             {
-                var toWalk = idleState.AddTransition(walkState);
-                toWalk.AddCondition(AnimatorConditionMode.Greater, 0.1f, "Speed");
-                toWalk.hasExitTime = false;
-                toWalk.duration = 0.15f;
+                walkBackState.motion = walkBClip;
+                clipCount++;
+                Debug.Log($"[EnemyAnimBuilder] ✓ WalkBack 클립: {walkBClip.name}");
             }
-            // Walk → Idle: Speed < 0.1
+
+            // Speed > 0 = 전진, Speed < 0 = 후퇴
+            // Idle → WalkForward: Speed > 0.1
             {
-                var toIdle = walkState.AddTransition(idleState);
-                toIdle.AddCondition(AnimatorConditionMode.Less, 0.1f, "Speed");
-                toIdle.hasExitTime = false;
-                toIdle.duration = 0.15f;
+                var tr = idleState.AddTransition(walkForwardState);
+                tr.AddCondition(AnimatorConditionMode.Greater, 0.1f, "Speed");
+                tr.hasExitTime = false;
+                tr.duration = 0.15f;
+            }
+            // Idle → WalkBack: Speed < -0.1
+            {
+                var tr = idleState.AddTransition(walkBackState);
+                tr.AddCondition(AnimatorConditionMode.Less, -0.1f, "Speed");
+                tr.hasExitTime = false;
+                tr.duration = 0.15f;
+            }
+            // WalkForward → Idle: Speed < 0.1
+            {
+                var tr = walkForwardState.AddTransition(idleState);
+                tr.AddCondition(AnimatorConditionMode.Less, 0.1f, "Speed");
+                tr.hasExitTime = false;
+                tr.duration = 0.15f;
+            }
+            // WalkBack → Idle: Speed > -0.1
+            {
+                var tr = walkBackState.AddTransition(idleState);
+                tr.AddCondition(AnimatorConditionMode.Greater, -0.1f, "Speed");
+                tr.hasExitTime = false;
+                tr.duration = 0.15f;
+            }
+            // WalkForward ↔ WalkBack 직접 전환 (Idle 경유 없이 즉시)
+            {
+                var tr = walkForwardState.AddTransition(walkBackState);
+                tr.AddCondition(AnimatorConditionMode.Less, -0.1f, "Speed");
+                tr.hasExitTime = false;
+                tr.duration = 0.1f;
+            }
+            {
+                var tr = walkBackState.AddTransition(walkForwardState);
+                tr.AddCondition(AnimatorConditionMode.Greater, 0.1f, "Speed");
+                tr.hasExitTime = false;
+                tr.duration = 0.1f;
             }
 
             // ─── 공격 상태들 ───
-            int stateCount = 0;
-            int clipCount = 0;
             foreach (var (fbxPath, stateName) in EnemyAnimMap)
             {
                 AnimationClip clip = LoadClipFromFBX(fbxPath);

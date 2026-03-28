@@ -543,11 +543,12 @@ namespace FreeFlowHero.Combat.Enemy
             }
             else if (cooldownTimer > 0f)
             {
-                // 쿨다운 대기 중: 너무 가까우면 살짝 후퇴, 적당하면 제자리
+                // 쿨다운 대기 중: 너무 가까우면 PC를 바라보며 뒤로 후퇴
                 if (dist < attackRange * 0.5f)
                 {
+                    FaceDirection(dir); // PC를 바라본 채로
                     MoveHorizontal(-dir * patrolSpeed * 0.6f * Time.deltaTime);
-                    SafeSetFloat("Speed", patrolSpeed * 0.6f);
+                    SafeSetFloat("Speed", -patrolSpeed * 0.6f); // 음수 = WalkBack
                 }
                 else
                 {
