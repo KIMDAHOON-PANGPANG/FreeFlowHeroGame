@@ -130,8 +130,8 @@ namespace FreeFlowHero.Editor
         private const float CollapsedPanelWidth = 24f;
 
         // ─── 리사이즈 가능 패널 크기 ───
-        private float leftPanelWidth = 200f;       // 좌측 액션 목록
-        private float rightPanelWidth = 380f;      // 우측 인스펙터
+        private float leftPanelWidth = 180f;       // 좌측 액션 목록
+        private float rightPanelWidth = 480f;      // 우측 인스펙터
         private float previewHeight = 500f;         // 프리뷰 높이 (기본값=최대)
 
         private const float MinPanelWidth = 120f;
