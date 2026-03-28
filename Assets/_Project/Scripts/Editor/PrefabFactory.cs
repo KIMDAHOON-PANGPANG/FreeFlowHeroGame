@@ -3,6 +3,7 @@ using UnityEditor;
 using FreeFlowHero.Combat.Player;
 using FreeFlowHero.Combat.Core;
 using FreeFlowHero.Combat.Enemy;
+using FreeFlowHero.Combat.HitReaction;
 using FreeFlowHero.Common;
 
 namespace FreeFlowHero.Editor
@@ -68,6 +69,10 @@ namespace FreeFlowHero.Editor
             // ─── 전투 컴포넌트 ───
             player.AddComponent<PlayerCombatFSM>();
             player.AddComponent<CombatInputHandler>();
+            player.AddComponent<HitFlash>();
+
+            // ★ Sprite-Flash 머티리얼 할당
+            AssignFlashMaterial(sr);
 
             // ─── Hitbox 자식 오브젝트 ───
             GameObject hitboxObj = new GameObject("Hitbox");
@@ -138,6 +143,10 @@ namespace FreeFlowHero.Editor
 
             // DummyEnemyTarget (ICombatTarget 구현)
             enemy.AddComponent<DummyEnemyTarget>();
+            enemy.AddComponent<HitFlash>();
+
+            // ★ Sprite-Flash 머티리얼 할당
+            AssignFlashMaterial(sr);
 
             // EnemyCombatUI (HP 바 + 타겟 인디케이터 + 히트 넘버)
             enemy.AddComponent<EnemyCombatUI>();
@@ -212,6 +221,34 @@ namespace FreeFlowHero.Editor
         private static bool AssetExists(string path)
         {
             return AssetDatabase.LoadAssetAtPath<Object>(path) != null;
+        }
+
+        private const string FlashShaderName = "REPLACED/Sprite-Flash";
+        private const string FlashMaterialPath = "Assets/_Project/Materials/Sprite-Flash.mat";
+
+        /// <summary>SpriteRenderer에 Sprite-Flash 셰이더 머티리얼 할당. 없으면 자동 생성.</summary>
+        private static void AssignFlashMaterial(SpriteRenderer sr)
+        {
+            if (sr == null) return;
+
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(FlashMaterialPath);
+            if (mat == null)
+            {
+                // 머티리얼 자동 생성
+                var shader = Shader.Find(FlashShaderName);
+                if (shader == null)
+                {
+                    Debug.LogWarning($"[REPLACED] '{FlashShaderName}' 셰이더를 찾을 수 없습니다. 기본 머티리얼 사용.");
+                    return;
+                }
+                EnsureFolder("Assets/_Project/Materials");
+                mat = new Material(shader);
+                mat.name = "Sprite-Flash";
+                AssetDatabase.CreateAsset(mat, FlashMaterialPath);
+                Debug.Log($"[REPLACED] Sprite-Flash 머티리얼 자동 생성: {FlashMaterialPath}");
+            }
+
+            sr.sharedMaterial = mat;
         }
 
         private static void SetLayerRecursive(GameObject obj, string layerName)

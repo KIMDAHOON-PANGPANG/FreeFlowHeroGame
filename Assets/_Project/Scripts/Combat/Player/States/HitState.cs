@@ -32,6 +32,9 @@ namespace FreeFlowHero.Combat.Player
             if (context.playerAnimator != null)
                 context.playerAnimator.SetTrigger("Hit");
 
+            // ★ 머티리얼 플래시
+            context.hitFlash?.Play();
+
             // 이벤트 발행
             CombatEventBus.Publish(new OnPlayerHit
             {

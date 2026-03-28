@@ -1,11 +1,12 @@
 using UnityEngine;
 using FreeFlowHero.Combat.Core;
+using FreeFlowHero.Combat.HitReaction;
 
 namespace FreeFlowHero.Combat.Enemy
 {
     /// <summary>
     /// 테스트용 더미 적. ICombatTarget을 구현하여 Phase 1 히트 테스트에 사용한다.
-    /// 맞으면 빨간색 플래시 + 넉백 연출만 수행한다.
+    /// 맞으면 HitFlash(머티리얼 플래시) + 스케일 펀치 + 넉백 연출을 수행한다.
     /// </summary>
     public class DummyEnemyTarget : MonoBehaviour, ICombatTarget
     {
@@ -13,12 +14,13 @@ namespace FreeFlowHero.Combat.Enemy
         [SerializeField] private float maxHP = 100f;
         [SerializeField] private float currentHP = 100f;
 
+        // ★ 데이터 튜닝: 스케일 펀치 지속 시간
         [Header("시각 피드백")]
-        [SerializeField] private float flashDuration = 0.15f;
+        [SerializeField] private float scalePunchDuration = 0.15f;
 
         private SpriteRenderer spriteRenderer;
-        private Color originalColor;
-        private float flashTimer;
+        private HitFlash hitFlash;
+        private float scalePunchTimer;
         private Vector3 originalScale;
         private bool isDying;
         private float deathTimer;
@@ -38,10 +40,9 @@ namespace FreeFlowHero.Combat.Enemy
             // 데미지 적용 (Phase 1: 단순 감산)
             currentHP = Mathf.Max(0f, currentHP - hitData.BaseDamage);
 
-            // 시각 피드백: 흰색 플래시 + 스케일 펀치
-            flashTimer = flashDuration;
-            if (spriteRenderer != null)
-                spriteRenderer.color = Color.white;
+            // 시각 피드백: 머티리얼 플래시 + 스케일 펀치
+            hitFlash?.Play();
+            scalePunchTimer = scalePunchDuration;
             transform.localScale = originalScale * 1.15f;
 
             // 넉백: Kinematic position-based (Impulse 방식은 반동/진동 유발 가능)
@@ -56,8 +57,6 @@ namespace FreeFlowHero.Combat.Enemy
                 Vector2 knockPos = rb.position + knockDir.normalized * knockbackDist;
                 rb.position = knockPos;
             }
-
-
 
             // 사망 처리
             if (currentHP <= 0f && !isDying)
@@ -78,8 +77,7 @@ namespace FreeFlowHero.Combat.Enemy
         private void Awake()
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
-            if (spriteRenderer != null)
-                originalColor = spriteRenderer.color;
+            hitFlash = GetComponent<HitFlash>();
             originalScale = transform.localScale;
         }
 
@@ -105,21 +103,18 @@ namespace FreeFlowHero.Combat.Enemy
                 {
                     Destroy(gameObject);
                 }
-                return; // 사망 중에는 플래시 처리 스킵
+                return; // 사망 중에는 스케일 펀치 스킵
             }
 
-            // 플래시 타이머 + 스케일 복원
-            if (flashTimer > 0f)
+            // 스케일 펀치 복원
+            if (scalePunchTimer > 0f)
             {
-                flashTimer -= Time.deltaTime;
-                float t = Mathf.Clamp01(flashTimer / flashDuration);
-                // 스케일: 펀치→원래 크기로 보간
+                scalePunchTimer -= Time.deltaTime;
+                float t = Mathf.Clamp01(scalePunchTimer / scalePunchDuration);
                 transform.localScale = Vector3.Lerp(originalScale, originalScale * 1.15f, t);
 
-                if (flashTimer <= 0f)
+                if (scalePunchTimer <= 0f)
                 {
-                    if (spriteRenderer != null)
-                        spriteRenderer.color = originalColor;
                     transform.localScale = originalScale;
                 }
             }
@@ -129,7 +124,6 @@ namespace FreeFlowHero.Combat.Enemy
         public void ResetHP()
         {
             currentHP = maxHP;
-
         }
 
 #if UNITY_EDITOR

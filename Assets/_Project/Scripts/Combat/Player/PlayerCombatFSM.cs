@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using FreeFlowHero.Combat.Core;
+using FreeFlowHero.Combat.HitReaction;
 
 namespace FreeFlowHero.Combat.Player
 {
@@ -81,6 +82,11 @@ namespace FreeFlowHero.Combat.Player
                 context.playerAnimator.applyRootMotion = false;
 
             }
+
+            // ★ HitFlash 참조 캐시
+            context.hitFlash = GetComponent<HitFlash>();
+            if (context.hitFlash == null)
+                context.hitFlash = GetComponentInChildren<HitFlash>();
 
             // 상태 등록 — Phase 1
             RegisterState(new IdleState());

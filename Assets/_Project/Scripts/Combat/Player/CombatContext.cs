@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using FreeFlowHero.Combat.Core;
+using FreeFlowHero.Combat.HitReaction;
 
 namespace FreeFlowHero.Combat.Player
 {
@@ -69,6 +70,7 @@ namespace FreeFlowHero.Combat.Player
         public Rigidbody2D playerRigidbody;
         public Animator playerAnimator;
         public Transform playerTransform;
+        [System.NonSerialized] public HitFlash hitFlash;
 
         /// <summary>콤보 리셋</summary>
         public void ResetCombo()

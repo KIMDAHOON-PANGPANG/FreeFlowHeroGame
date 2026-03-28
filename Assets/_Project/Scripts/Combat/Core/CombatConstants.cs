@@ -57,5 +57,9 @@ namespace FreeFlowHero.Combat.Core
         // ─── 적 사망 연출 ───
         public const float EnemyDeathDelay = 0.5f;       // 사망 후 페이드 시작까지 대기
         public const float EnemyDeathFadeDuration = 0.8f; // 페이드아웃 지속 시간
+
+        // ─── 히트 플래시 ───
+        public const float HitFlashDuration = 0.15f;     // 플래시 지속 시간
+        public const float HitFlashIntensity = 1.0f;     // 플래시 강도 (0~1)
     }
 }
