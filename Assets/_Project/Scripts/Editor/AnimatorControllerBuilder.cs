@@ -33,6 +33,10 @@ namespace FreeFlowHero.Editor
         // ─── 4타 (EEJANAI knee strike) ───
         private const string Atk4FBX = FBXFolder + "/knee strike.fbx";
 
+        // ─── 히트 리액션 클립 (Martial Art) ───
+        private const string FlinchFBX = MartialArtRoot + "/Hit_A.fbx";
+        private const string KnockdownFBX = MartialArtRoot + "/Knock_A.fbx";
+
         // 애니메이션 → 전투 액션 매핑 (1~3타: Martial Art, 나머지: EEJANAI)
         private static readonly (string fbxName, string stateName, string triggerName)[] AnimMap = new[]
         {
@@ -83,6 +87,8 @@ namespace FreeFlowHero.Editor
             controller.AddParameter("HuxleyShot", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("HuxleyFinisher", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Hit", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("Flinch", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("Knockdown", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("CounterStrike", AnimatorControllerParameterType.Trigger);
 
             // ─── 베이스 레이어 ───
@@ -173,6 +179,42 @@ namespace FreeFlowHero.Editor
                 csTransition.hasExitTime = false;
                 csTransition.duration = 0.05f;
                 csTransition.canTransitionToSelf = false;
+            }
+
+            // ─── Flinch 상태 (경직 피격) ───
+            {
+                var flinchState = rootStateMachine.AddState("Flinch", GetStatePosition(stateCount + 1));
+                stateCount++;
+                AnimationClip flinchClip = LoadClipFromFBX(FlinchFBX);
+                if (flinchClip != null)
+                {
+                    flinchState.motion = flinchClip;
+                    clipFoundCount++;
+                }
+
+                var tr = rootStateMachine.AddAnyStateTransition(flinchState);
+                tr.AddCondition(AnimatorConditionMode.If, 0, "Flinch");
+                tr.hasExitTime = false;
+                tr.duration = 0.02f;
+                tr.canTransitionToSelf = true; // 연속 피격 시 리셋
+            }
+
+            // ─── Knockdown 상태 (넉다운 에어본) ───
+            {
+                var knockdownState = rootStateMachine.AddState("Knockdown", GetStatePosition(stateCount + 1));
+                stateCount++;
+                AnimationClip knockClip = LoadClipFromFBX(KnockdownFBX);
+                if (knockClip != null)
+                {
+                    knockdownState.motion = knockClip;
+                    clipFoundCount++;
+                }
+
+                var tr = rootStateMachine.AddAnyStateTransition(knockdownState);
+                tr.AddCondition(AnimatorConditionMode.If, 0, "Knockdown");
+                tr.hasExitTime = false;
+                tr.duration = 0.05f;
+                tr.canTransitionToSelf = false;
             }
 
             // ─── 모든 전투 상태 → Locomotion 복귀 (Exit Time) ───

@@ -71,6 +71,10 @@ namespace FreeFlowHero.Combat.Player
         public Animator playerAnimator;
         public Transform playerTransform;
         [System.NonSerialized] public HitFlash hitFlash;
+        [System.NonSerialized] public HitReactionHandler hitReactionHandler;
+
+        // ─── 피격 데이터 (OnHit → HitState.Enter 전달용) ───
+        [System.NonSerialized] public HitData lastHitData;
 
         /// <summary>콤보 리셋</summary>
         public void ResetCombo()

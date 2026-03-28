@@ -18,9 +18,6 @@ namespace FreeFlowHero.Editor
         [MenuItem("REPLACED/Setup/4. Build Test Scene", priority = 4)]
         public static void Execute()
         {
-            // ★ 적 AnimatorController 자동 빌드 (Flinch/Knockdown 파라미터 보장)
-            EnemyAnimatorBuilder.Execute();
-
             // 새 씬 생성
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 

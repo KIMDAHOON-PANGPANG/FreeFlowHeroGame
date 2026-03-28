@@ -12,25 +12,22 @@ namespace FreeFlowHero.Editor
     public static class EnemyAnimatorBuilder
     {
         private const string AnimatorPath = "Assets/_Project/Animations/Enemy/EnemyCombatAnimator.controller";
-        private const string EEJANAIRoot = "Assets/EEJANAI_Team/FreeFighterAnimations";
-        private const string FBXFolder = EEJANAIRoot + "/FBX";
-        private const string AnimFolder = EEJANAIRoot + "/Animations";
 
-        // Idle 클립 (Martial Art 또는 EEJANAI)
+        // Martial Art Animations Sample 클립
         private const string IdleFBX = "Assets/Martial Art Animations Sample/Animations/Fight_Idle.fbx";
 
         // 히트 리액션 클립
         private const string FlinchFBX = "Assets/Martial Art Animations Sample/Animations/Hit_A.fbx";
         private const string KnockdownFBX = "Assets/Martial Art Animations Sample/Animations/Knock_A.fbx";
 
-        // 적 공격 애니메이션 매핑
-        private static readonly (string fbxName, string stateName)[] EnemyAnimMap = new[]
+        // 적 공격 애니메이션 매핑 (Martial Art Animations Sample)
+        private const string AttackKickFBX = "Assets/Martial Art Animations Sample/Animations/Atk_K_1.fbx";
+        private const string AttackPunchFBX = "Assets/Martial Art Animations Sample/Animations/Atk_P_1.fbx";
+
+        private static readonly (string fbxPath, string stateName)[] EnemyAnimMap = new[]
         {
-            ("5 inch punch",     "Attack_Jab"),      // 일반 졸개 공격
-            ("back fist",        "Attack_BackFist"),  // 변형 공격
-            ("charge fist",      "Attack_Heavy"),     // 아머 적 강공격
-            ("low kick",         "Attack_LowKick"),   // 돌진형 공격
-            ("knee strike",      "Attack_Knee"),      // 엘리트 공격
+            (AttackPunchFBX,  "Attack_Punch"),  // 펀치
+            (AttackKickFBX,   "Attack_Kick"),   // 킥
         };
 
         [MenuItem("REPLACED/Setup/3b. Build Enemy Animator", priority = 31)]
@@ -54,6 +51,7 @@ namespace FreeFlowHero.Editor
             controller.AddParameter("Flinch", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Knockdown", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Die", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("Idle", AnimatorControllerParameterType.Trigger);
 
             var sm = controller.layers[0].stateMachine;
 
@@ -64,12 +62,21 @@ namespace FreeFlowHero.Editor
                 idleState.motion = idleClip;
             sm.defaultState = idleState;
 
+            // ★ Idle 트리거 → 강제 Idle 복귀 (넉다운/피격 후 Chase 진입 시 사용)
+            {
+                var toIdle = sm.AddAnyStateTransition(idleState);
+                toIdle.AddCondition(AnimatorConditionMode.If, 0, "Idle");
+                toIdle.hasExitTime = false;
+                toIdle.duration = 0.15f;
+                toIdle.canTransitionToSelf = true;
+            }
+
             // ─── 공격 상태들 ───
             int stateCount = 0;
             int clipCount = 0;
-            foreach (var (fbxName, stateName) in EnemyAnimMap)
+            foreach (var (fbxPath, stateName) in EnemyAnimMap)
             {
-                AnimationClip clip = FindClipByFBXName(fbxName);
+                AnimationClip clip = LoadClipFromFBX(fbxPath);
                 var state = sm.AddState(stateName, GetStatePosition(stateCount + 1));
                 stateCount++;
 
@@ -81,7 +88,7 @@ namespace FreeFlowHero.Editor
                 }
                 else
                 {
-                    Debug.LogWarning($"[EnemyAnimBuilder] ❌ {stateName} 클립 미발견: {fbxName}");
+                    Debug.LogWarning($"[EnemyAnimBuilder] ❌ {stateName} 클립 미발견: {fbxPath}");
                 }
 
                 // Attack 트리거 + AttackIndex로 분기
@@ -195,32 +202,6 @@ namespace FreeFlowHero.Editor
             foreach (Object asset in assets)
             {
                 if (asset is AnimationClip clip && !clip.name.StartsWith("__preview__"))
-                    return clip;
-            }
-            return null;
-        }
-
-        private static AnimationClip FindClipByFBXName(string fbxName)
-        {
-            string[] searchFolders = { FBXFolder, AnimFolder, EEJANAIRoot };
-            string[] guids = AssetDatabase.FindAssets(fbxName, searchFolders);
-            foreach (string guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                Object[] assets = AssetDatabase.LoadAllAssetsAtPath(path);
-                foreach (Object asset in assets)
-                {
-                    if (asset is AnimationClip clip && !clip.name.StartsWith("__preview__"))
-                        return clip;
-                }
-            }
-
-            guids = AssetDatabase.FindAssets($"t:AnimationClip {fbxName}");
-            foreach (string guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
-                if (clip != null && !clip.name.StartsWith("__preview__"))
                     return clip;
             }
             return null;

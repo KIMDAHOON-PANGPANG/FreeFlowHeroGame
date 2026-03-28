@@ -125,7 +125,8 @@ namespace FreeFlowHero.Combat.Enemy
         {
             enemyTarget = GetComponent<DummyEnemyTarget>();
             rb = GetComponent<Rigidbody2D>();
-            animator = GetComponent<Animator>();
+            // ★ 3D 모델의 Animator는 자식에 있음 (루트 Animator는 비활성)
+            animator = GetComponentInChildren<Animator>();
             cachedCapsule = GetComponent<CapsuleCollider2D>();
             spriteRenderer = GetComponent<SpriteRenderer>();
             reactionHandler = GetComponent<HitReaction.HitReactionHandler>();
@@ -190,8 +191,12 @@ namespace FreeFlowHero.Combat.Enemy
             }
             lastHP = curHP;
 
-            // ★ 수동 중력 적용 (Knockdown 중에는 HitReactionHandler가 이동 전담)
-            if (currentState != AIState.Knockdown)
+            // ★ 수동 중력 적용
+            // Knockdown: HitReactionHandler가 이동 전담
+            // Attack/Telegraph: 공격 모션 중 Y축 스냅으로 땅 파묻힘 방지
+            if (currentState != AIState.Knockdown
+                && currentState != AIState.Attack
+                && currentState != AIState.Telegraph)
                 ApplyGravity();
 
             // 쿨다운 틱
@@ -303,6 +308,8 @@ namespace FreeFlowHero.Combat.Enemy
 
                 case AIState.Chase:
                     stateTimer = 5f; // 최대 추적 시간
+                    // ★ Chase 진입 시 Idle 애니메이션으로 복귀 보장 (넉다운/피격 포즈 잔류 방지)
+                    SafeSetTrigger("Idle");
                     break;
 
                 case AIState.Telegraph:

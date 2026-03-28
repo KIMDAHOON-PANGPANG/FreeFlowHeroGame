@@ -104,6 +104,8 @@ AnimatorController 구성 시 이 매핑을 기준으로 할 것.
 | `replaced-combat:enemy-ai` | `.skills/replaced-combat-enemy-ai/SKILL.md` | 적 AI, 텔레그래프, 공격 턴 관리 구현 |
 | `replaced-combat:hit-reaction` | `.skills/replaced-combat-hit-reaction/SKILL.md` | 히트 리액션, 타격감 연출 구현 |
 | `replaced-combat:combat-math` | `.skills/replaced-combat-math/SKILL.md` | 데미지 공식, 밸런스 수치 설계 |
+| `replaced-combat:generator` | `.skills/replaced-combat-generator/SKILL.md` | 기획+구현 통합 제너레이터 (상위 스킬) |
+| `replaced-combat:evaluator` | `.skills/replaced-combat-evaluator/SKILL.md` | QA+아키텍처 검증 이밸류에이터 (상위 스킬) |
 
 ### 스킬 자동 활용 규칙
 
@@ -117,12 +119,16 @@ AnimatorController 구성 시 이 매핑을 기준으로 할 것.
 | 히트 리액션, 타격감, 넉백, 히트스탑, 카메라 셰이크, 피격 | `replaced-combat:hit-reaction` |
 | 데미지 공식, 밸런스, 수치 설계, 콤보 스케일링, DPS | `replaced-combat:combat-math` |
 | Unity 전반, 에디터 스크립트, SO, 프리팹, 씬 구성, 아키텍처 | `unity-dev-master` (범용 스킬) |
+| 구현해줘, 만들어줘, 기능 추가, 새 기능, 스프린트, 기획+구현 | `replaced-combat:generator` (상위 스킬) |
+| 검증해줘, 리뷰해줘, 버그, 안 돼, 엣지 케이스, 테스트, 아키텍처 검증, 대안 | `replaced-combat:evaluator` (상위 스킬) |
+
+**제너레이터/이밸류에이터 워크플로우**: 기능 구현 요청 → `generator`가 관련 하위 스킬을 조합하여 기획+구현 → `evaluator`가 코드/아키텍처/엣지케이스 검증 → 피드백 반영 → 반복. 로직이 근본적으로 안 될 때 `evaluator`가 대안 아키텍처를 설계하고 `generator`가 재구현한다.
 
 **복합 요청 시**: 여러 영역에 걸치는 요청이면 관련 스킬을 **모두 읽은 후** 통합하여 작업한다. 예를 들어 "콤보 중 처형이 발동되게 해줘"라면 `player-controller`와 `execution-huxley` 두 스킬을 모두 참조한다.
 
 **`unity-dev-master` 스킬 활용**: 이 프로젝트의 전투 시스템 5개 스킬로 커버되지 않는 Unity 일반 작업(에디터 툴 제작, JSON 파이프라인, 빌드 자동화, UI 시스템, 오디오, 세이브, 최적화 등)에는 `unity-dev-master` 스킬을 호출한다. 전투 시스템 스킬과 함께 사용할 수도 있다.
 
-## 에이전트 (5개)
+## 에이전트 (7개)
 
 | 에이전트 | 경로 | 역할 |
 |---------|------|------|
@@ -131,6 +137,8 @@ AnimatorController 구성 시 이 매핑을 기준으로 할 것.
 | Enemy AI | `.agents/enemy-ai-agent.md` | 적 AI, 텔레그래프, 턴 관리 |
 | Hit Reaction | `.agents/hit-reaction-agent.md` | 타격감, 피격 반응 구현 |
 | Execution System | `.agents/execution-system-agent.md` | 처형, 헉슬리 건 구현 |
+| **Generator** | `.agents/generator-agent.md` | 기획+구현 통합 (상위 에이전트) |
+| **Evaluator** | `.agents/evaluator-agent.md` | QA+아키텍처 검증 (상위 에이전트) |
 
 ## 핵심 설계 규칙
 

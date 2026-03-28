@@ -57,6 +57,8 @@ namespace FreeFlowHero.Combat.Player
             // 기본 동작: Hit 상태로 전환 (무적이 아닌 경우)
             if (!context.isInvulnerable)
             {
+                // ★ HitData를 context에 저장 → HitState.Enter()에서 사용
+                context.lastHitData = hitData;
                 fsm.TransitionTo<HitState>();
             }
         }

@@ -88,6 +88,11 @@ namespace FreeFlowHero.Combat.Player
             if (context.hitFlash == null)
                 context.hitFlash = GetComponentInChildren<HitFlash>();
 
+            // ★ HitReactionHandler 참조 캐시 (플레이어 피격 리액션)
+            context.hitReactionHandler = GetComponent<HitReaction.HitReactionHandler>();
+            if (context.hitReactionHandler == null)
+                context.hitReactionHandler = GetComponentInChildren<HitReaction.HitReactionHandler>();
+
             // 상태 등록 — Phase 1
             RegisterState(new IdleState());
             RegisterState(new StrikeState());

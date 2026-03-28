@@ -5,6 +5,7 @@ namespace FreeFlowHero.Combat.Player
 {
     /// <summary>
     /// Hit 상태: 플레이어 피격.
+    /// HitReactionHandler를 통해 Flinch/Knockdown 리액션을 실행한다.
     /// 경직 시간 동안 입력 무효 → Idle 복귀.
     /// </summary>
     public class HitState : CombatState
@@ -28,17 +29,26 @@ namespace FreeFlowHero.Combat.Player
             // 무적 설정 (연속 피격 방지)
             context.isInvulnerable = true;
 
-            // 애니메이션
-            if (context.playerAnimator != null)
-                context.playerAnimator.SetTrigger("Hit");
-
             // ★ 머티리얼 플래시
             context.hitFlash?.Play();
+
+            // ★ 히트 리액션 실행 (Flinch/Knockdown 모션 + 넉백 + 방향)
+            var hitData = context.lastHitData;
+            if (context.hitReactionHandler != null)
+            {
+                context.hitReactionHandler.ApplyReaction(hitData.Reaction, hitData);
+            }
+            else
+            {
+                // 폴백: HitReactionHandler 없으면 기존 애니메이션 트리거만
+                if (context.playerAnimator != null)
+                    context.playerAnimator.SetTrigger("Hit");
+            }
 
             // 이벤트 발행
             CombatEventBus.Publish(new OnPlayerHit
             {
-                HitData = default // TODO: 실제 HitData 전달
+                HitData = hitData
             });
         }
 
@@ -52,25 +62,39 @@ namespace FreeFlowHero.Combat.Player
         {
             base.Update(deltaTime);
 
+            // ★ Knockdown 중에는 경직 프레임 무시 — HitReactionHandler가 제어
+            if (context.hitReactionHandler != null && context.hitReactionHandler.IsKnockdownActive)
+                return;
+
             // 무적 프레임 종료
             if (context.stateFrameCounter >= InvulnerableFrames)
             {
                 context.isInvulnerable = false;
             }
 
-            // 경직 종료 → Idle 복귀
-            if (context.stateFrameCounter >= StunFrames)
+            // ★ Flinch 종료 대기: HitReactionHandler가 있으면 freezeTime 기반
+            if (context.hitReactionHandler != null)
             {
-                fsm.TransitionTo<IdleState>();
+                bool flinchDone = !context.hitReactionHandler.IsFlinchActive;
+                bool knockdownDone = !context.hitReactionHandler.IsKnockdownActive;
+                if (flinchDone && knockdownDone && context.stateFrameCounter >= InvulnerableFrames)
+                {
+                    fsm.TransitionTo<IdleState>();
+                }
+            }
+            else
+            {
+                // 폴백: 고정 경직 프레임
+                if (context.stateFrameCounter >= StunFrames)
+                {
+                    fsm.TransitionTo<IdleState>();
+                }
             }
         }
 
         public override void HandleInput(InputData input)
         {
             // 피격 중 모든 입력 무시
-            // Phase 2에서 카운터 빠른 반격 윈도우 추가 가능:
-            // if (input.Type == InputType.Counter && IsInCounterRecoveryWindow())
-            //     fsm.TransitionTo<CounterState>();
         }
 
         /// <summary>피격 중 추가 피격 (슈퍼아머 없으면 리셋)</summary>
@@ -79,9 +103,18 @@ namespace FreeFlowHero.Combat.Player
             // 무적 상태면 무시
             if (context.isInvulnerable) return;
 
-            // 프레임 카운터 리셋 (경직 재시작)
+            // HitData 갱신 + 프레임 카운터 리셋 (경직 재시작)
+            context.lastHitData = hitData;
             context.ResetStateFrame();
             context.isInvulnerable = true;
+
+            // ★ 재피격 리액션 실행
+            if (context.hitReactionHandler != null)
+            {
+                context.hitReactionHandler.ApplyReaction(hitData.Reaction, hitData);
+            }
+
+            context.hitFlash?.Play();
         }
     }
 }

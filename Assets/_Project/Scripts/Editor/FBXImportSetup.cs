@@ -167,6 +167,10 @@ namespace FreeFlowHero.Editor
             {
                 // 애니메이션 임포트 활성화
                 importer.importAnimation = true;
+
+                // ★ 루트 모션 Bake Into Pose — 애니메이션이 메쉬를 이동/회전시키지 않도록
+                // 이 설정 없으면: 킥/펀치 모션 시 스켈레톤이 앞으로 이동하거나 Y축으로 내려가 땅에 파묻힘
+                needsReimport |= BakeRootMotionIntoPose(importer);
             }
 
             if (needsReimport)
@@ -183,6 +187,55 @@ namespace FreeFlowHero.Editor
                 Debug.Log($"  — 이미 Humanoid: {fileName}");
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 애니메이션 클립의 루트 트랜스폼을 Bake Into Pose로 설정한다.
+        /// 이렇게 하면 애니메이션 재생 시 루트 본이 이동/회전하지 않아
+        /// 메쉬가 제자리에서 애니메이션된다.
+        /// </summary>
+        private static bool BakeRootMotionIntoPose(ModelImporter importer)
+        {
+            // 기존 클립 설정 가져오기 (없으면 기본값)
+            var clips = importer.clipAnimations;
+            if (clips == null || clips.Length == 0)
+                clips = importer.defaultClipAnimations;
+
+            if (clips == null || clips.Length == 0)
+                return false;
+
+            bool changed = false;
+            for (int i = 0; i < clips.Length; i++)
+            {
+                // Root Transform Rotation → Bake Into Pose (Based Upon: Original)
+                if (!clips[i].lockRootRotation)
+                {
+                    clips[i].lockRootRotation = true;
+                    clips[i].keepOriginalOrientation = true;
+                    changed = true;
+                }
+
+                // Root Transform Position (Y) → Bake Into Pose (Based Upon: Original)
+                if (!clips[i].lockRootHeightY)
+                {
+                    clips[i].lockRootHeightY = true;
+                    clips[i].keepOriginalPositionY = true;
+                    changed = true;
+                }
+
+                // Root Transform Position (XZ) → Bake Into Pose (Based Upon: Original)
+                if (!clips[i].lockRootPositionXZ)
+                {
+                    clips[i].lockRootPositionXZ = true;
+                    clips[i].keepOriginalPositionXZ = true;
+                    changed = true;
+                }
+            }
+
+            if (changed)
+                importer.clipAnimations = clips;
+
+            return changed;
         }
 
         /// <summary>FBX에서 Avatar를 추출한다.</summary>
