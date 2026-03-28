@@ -207,20 +207,34 @@ namespace FreeFlowHero.Editor
                 return false;
             }
 
-            // ★ 항상 강제 적용: 이전 설정이 있어도 heightFromFeet 등 변경사항 반영
+            // ★ 피격 모션(Knock_, Hit_) 판별: 루트 Y를 Original 기준으로 고정
+            //   발 기준(heightFromFeet)이면 넉다운 중 발 위치 변화로 루트 Y가 흔들림
+            string fileName = System.IO.Path.GetFileNameWithoutExtension(importer.assetPath);
+            bool isHitReactionClip = fileName.StartsWith("Knock_") || fileName.StartsWith("Hit_")
+                || fileName.StartsWith("GetUp_");
+
             for (int i = 0; i < clips.Length; i++)
             {
                 // Root Transform Rotation → Bake Into Pose (Based Upon: Original)
                 clips[i].lockRootRotation = true;
                 clips[i].keepOriginalOrientation = true;
 
-                // Root Transform Position (Y) → Bake Into Pose (Based Upon: Feet)
-                // ★ keepOriginalPositionY=false + heightFromFeet=true
-                //   → 발 위치 기준으로 루트 Y 고정. 격투 모션에서 루트 본이
-                //     원래 낮은 위치에 있어도 발이 지면에 맞춰짐.
+                // Root Transform Position (Y) → Bake Into Pose
                 clips[i].lockRootHeightY = true;
-                clips[i].keepOriginalPositionY = false;
-                clips[i].heightFromFeet = true;
+                if (isHitReactionClip)
+                {
+                    // ★ 피격 모션: Based Upon = Original (원점 고정)
+                    //   넉다운/피격 모션은 체공/넘어짐 중 발 위치가 크게 변하므로
+                    //   Feet 기준이면 루트 Y가 흔들린다. Original로 원점 고정.
+                    clips[i].keepOriginalPositionY = true;
+                    clips[i].heightFromFeet = false;
+                }
+                else
+                {
+                    // 일반 전투 모션: Based Upon = Feet (지면 기준)
+                    clips[i].keepOriginalPositionY = false;
+                    clips[i].heightFromFeet = true;
+                }
 
                 // Root Transform Position (XZ) → Bake Into Pose (Based Upon: Original)
                 clips[i].lockRootPositionXZ = true;
@@ -228,7 +242,8 @@ namespace FreeFlowHero.Editor
             }
 
             importer.clipAnimations = clips;
-            Debug.Log($"  [BakeRoot] ✓ {clips.Length}개 클립 Bake Into Pose 적용 (Y=Feet 기준): {System.IO.Path.GetFileName(importer.assetPath)}");
+            string yBasis = isHitReactionClip ? "Original" : "Feet";
+            Debug.Log($"  [BakeRoot] ✓ {clips.Length}개 클립 Bake Into Pose 적용 (Y={yBasis} 기준): {fileName}");
             return true;
         }
 
