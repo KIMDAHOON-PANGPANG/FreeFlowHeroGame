@@ -13,7 +13,8 @@ namespace FreeFlowHero.Editor
     public static class ModelSetup
     {
         private const string ModelPath = "Assets/EEJANAI_Team/Commons/Model/EEJANAIbot.fbx";
-        private const string AnimatorPath = "Assets/_Project/Animations/Player/PlayerCombatAnimator.controller";
+        private const string PlayerAnimatorPath = "Assets/_Project/Animations/Player/PlayerCombatAnimator.controller";
+        private const string EnemyAnimatorPath = "Assets/_Project/Animations/Enemy/EnemyCombatAnimator.controller";
         private const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player/Player.prefab";
         private const string DummyEnemyPrefabPath = "Assets/_Project/Prefabs/Enemies/DummyEnemy.prefab";
 
@@ -34,17 +35,18 @@ namespace FreeFlowHero.Editor
             }
 
             // AnimatorController 확인
-            var animController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(AnimatorPath);
-            if (animController == null)
-            {
-                Debug.LogWarning("[REPLACED] AnimatorController가 없습니다. " +
-                    "먼저 REPLACED > Setup > 3. Build Animator Controller 실행");
-            }
+            var playerAnim = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(PlayerAnimatorPath);
+            if (playerAnim == null)
+                Debug.LogWarning("[REPLACED] PlayerCombatAnimator가 없습니다. 먼저 3a. Build Animator Controller 실행");
+
+            var enemyAnim = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(EnemyAnimatorPath);
+            if (enemyAnim == null)
+                Debug.LogWarning("[REPLACED] EnemyCombatAnimator가 없습니다. 먼저 3b. Build Enemy Animator 실행");
 
             int count = 0;
-            count += AttachModelToPrefab(PlayerPrefabPath, modelPrefab, animController,
+            count += AttachModelToPrefab(PlayerPrefabPath, modelPrefab, playerAnim,
                 "PlayerModel", new Color(0.3f, 0.6f, 1f));
-            count += AttachModelToPrefab(DummyEnemyPrefabPath, modelPrefab, animController,
+            count += AttachModelToPrefab(DummyEnemyPrefabPath, modelPrefab, enemyAnim,
                 "EnemyModel", new Color(1f, 0.3f, 0.2f));
 
             AssetDatabase.SaveAssets();
@@ -52,7 +54,7 @@ namespace FreeFlowHero.Editor
 
             Debug.Log($"[REPLACED] 3D 모델 부착 완료 — {count}개 프리팹 업데이트" +
                 "\n  모델: EEJANAIbot.fbx" +
-                "\n  AnimatorController: PlayerCombatAnimator.controller" +
+                "\n  Player → PlayerCombatAnimator, Enemy → EnemyCombatAnimator" +
                 "\n  기존 SpriteRenderer는 비활성화됨 (삭제 아님)" +
                 "\n  REPLACED > Setup > 4. Build Test Scene 으로 씬 재생성 후 테스트");
         }

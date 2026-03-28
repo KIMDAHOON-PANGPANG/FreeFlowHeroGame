@@ -48,6 +48,8 @@ namespace FreeFlowHero.Combat.HitReaction
         /// </summary>
         public void ApplyReaction(HitReactionData reaction, float knockDir)
         {
+            Debug.Log($"[HitReaction][Handler] type={reaction.type} animator={(animator != null ? animator.name : "NULL")} " +
+                      $"controller={(animator?.runtimeAnimatorController != null ? "있음" : "NULL")} dir={knockDir:F1}");
             switch (reaction.type)
             {
                 case HitType.Flinch:
@@ -65,13 +67,19 @@ namespace FreeFlowHero.Combat.HitReaction
 
         private void PlayFlinchAnim()
         {
-            if (animator == null || animator.runtimeAnimatorController == null) return;
+            if (animator == null) { Debug.LogWarning("[HitReaction][Anim] Flinch 실패 — Animator NULL"); return; }
+            if (animator.runtimeAnimatorController == null) { Debug.LogWarning("[HitReaction][Anim] Flinch 실패 — Controller NULL"); return; }
+            string ctrlName = animator.runtimeAnimatorController != null ? animator.runtimeAnimatorController.name : "null";
+            Debug.Log($"[HitReaction][Anim] Flinch 트리거 — animator={animator.gameObject.name} controller={ctrlName}");
             animator.SetTrigger(FlinchTrigger);
         }
 
         private void PlayKnockdownAnim()
         {
-            if (animator == null || animator.runtimeAnimatorController == null) return;
+            if (animator == null) { Debug.LogWarning("[HitReaction][Anim] Knockdown 실패 — Animator NULL"); return; }
+            if (animator.runtimeAnimatorController == null) { Debug.LogWarning("[HitReaction][Anim] Knockdown 실패 — Controller NULL"); return; }
+            string ctrlName = animator.runtimeAnimatorController != null ? animator.runtimeAnimatorController.name : "null";
+            Debug.Log($"[HitReaction][Anim] Knockdown 트리거 — animator={animator.gameObject.name} controller={ctrlName}");
             animator.SetTrigger(KnockdownTrigger);
         }
 
