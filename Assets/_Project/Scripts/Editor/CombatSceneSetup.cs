@@ -18,6 +18,9 @@ namespace FreeFlowHero.Editor
         [MenuItem("REPLACED/Setup/4. Build Test Scene", priority = 4)]
         public static void Execute()
         {
+            // ★ 적 AnimatorController 자동 빌드 (Flinch/Knockdown 파라미터 보장)
+            EnemyAnimatorBuilder.Execute();
+
             // 새 씬 생성
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -183,7 +186,8 @@ namespace FreeFlowHero.Editor
             LayerAndTagSetup.Execute();         // 1. 레이어/태그/충돌 매트릭스
             PrefabFactory.CreateAllPrefabs();   // 2. 프리팹 생성
             FBXImportSetup.Execute();           // 6. FBX Humanoid 설정
-            AnimatorControllerBuilder.Execute(); // 3. AnimatorController
+            AnimatorControllerBuilder.Execute(); // 3a. Player AnimatorController
+            EnemyAnimatorBuilder.Execute();      // 3b. Enemy AnimatorController
             ModelSetup.Execute();               // 5. 3D 모델 부착
             Execute();                          // 4. 테스트 씬
 
