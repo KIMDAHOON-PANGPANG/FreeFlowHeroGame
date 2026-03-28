@@ -202,40 +202,34 @@ namespace FreeFlowHero.Editor
                 clips = importer.defaultClipAnimations;
 
             if (clips == null || clips.Length == 0)
+            {
+                Debug.LogWarning($"  [BakeRoot] 클립 없음: {importer.assetPath}");
                 return false;
+            }
 
-            bool changed = false;
+            // ★ 항상 강제 적용: 이전 설정이 있어도 heightFromFeet 등 변경사항 반영
             for (int i = 0; i < clips.Length; i++)
             {
                 // Root Transform Rotation → Bake Into Pose (Based Upon: Original)
-                if (!clips[i].lockRootRotation)
-                {
-                    clips[i].lockRootRotation = true;
-                    clips[i].keepOriginalOrientation = true;
-                    changed = true;
-                }
+                clips[i].lockRootRotation = true;
+                clips[i].keepOriginalOrientation = true;
 
-                // Root Transform Position (Y) → Bake Into Pose (Based Upon: Original)
-                if (!clips[i].lockRootHeightY)
-                {
-                    clips[i].lockRootHeightY = true;
-                    clips[i].keepOriginalPositionY = true;
-                    changed = true;
-                }
+                // Root Transform Position (Y) → Bake Into Pose (Based Upon: Feet)
+                // ★ keepOriginalPositionY=false + heightFromFeet=true
+                //   → 발 위치 기준으로 루트 Y 고정. 격투 모션에서 루트 본이
+                //     원래 낮은 위치에 있어도 발이 지면에 맞춰짐.
+                clips[i].lockRootHeightY = true;
+                clips[i].keepOriginalPositionY = false;
+                clips[i].heightFromFeet = true;
 
                 // Root Transform Position (XZ) → Bake Into Pose (Based Upon: Original)
-                if (!clips[i].lockRootPositionXZ)
-                {
-                    clips[i].lockRootPositionXZ = true;
-                    clips[i].keepOriginalPositionXZ = true;
-                    changed = true;
-                }
+                clips[i].lockRootPositionXZ = true;
+                clips[i].keepOriginalPositionXZ = true;
             }
 
-            if (changed)
-                importer.clipAnimations = clips;
-
-            return changed;
+            importer.clipAnimations = clips;
+            Debug.Log($"  [BakeRoot] ✓ {clips.Length}개 클립 Bake Into Pose 적용 (Y=Feet 기준): {System.IO.Path.GetFileName(importer.assetPath)}");
+            return true;
         }
 
         /// <summary>FBX에서 Avatar를 추출한다.</summary>

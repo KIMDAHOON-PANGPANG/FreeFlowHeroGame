@@ -174,8 +174,27 @@ namespace FreeFlowHero.Combat.Enemy
             TransitionTo(AIState.Patrol);
         }
 
+        // [DEBUG] 메쉬 로컬 위치 추적 쿨다운
+        private float meshLogCooldown;
+
         private void Update()
         {
+            // [DEBUG] 3D 모델 자식의 localPosition 추적 (0.5초마다)
+            // 이 값이 (0,0,0)이 아니면 Animator가 메쉬를 이동시키고 있음
+            meshLogCooldown -= Time.deltaTime;
+            if (meshLogCooldown <= 0f && animator != null)
+            {
+                meshLogCooldown = 0.5f;
+                var meshT = animator.transform;
+                if (meshT != transform) // 자식인 경우만
+                {
+                    Debug.Log($"[MeshPos][{gameObject.name}] state={currentState} " +
+                        $"meshLocalPos={meshT.localPosition} rb.pos={rb.position} " +
+                        $"applyRootMotion={animator.applyRootMotion} " +
+                        $"animState={animator.GetCurrentAnimatorStateInfo(0).shortNameHash}");
+                }
+            }
+
             // 플레이어 지연 검색
             if (playerTransform == null)
             {
@@ -241,6 +260,9 @@ namespace FreeFlowHero.Combat.Enemy
         //  수동 중력 & 지면 검사
         // ────────────────────────────
 
+        // [DEBUG] 중력 로그 쿨다운 (0.5초마다 출력)
+        private float gravityLogCooldown;
+
         private void ApplyGravity()
         {
             if (rb == null) return;
@@ -260,6 +282,21 @@ namespace FreeFlowHero.Combat.Enemy
 
             RaycastHit2D groundHit = Physics2D.Raycast(rayOrigin, Vector2.down, dynamicDist, groundMask);
 
+            // [DEBUG] 중력 진단 로그 (0.5초마다)
+            gravityLogCooldown -= Time.deltaTime;
+            if (gravityLogCooldown <= 0f)
+            {
+                gravityLogCooldown = 0.5f;
+                bool hasGround = groundHit.collider != null;
+                float targetY = hasGround ? groundHit.point.y - capsuleOffsetY + capsuleHalfH : -999f;
+                Debug.Log($"[Gravity][{gameObject.name}] state={currentState} pos.y={pos.y:F3} " +
+                    $"capsuleOff={capsuleOffsetY:F3} capsuleHalfH={capsuleHalfH:F3} " +
+                    $"rayOrigin.y={rayOrigin.y:F3} groundHit={hasGround} " +
+                    $"groundY={(hasGround ? groundHit.point.y : -999f):F3} targetPivotY={targetY:F3} " +
+                    $"vertVel={verticalVelocity:F3} " +
+                    $"capsule={cachedCapsule != null} groundMask={groundMask}");
+            }
+
             if (groundHit.collider != null)
             {
                 isGrounded = true;
@@ -271,6 +308,9 @@ namespace FreeFlowHero.Combat.Enemy
                 float targetPivotY = groundHit.point.y - capsuleOffsetY + capsuleHalfH;
                 if (pos.y < targetPivotY || pos.y - targetPivotY > 0.1f)
                 {
+                    // [DEBUG] Y 스냅 발생 시 상세 로그
+                    Debug.Log($"[Gravity][SNAP][{gameObject.name}] {pos.y:F3} → {targetPivotY:F3} " +
+                        $"(diff={pos.y - targetPivotY:F3}) groundY={groundHit.point.y:F3}");
                     pos.y = targetPivotY;
                     rb.position = pos;
                 }

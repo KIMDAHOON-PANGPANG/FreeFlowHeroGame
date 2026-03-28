@@ -203,6 +203,12 @@ namespace FreeFlowHero.Combat.HitReaction
             knockdownDir = dir;
             knockdownBaseY = rb.position.y;
 
+            // [DEBUG] 넉다운 시작 로그
+            Debug.Log($"[Knockdown][START][{gameObject.name}] baseY={knockdownBaseY:F3} " +
+                $"launchH={knockdownLaunchHeight:F3} airTime={knockdownAirTime:F3} " +
+                $"dist={knockdownDistance:F3} dir={knockdownDir:F1} " +
+                $"rb.pos={rb.position} animator={animator?.name} applyRoot={animator?.applyRootMotion}");
+
             PlayKnockdownAnim();
         }
 
@@ -227,8 +233,19 @@ namespace FreeFlowHero.Combat.HitReaction
 
             rb.position = new Vector2(x, y);
 
+            // [DEBUG] 체공 중 10프레임마다 위치 로그
+            if (Time.frameCount % 10 == 0)
+            {
+                Debug.Log($"[Knockdown][FLY][{gameObject.name}] t={t:F2} rb.pos={rb.position} " +
+                    $"y_calc={y:F3} baseY={knockdownBaseY:F3} " +
+                    $"meshLocalPos={animator?.transform.localPosition}");
+            }
+
             if (t >= 1f)
             {
+                // [DEBUG] 넉다운 종료 로그
+                Debug.Log($"[Knockdown][END][{gameObject.name}] rb.pos={rb.position} → baseY={knockdownBaseY:F3} " +
+                    $"meshLocalPos={animator?.transform.localPosition}");
                 knockdownActive = false;
                 rb.position = new Vector2(rb.position.x, knockdownBaseY);
             }
