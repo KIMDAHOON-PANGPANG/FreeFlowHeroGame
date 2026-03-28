@@ -18,6 +18,12 @@ namespace FreeFlowHero.Editor
         [MenuItem("REPLACED/Setup/4. Build Test Scene", priority = 4)]
         public static void Execute()
         {
+            if (Application.isPlaying)
+            {
+                Debug.LogError("[REPLACED] Play 모드에서는 실행할 수 없습니다. Play를 중지한 후 다시 실행하세요.");
+                return;
+            }
+
             // 새 씬 생성
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -178,6 +184,12 @@ namespace FreeFlowHero.Editor
         [MenuItem("REPLACED/Setup/0. Full Setup (All Steps)", priority = 0)]
         public static void FullSetup()
         {
+            if (Application.isPlaying)
+            {
+                Debug.LogError("[REPLACED] Play 모드에서는 Full Setup을 실행할 수 없습니다. Play를 중지한 후 다시 실행하세요.");
+                return;
+            }
+
             Debug.Log("[REPLACED] ===== 전체 자동 셋업 시작 =====");
 
             LayerAndTagSetup.Execute();         // 1. 레이어/태그/충돌 매트릭스
