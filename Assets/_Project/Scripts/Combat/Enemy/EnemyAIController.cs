@@ -346,8 +346,8 @@ namespace FreeFlowHero.Combat.Enemy
                     if (spriteRenderer != null)
                         spriteRenderer.color = HitStunColor;
 
-                    // 애니메이션
-                    SafeSetTrigger("HitStun");
+                    // 애니메이션: Flinch 모션 (Hit_A)
+                    SafeSetTrigger("Flinch");
                     break;
 
                 case AIState.Knockdown:
@@ -357,7 +357,8 @@ namespace FreeFlowHero.Combat.Enemy
                     if (spriteRenderer != null)
                         spriteRenderer.color = HitStunColor;
 
-                    SafeSetTrigger("HitStun"); // TODO: 별도 Knockdown 애니메이션 추가 시 교체
+                    // 애니메이션: Knockdown 모션 (Knock_A)
+                    SafeSetTrigger("Knockdown");
                     break;
 
                 case AIState.Dead:

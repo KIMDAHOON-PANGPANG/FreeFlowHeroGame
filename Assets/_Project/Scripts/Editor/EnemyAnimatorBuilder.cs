@@ -19,6 +19,10 @@ namespace FreeFlowHero.Editor
         // Idle 클립 (Martial Art 또는 EEJANAI)
         private const string IdleFBX = "Assets/Martial Art Animations Sample/Animations/Fight_Idle.fbx";
 
+        // 히트 리액션 클립
+        private const string FlinchFBX = "Assets/Martial Art Animations Sample/Animations/Hit_A.fbx";
+        private const string KnockdownFBX = "Assets/Martial Art Animations Sample/Animations/Knock_A.fbx";
+
         // 적 공격 애니메이션 매핑
         private static readonly (string fbxName, string stateName)[] EnemyAnimMap = new[]
         {
@@ -47,6 +51,8 @@ namespace FreeFlowHero.Editor
             controller.AddParameter("AttackIndex", AnimatorControllerParameterType.Int);
             controller.AddParameter("Telegraph", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("HitStun", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("Flinch", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("Knockdown", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Die", AnimatorControllerParameterType.Trigger);
 
             var sm = controller.layers[0].stateMachine;
@@ -123,6 +129,44 @@ namespace FreeFlowHero.Editor
                 var toIdle = hitStunState.AddTransition(idleState);
                 toIdle.hasExitTime = true;
                 toIdle.exitTime = 0.85f;
+                toIdle.duration = 0.15f;
+            }
+
+            // ─── Flinch 상태 (경직 피격) ───
+            var flinchState = sm.AddState("Flinch", GetStatePosition(stateCount + 1));
+            stateCount++;
+            {
+                AnimationClip flinchClip = LoadClipFromFBX(FlinchFBX);
+                if (flinchClip != null) flinchState.motion = flinchClip;
+
+                var tr = sm.AddAnyStateTransition(flinchState);
+                tr.AddCondition(AnimatorConditionMode.If, 0, "Flinch");
+                tr.hasExitTime = false;
+                tr.duration = 0.02f;
+                tr.canTransitionToSelf = true; // 연속 피격 시 리셋
+
+                var toIdle = flinchState.AddTransition(idleState);
+                toIdle.hasExitTime = true;
+                toIdle.exitTime = 0.85f;
+                toIdle.duration = 0.15f;
+            }
+
+            // ─── Knockdown 상태 (넉다운 에어본) ───
+            var knockdownState = sm.AddState("Knockdown", GetStatePosition(stateCount + 1));
+            stateCount++;
+            {
+                AnimationClip knockClip = LoadClipFromFBX(KnockdownFBX);
+                if (knockClip != null) knockdownState.motion = knockClip;
+
+                var tr = sm.AddAnyStateTransition(knockdownState);
+                tr.AddCondition(AnimatorConditionMode.If, 0, "Knockdown");
+                tr.hasExitTime = false;
+                tr.duration = 0.05f;
+                tr.canTransitionToSelf = false;
+
+                var toIdle = knockdownState.AddTransition(idleState);
+                toIdle.hasExitTime = true;
+                toIdle.exitTime = 0.9f;
                 toIdle.duration = 0.15f;
             }
 
