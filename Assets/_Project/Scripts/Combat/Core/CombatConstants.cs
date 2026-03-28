@@ -62,6 +62,10 @@ namespace FreeFlowHero.Combat.Core
         public const float HitFlashDuration = 0.15f;     // 플래시 지속 시간
         public const float HitFlashIntensity = 1.0f;     // 플래시 강도 (0~1)
 
+        // ─── 피격 리액션: 모션 클립 경로 ───
+        public const string FlinchClipPath = "Assets/Martial Art Animations Sample/Animations/Hit_A.fbx";
+        public const string KnockdownClipPath = "Assets/Martial Art Animations Sample/Animations/Knock_A.fbx";
+
         // ─── 피격 리액션: Flinch 프리셋 (cm / 초 / 프레임) ───
         public const float FlinchLightPush = 30f;
         public const float FlinchLightFreeze = 0.08f;

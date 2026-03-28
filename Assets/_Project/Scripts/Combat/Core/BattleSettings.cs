@@ -242,6 +242,17 @@ namespace FreeFlowHero.Combat.Core
         [Tooltip("날아가는 거리 (cm)")] public float knockdownHeavyDistance = CombatConstants.KnockdownHeavyDistance;
 
         // ════════════════════════════════════════════
+        //  피격 리액션: 모션 클립
+        // ════════════════════════════════════════════
+
+        [Header("히트 리액션 모션")]
+        [Tooltip("Flinch 피격 모션 FBX 경로")]
+        public string flinchClipPath = CombatConstants.FlinchClipPath;
+
+        [Tooltip("Knockdown 피격 모션 FBX 경로")]
+        public string knockdownClipPath = CombatConstants.KnockdownClipPath;
+
+        // ════════════════════════════════════════════
         //  유틸리티
         // ════════════════════════════════════════════
 
@@ -300,6 +311,8 @@ namespace FreeFlowHero.Combat.Core
             knockdownHeavyHeight = CombatConstants.KnockdownHeavyHeight;
             knockdownHeavyAirTime = CombatConstants.KnockdownHeavyAirTime;
             knockdownHeavyDistance = CombatConstants.KnockdownHeavyDistance;
+            flinchClipPath = CombatConstants.FlinchClipPath;
+            knockdownClipPath = CombatConstants.KnockdownClipPath;
         }
 
         // ════════════════════════════════════════════
@@ -449,5 +462,13 @@ namespace FreeFlowHero.Combat.Core
                 _ => new KnockdownData(i.knockdownMediumHeight, i.knockdownMediumAirTime, i.knockdownMediumDistance)
             };
         }
+
+        /// <summary>Flinch 피격 모션 클립 경로.</summary>
+        public static string GetFlinchClipPath()
+            => IsLoaded ? _instance.flinchClipPath : CombatConstants.FlinchClipPath;
+
+        /// <summary>Knockdown 피격 모션 클립 경로.</summary>
+        public static string GetKnockdownClipPath()
+            => IsLoaded ? _instance.knockdownClipPath : CombatConstants.KnockdownClipPath;
     }
 }
