@@ -126,7 +126,20 @@ namespace FreeFlowHero.Combat.Enemy
             enemyTarget = GetComponent<DummyEnemyTarget>();
             rb = GetComponent<Rigidbody2D>();
             // ★ 3D 모델의 Animator는 자식에 있음 (루트 Animator는 비활성)
-            animator = GetComponentInChildren<Animator>();
+            // HitReactionHandler와 동일 패턴: enabled + Controller 있는 Animator 우선 탐색
+            foreach (var anim in GetComponentsInChildren<Animator>(true))
+            {
+                if (anim.enabled && anim.runtimeAnimatorController != null)
+                {
+                    animator = anim;
+                    break;
+                }
+            }
+            if (animator == null)
+                animator = GetComponentInChildren<Animator>();
+            // ★ 루트 모션 강제 비활성화 (Idle 등에서 메쉬 Y 드리프트 방지)
+            if (animator != null)
+                animator.applyRootMotion = false;
             cachedCapsule = GetComponent<CapsuleCollider2D>();
             spriteRenderer = GetComponent<SpriteRenderer>();
             reactionHandler = GetComponent<HitReaction.HitReactionHandler>();
@@ -194,9 +207,14 @@ namespace FreeFlowHero.Combat.Enemy
             // ★ 수동 중력 적용
             // Knockdown: HitReactionHandler가 이동 전담
             // Attack/Telegraph: 공격 모션 중 Y축 스냅으로 땅 파묻힘 방지
+            // ★ 중력 스킵 조건:
+            //   Knockdown: HitReactionHandler가 체공 이동 전담
+            //   Attack/Telegraph: 공격 모션 중 Y 스냅 방지
+            //   HitStun: Flinch 밀림 중 중력과 충돌 방지
             if (currentState != AIState.Knockdown
                 && currentState != AIState.Attack
-                && currentState != AIState.Telegraph)
+                && currentState != AIState.Telegraph
+                && currentState != AIState.HitStun)
                 ApplyGravity();
 
             // 쿨다운 틱

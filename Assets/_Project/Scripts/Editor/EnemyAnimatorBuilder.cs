@@ -159,6 +159,9 @@ namespace FreeFlowHero.Editor
             }
 
             // ─── Knockdown 상태 (넉다운 에어본) ───
+            // ★ Idle 자동 전환 제거: HitReactionHandler가 체공 제어 완료 후
+            //   AI 상태머신이 SafeSetTrigger("Idle")로 직접 전환한다.
+            //   exitTime 자동 전환이 있으면 체공 중 메쉬가 Idle 원점으로 스냅되는 버그 발생.
             var knockdownState = sm.AddState("Knockdown", GetStatePosition(stateCount + 1));
             stateCount++;
             {
@@ -171,10 +174,8 @@ namespace FreeFlowHero.Editor
                 tr.duration = 0.05f;
                 tr.canTransitionToSelf = false;
 
-                var toIdle = knockdownState.AddTransition(idleState);
-                toIdle.hasExitTime = true;
-                toIdle.exitTime = 0.9f;
-                toIdle.duration = 0.15f;
+                // ★ Knockdown → Idle 자동 전환 없음
+                // AI가 HitStun 진입 시 SafeSetTrigger("Flinch") 또는 SafeSetTrigger("Idle")로 제어
             }
 
             // ─── Die 상태 ───

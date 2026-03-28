@@ -218,9 +218,12 @@ namespace FreeFlowHero.Editor
             }
 
             // ─── 모든 전투 상태 → Locomotion 복귀 (Exit Time) ───
+            // ★ Knockdown은 제외: HitReactionHandler 체공 완료 후 AI가 직접 Idle 트리거로 전환.
+            //   exitTime 자동 전환이 있으면 체공 중 메쉬가 Locomotion 원점으로 스냅되는 버그 발생.
             foreach (var childState in rootStateMachine.states)
             {
-                if (childState.state != locomotionState)
+                if (childState.state != locomotionState
+                    && childState.state.name != "Knockdown")
                 {
                     var toLocomotion = childState.state.AddTransition(locomotionState);
                     toLocomotion.hasExitTime = true;
