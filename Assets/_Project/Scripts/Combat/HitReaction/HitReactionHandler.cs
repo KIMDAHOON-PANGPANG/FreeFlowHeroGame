@@ -64,14 +64,19 @@ namespace FreeFlowHero.Combat.HitReaction
             if (animator == null)
                 animator = GetComponentInChildren<Animator>();
 
-            // ★ applyRootMotion=false: FBX가 Bake Into Pose로 설정되어 루트모션이 없으므로
-            //   Animator GO(메쉬 컨테이너)가 스스로 이동하지 않음.
-            //   LateUpdate에서 meshT.localPosition=Vector3.zero로 강제하여
-            //   메쉬가 항상 rb.position에 위치하도록 보장.
-            //   (applyRootMotion=true + RootMotionCanceller 방식은 매 프레임 누적 이탈 버그 발생)
+            // ★ applyRootMotion=true: Unity가 Hips 본에서 루트모션을 추출 → Hips가 제자리 유지.
+            //   빈 OnAnimatorMove()로 추출된 루트모션이 GO에 적용되는 것을 차단.
+            //   LateUpdate에서 meshT.localPosition=Vector3.zero 강제 리셋으로 누적 이탈도 방지.
+            //   (applyRootMotion=false면 루트모션이 추출되지 않아 Hips 본이 애니메이션대로 이동함)
             if (animator != null)
             {
-                animator.applyRootMotion = false;
+                animator.applyRootMotion = true;
+                // Animator가 자식 GO에 있으면 RootMotionCanceller 부착 (빈 OnAnimatorMove)
+                if (animator.gameObject != gameObject)
+                {
+                    if (animator.gameObject.GetComponent<RootMotionCanceller>() == null)
+                        animator.gameObject.AddComponent<RootMotionCanceller>();
+                }
             }
         }
 
