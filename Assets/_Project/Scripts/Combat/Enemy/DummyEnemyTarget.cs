@@ -47,9 +47,11 @@ namespace FreeFlowHero.Combat.Enemy
             if (rb != null)
             {
                 rb.linearVelocity = Vector2.zero;
-                // ★ 즉시 위치 이동 방식 넉백 (물리 반동 없음)
+                // ★ 즉시 위치 이동 방식 넉백 (수평 방향만 — Y 성분 포함 시 땅속 관통 유발)
                 float knockbackDist = 0.3f;
-                Vector2 knockPos = rb.position + hitData.KnockbackDirection * knockbackDist;
+                Vector2 knockDir = new Vector2(hitData.KnockbackDirection.x, 0f);
+                if (knockDir == Vector2.zero) knockDir = Vector2.right;
+                Vector2 knockPos = rb.position + knockDir.normalized * knockbackDist;
                 rb.position = knockPos;
             }
 

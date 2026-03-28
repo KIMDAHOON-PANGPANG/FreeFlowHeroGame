@@ -212,22 +212,31 @@ namespace FreeFlowHero.Combat.Enemy
 
             Vector2 pos = rb.position;
 
-            // 지면 레이캐스트: 캡슐 하단에서 아래로
-            float capsuleBottomY = pos.y + (cachedCapsule != null ? cachedCapsule.offset.y - cachedCapsule.size.y * 0.5f : 0f);
+            // 캡슐 형상 캐시
+            float capsuleOffsetY  = cachedCapsule != null ? cachedCapsule.offset.y  : 0f;
+            float capsuleHalfH    = cachedCapsule != null ? cachedCapsule.size.y * 0.5f : 0f;
+
+            // 캡슐 하단 Y: 피벗 기준
+            float capsuleBottomY = pos.y + capsuleOffsetY - capsuleHalfH;
+
+            // 낙하 속도에 따라 레이 거리를 늘려 빠른 낙하 시 땅 관통 방지
+            float dynamicDist = GroundCheckDist + Mathf.Max(0f, -verticalVelocity * Time.deltaTime) + 0.05f;
             Vector2 rayOrigin = new Vector2(pos.x, capsuleBottomY + 0.05f);
 
-            RaycastHit2D groundHit = Physics2D.Raycast(rayOrigin, Vector2.down, GroundCheckDist + 0.05f, groundMask);
+            RaycastHit2D groundHit = Physics2D.Raycast(rayOrigin, Vector2.down, dynamicDist, groundMask);
 
             if (groundHit.collider != null)
             {
                 isGrounded = true;
                 verticalVelocity = 0f;
 
-                // 지면 위에 정확히 배치
-                float correctY = groundHit.point.y;
-                if (pos.y < correctY || pos.y - correctY > 0.1f)
+                // ★ 피벗 스냅 위치 = 지면 표면 Y + 캡슐 반높이 - 캡슐 오프셋
+                //   capsuleBottomY = pos.y + offsetY - halfH 이므로
+                //   pos.y = groundY - offsetY + halfH 로 역산
+                float targetPivotY = groundHit.point.y - capsuleOffsetY + capsuleHalfH;
+                if (pos.y < targetPivotY || pos.y - targetPivotY > 0.1f)
                 {
-                    pos.y = correctY;
+                    pos.y = targetPivotY;
                     rb.position = pos;
                 }
             }
