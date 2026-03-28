@@ -92,6 +92,10 @@ namespace FreeFlowHero.Editor
                 // ★ AnimatorClipOverrider: JSON clipPath 기반 런타임 클립 교체
                 if (player.GetComponent<FreeFlowHero.Combat.Core.AnimatorClipOverrider>() == null)
                     player.AddComponent<FreeFlowHero.Combat.Core.AnimatorClipOverrider>();
+
+                // ★ HitReactionHandler: 피격 리액션 (Flinch/Knockdown)
+                if (player.GetComponent<FreeFlowHero.Combat.HitReaction.HitReactionHandler>() == null)
+                    player.AddComponent<FreeFlowHero.Combat.HitReaction.HitReactionHandler>();
             }
             else
             {
@@ -147,6 +151,10 @@ namespace FreeFlowHero.Editor
                     // EnemyAIController 자동 부착 (기존 프리팹에 없으면 추가)
                     if (enemy.GetComponent<FreeFlowHero.Combat.Enemy.EnemyAIController>() == null)
                         enemy.AddComponent<FreeFlowHero.Combat.Enemy.EnemyAIController>();
+
+                    // ★ HitReactionHandler: 피격 리액션 (Flinch/Knockdown)
+                    if (enemy.GetComponent<FreeFlowHero.Combat.HitReaction.HitReactionHandler>() == null)
+                        enemy.AddComponent<FreeFlowHero.Combat.HitReaction.HitReactionHandler>();
                 }
             }
             else
