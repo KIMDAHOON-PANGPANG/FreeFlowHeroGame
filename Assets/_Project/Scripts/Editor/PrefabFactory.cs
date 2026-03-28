@@ -198,6 +198,51 @@ namespace FreeFlowHero.Editor
             Debug.Log("[REPLACED] 프리팹 강제 재생성 완료!");
         }
 
+        /// <summary>기존 프리팹에 HitFlash 컴포넌트 + Sprite-Flash 머티리얼을 패치 (비파괴)</summary>
+        [MenuItem("REPLACED/Setup/2f. Patch HitFlash to Prefabs", priority = 21)]
+        public static void PatchHitFlashToPrefabs()
+        {
+            int patched = 0;
+            string[] prefabPaths = { PlayerPrefabPath, DummyEnemyPrefabPath };
+
+            foreach (var path in prefabPaths)
+            {
+                if (!AssetExists(path)) continue;
+
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                using (var editScope = new PrefabUtility.EditPrefabContentsScope(path))
+                {
+                    var root = editScope.prefabContentsRoot;
+
+                    // HitFlash 컴포넌트 추가
+                    if (root.GetComponent<HitFlash>() == null)
+                    {
+                        root.AddComponent<HitFlash>();
+                        Debug.Log($"[REPLACED] HitFlash 추가: {path}");
+                        patched++;
+                    }
+
+                    // Sprite-Flash 머티리얼 할당
+                    var sr = root.GetComponent<SpriteRenderer>();
+                    if (sr != null)
+                    {
+                        AssignFlashMaterial(sr);
+                        patched++;
+                    }
+                }
+            }
+
+            if (patched > 0)
+            {
+                AssetDatabase.SaveAssets();
+                Debug.Log($"[REPLACED] HitFlash 패치 완료 ({patched}건)");
+            }
+            else
+            {
+                Debug.Log("[REPLACED] 패치할 항목 없음 (이미 적용됨)");
+            }
+        }
+
         // ─── 유틸리티 ───
 
         private static void EnsureDirectories()

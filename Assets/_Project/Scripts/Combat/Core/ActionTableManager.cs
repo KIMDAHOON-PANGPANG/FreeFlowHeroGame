@@ -69,6 +69,8 @@ namespace FreeFlowHero.Combat.Core
         private void OnDestroy()
         {
             CleanupFileWatcher();
+            if (instance == this)
+                instance = null;
         }
 
         private void Update()
