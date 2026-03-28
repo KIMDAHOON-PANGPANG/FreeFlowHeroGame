@@ -105,6 +105,7 @@ namespace FreeFlowHero.Combat.Core
         public int hitPreset;            // (int)HitPreset: 0=Light, 1=Medium, 2=Heavy
         public int hitFacing;            // (int)HitFacing: 0=Attacker, 1=HitPoint, 2=KnockDirection
         public bool forceFlip = true;    // 강제 플립 (기본 true)
+        public int hitKnockDirection;    // (int)HitKnockDirection: 0=Attacker(기본), 1=Defender(피격자 방향)
         // Flinch 오프셋 (프리셋 기본값에 더함)
         public float flinchPushOffset;   // cm
         public float flinchFreezeOffset; // 초

@@ -25,6 +25,18 @@ namespace FreeFlowHero.Combat.Core
     }
 
     /// <summary>
+    /// 피격 시 넉백(날아가는) 방향 기준.
+    /// COLLISION 노티파이에서 설정.
+    /// </summary>
+    public enum HitKnockDirection
+    {
+        /// <summary>공격자→피격자 방향으로 넉백 (기본값)</summary>
+        Attacker = 0,
+        /// <summary>피격자가 바라보는 방향으로 넉백</summary>
+        Defender = 1,
+    }
+
+    /// <summary>
     /// 피격 시 피격자가 바라보는 방향.
     /// COLLISION 노티파이에서 설정.
     /// </summary>
@@ -115,17 +127,22 @@ namespace FreeFlowHero.Combat.Core
         public HitType type;
         public HitFacing facing;
         public bool forceFlip;       // true: 현재 방향과 무관하게 강제 플립
+        public HitKnockDirection knockDirection; // 넉백 방향 기준 (Attacker/Defender)
         public FlinchData flinch;
         public KnockdownData knockdown;
 
-        public static HitReactionData CreateFlinch(FlinchData data, HitFacing facing = HitFacing.Attacker, bool forceFlip = true)
+        public static HitReactionData CreateFlinch(FlinchData data,
+            HitFacing facing = HitFacing.Attacker, bool forceFlip = true,
+            HitKnockDirection knockDir = HitKnockDirection.Attacker)
         {
-            return new HitReactionData { type = HitType.Flinch, flinch = data, facing = facing, forceFlip = forceFlip };
+            return new HitReactionData { type = HitType.Flinch, flinch = data, facing = facing, forceFlip = forceFlip, knockDirection = knockDir };
         }
 
-        public static HitReactionData CreateKnockdown(KnockdownData data, HitFacing facing = HitFacing.Attacker, bool forceFlip = true)
+        public static HitReactionData CreateKnockdown(KnockdownData data,
+            HitFacing facing = HitFacing.Attacker, bool forceFlip = true,
+            HitKnockDirection knockDir = HitKnockDirection.Attacker)
         {
-            return new HitReactionData { type = HitType.Knockdown, knockdown = data, facing = facing, forceFlip = forceFlip };
+            return new HitReactionData { type = HitType.Knockdown, knockdown = data, facing = facing, forceFlip = forceFlip, knockDirection = knockDir };
         }
     }
 }

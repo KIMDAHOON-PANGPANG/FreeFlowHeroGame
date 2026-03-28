@@ -1327,6 +1327,12 @@ namespace FreeFlowHero.Editor
                     notify.forceFlip = EditorGUILayout.Toggle("Force Flip", notify.forceFlip);
                     Tip("true: 항상 강제 플립\nfalse: 이미 해당 방향을 보고 있으면 스킵");
 
+                    // 넉백 방향 드롭다운
+                    var hitKnockDir = (FreeFlowHero.Combat.Core.HitKnockDirection)notify.hitKnockDirection;
+                    hitKnockDir = (FreeFlowHero.Combat.Core.HitKnockDirection)EditorGUILayout.EnumPopup("적중 시 피격자 넉백 방향", hitKnockDir);
+                    notify.hitKnockDirection = (int)hitKnockDir;
+                    Tip("Attacker: 공격자→피격자 방향으로 날아감 (기본)\nDefender: 피격자가 바라보는 방향으로 날아감");
+
                     EditorGUILayout.Space(4);
 
                     if (hitType == FreeFlowHero.Combat.Core.HitType.Flinch)

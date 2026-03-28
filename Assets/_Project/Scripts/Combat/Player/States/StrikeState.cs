@@ -862,20 +862,28 @@ namespace FreeFlowHero.Combat.Player
                     var preset = (HitPreset)cn.hitPreset;
                     var facing = (HitFacing)cn.hitFacing;
                     bool flip = cn.forceFlip;
+                    var knockDirType = (HitKnockDirection)cn.hitKnockDirection;
+
+                    // ★ 넉백 방향 결정: Defender면 피격자가 바라보는 방향으로 날아감
+                    if (knockDirType == HitKnockDirection.Defender)
+                    {
+                        float defenderFacing = Mathf.Sign(target.GetTransform().localScale.x);
+                        hitData.KnockbackDirection = new Vector2(defenderFacing, 0f);
+                    }
 
                     if (hitType == HitType.Knockdown)
                     {
                         var baseData = BattleSettings.GetKnockdownPreset(preset);
                         hitData.Reaction = HitReactionData.CreateKnockdown(
                             baseData.WithOffset(cn.knockLaunchOffset, cn.knockAirTimeOffset, cn.knockDistanceOffset, cn.knockDownTimeOffset),
-                            facing, flip);
+                            facing, flip, knockDirType);
                     }
                     else
                     {
                         var baseData = BattleSettings.GetFlinchPreset(preset);
                         hitData.Reaction = HitReactionData.CreateFlinch(
                             baseData.WithOffset(cn.flinchPushOffset, cn.flinchFreezeOffset, cn.flinchHitStopOffset),
-                            facing, flip);
+                            facing, flip, knockDirType);
 
                         // ★ 히트스탑 적용 (공격자 측 — Flinch만)
                         float hitStopFrames = hitData.Reaction.flinch.hitStop;

@@ -33,6 +33,9 @@ namespace FreeFlowHero.Combat.HitReaction
         /// <summary>넉다운 체공 중인지. true이면 외부 중력/AI 이동을 스킵할 것.</summary>
         public bool IsKnockdownActive => knockdownActive;
 
+        /// <summary>넉다운 넉백 방향 (+1 또는 -1). RootMotionCanceller에서 참조.</summary>
+        public float KnockdownDir => knockdownDir;
+
         /// <summary>경직(Flinch) 중인지</summary>
         public bool IsFlinchActive { get; private set; }
         private float flinchTimer;
@@ -61,9 +64,30 @@ namespace FreeFlowHero.Combat.HitReaction
             if (animator == null)
                 animator = GetComponentInChildren<Animator>();
 
-            // ★ 루트 모션 강제 비활성화 (메쉬 이탈 방지 런타임 안전장치)
+            // ★ 루트모션 추출 모드: applyRootMotion=true + OnAnimatorMove(빈) 조합
+            //   applyRootMotion=false면 Animator가 루트 본 위치를 애니메이션대로 평가하여
+            //   SkinnedMeshRenderer가 rb.position에서 시각적으로 이탈함.
+            //   applyRootMotion=true + 빈 OnAnimatorMove()로 루트 본을 원점에 고정하면서
+            //   실제 이동은 스크립트(rb.position)가 전담한다.
             if (animator != null)
-                animator.applyRootMotion = false;
+            {
+                animator.applyRootMotion = true;
+                // Animator가 자식에 있으면 OnAnimatorMove 헬퍼 부착
+                if (animator.gameObject != gameObject)
+                {
+                    if (animator.gameObject.GetComponent<RootMotionCanceller>() == null)
+                        animator.gameObject.AddComponent<RootMotionCanceller>();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Animator가 같은 GO에 있을 때 루트모션 무효화.
+        /// Animator가 자식에 있으면 RootMotionCanceller가 대신 처리.
+        /// </summary>
+        private void OnAnimatorMove()
+        {
+            // 의도적으로 비어있음: 루트모션 적용 차단
         }
 
         /// <summary>
@@ -226,7 +250,9 @@ namespace FreeFlowHero.Combat.HitReaction
                     IsFlinchActive = false;
             }
 
-            // ── Knockdown 체공 ──
+            // ── Knockdown 체공 (sin-curve) ──
+            // ★ 애니메이션에 루트모션이 없을 수 있으므로 sin-curve로 rb.position을 직접 구동.
+            //   applyRootMotion=true + RootMotionCanceller가 시각 이탈만 방지.
             if (!knockdownActive) return;
 
             knockdownTimer += Time.deltaTime;
@@ -234,22 +260,10 @@ namespace FreeFlowHero.Combat.HitReaction
 
             float y = knockdownBaseY + knockdownLaunchHeight * Mathf.Sin(Mathf.PI * t);
             float x = rb.position.x + knockdownDir * (knockdownDistance / knockdownAirTime) * Time.deltaTime;
-
             rb.position = new Vector2(x, y);
-
-            // [DEBUG] 체공 중 10프레임마다 위치 로그
-            if (Time.frameCount % 10 == 0)
-            {
-                Debug.Log($"[Knockdown][FLY][{gameObject.name}] t={t:F2} rb.pos={rb.position} " +
-                    $"y_calc={y:F3} baseY={knockdownBaseY:F3} " +
-                    $"meshLocalPos={animator?.transform.localPosition}");
-            }
 
             if (t >= 1f)
             {
-                // [DEBUG] 넉다운 종료 로그
-                Debug.Log($"[Knockdown][END][{gameObject.name}] rb.pos={rb.position} → baseY={knockdownBaseY:F3} " +
-                    $"meshLocalPos={animator?.transform.localPosition}");
                 knockdownActive = false;
                 rb.position = new Vector2(rb.position.x, knockdownBaseY);
             }
@@ -257,17 +271,10 @@ namespace FreeFlowHero.Combat.HitReaction
 
         private void LateUpdate()
         {
-            // ★ 체공 중 메쉬 이탈 방지
-            // Animator가 Update 이후 본을 평가하면서 Knock_A 클립의 루트 본 이동량이
-            // 자식 메쉬의 localPosition에 반영되어 루트(rb.position)에서 시각적으로 이탈함.
-            // LateUpdate에서 메쉬를 루트 원점에 강제 고정하여 rb.position 기반 포물선만 보이게 한다.
-            if (!knockdownActive) return;
-            if (animator == null) return;
-
-            var meshT = animator.transform;
-            if (meshT == transform) return; // 메쉬가 루트 자체면 스킵
-
-            meshT.localPosition = Vector3.zero;
+            // ★ 메쉬 위치 보정
+            // applyRootMotion=true + RootMotionCanceller 조합으로 루트 본 이탈은 해결됨.
+            // 넉다운 중에는 RootMotionCanceller가 rb.position을 직접 구동하므로 리셋 불필요.
+            // 일반 상태에서도 OnAnimatorMove(빈)로 루트 본이 원점 고정되므로 리셋 불필요.
         }
     }
 }

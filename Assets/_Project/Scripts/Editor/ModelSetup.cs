@@ -102,8 +102,10 @@ namespace FreeFlowHero.Editor
             if (animController != null)
                 modelAnimator.runtimeAnimatorController = animController;
 
-            // ★ 루트 모션 비활성화 — 애니메이션이 메쉬를 루트에서 이탈시키는 것 방지
-            modelAnimator.applyRootMotion = false;
+            // ★ 루트모션 추출 모드: true + RootMotionCanceller로 루트 본 이탈 방지
+            //   런타임에서 HitReactionHandler/PlayerCombatFSM이 RootMotionCanceller를 자동 부착.
+            //   에디터 프리팹에서도 미리 true로 설정.
+            modelAnimator.applyRootMotion = true;
 
             // Avatar 명시적 설정 (Humanoid)
             Avatar avatar = GetModelAvatar();

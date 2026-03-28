@@ -75,12 +75,17 @@ namespace FreeFlowHero.Combat.Player
 
             }
 
-            // ★ Root Motion 비활성화: 3D 메쉬가 Rigidbody2D와 분리 이동하는 것을 방지
-            // 모든 이동은 스크립트(rb.position)로 제어하므로 Root Motion 불필요
+            // ★ 루트모션 추출 모드: applyRootMotion=true + RootMotionCanceller(빈 OnAnimatorMove)
+            //   applyRootMotion=false면 루트 본 위치가 애니메이션대로 이동하여 SkinnedMesh가 이탈함.
+            //   true + 빈 OnAnimatorMove로 루트 본을 원점에 고정, 이동은 스크립트(rb.position) 전담.
             if (context.playerAnimator != null)
             {
-                context.playerAnimator.applyRootMotion = false;
-
+                context.playerAnimator.applyRootMotion = true;
+                if (context.playerAnimator.gameObject != gameObject)
+                {
+                    if (context.playerAnimator.gameObject.GetComponent<HitReaction.RootMotionCanceller>() == null)
+                        context.playerAnimator.gameObject.AddComponent<HitReaction.RootMotionCanceller>();
+                }
             }
 
             // ★ HitFlash 참조 캐시

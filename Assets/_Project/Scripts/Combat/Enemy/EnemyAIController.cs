@@ -139,9 +139,9 @@ namespace FreeFlowHero.Combat.Enemy
             }
             if (animator == null)
                 animator = GetComponentInChildren<Animator>();
-            // ★ 루트 모션 강제 비활성화 (Idle 등에서 메쉬 Y 드리프트 방지)
-            if (animator != null)
-                animator.applyRootMotion = false;
+            // ★ 루트모션 제어: HitReactionHandler가 applyRootMotion=true +
+            //   RootMotionCanceller(빈 OnAnimatorMove)로 루트 본 이탈을 방지함.
+            //   여기서 false로 덮어쓰면 시각 이탈이 재발하므로 건드리지 않는다.
             cachedCapsule = GetComponent<CapsuleCollider2D>();
             spriteRenderer = GetComponent<SpriteRenderer>();
             reactionHandler = GetComponent<HitReaction.HitReactionHandler>();
