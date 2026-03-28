@@ -188,8 +188,13 @@ namespace FreeFlowHero.Combat.Enemy
                 var meshT = animator.transform;
                 if (meshT != transform) // 자식인 경우만
                 {
+                    // 발 본 Y 정보도 출력
+                    float footY = -999f;
+                    if (cachedLeftFoot != null && cachedRightFoot != null)
+                        footY = Mathf.Min(cachedLeftFoot.position.y, cachedRightFoot.position.y);
                     Debug.Log($"[MeshPos][{gameObject.name}] state={currentState} " +
                         $"meshLocalPos={meshT.localPosition} rb.pos={rb.position} " +
+                        $"footWorldY={footY:F3} " +
                         $"applyRootMotion={animator.applyRootMotion} " +
                         $"animState={animator.GetCurrentAnimatorStateInfo(0).shortNameHash}");
                 }
@@ -803,6 +808,56 @@ namespace FreeFlowHero.Combat.Enemy
             if (animator == null || animator.runtimeAnimatorController == null) return;
             try { animator.SetInteger(paramName, value); }
             catch (System.Exception e) { Debug.LogWarning($"[EnemyAI] Animator 오류 무시: {e.Message}"); }
+        }
+
+        // ────────────────────────────
+        //  발 위치 보정 (LateUpdate)
+        // ────────────────────────────
+
+        /// <summary>
+        /// 애니메이션 평가 후 발 본 위치를 감지하여 메쉬 Y를 보정한다.
+        /// Martial Art 애니메이션 → EEJANAIbot 스켈레톤 리타겟팅 시
+        /// 힙 본 높이 차이로 발이 지면 아래로 내려가는 문제를 해결.
+        /// </summary>
+        private Transform cachedLeftFoot;
+        private Transform cachedRightFoot;
+        private bool footBonesSearched;
+
+        private void LateUpdate()
+        {
+            if (animator == null) return;
+
+            // Knockdown 중에는 HitReactionHandler가 이동 전담
+            if (reactionHandler != null && reactionHandler.IsKnockdownActive) return;
+
+            // 발 본 캐시 (한 번만 탐색)
+            if (!footBonesSearched)
+            {
+                cachedLeftFoot = animator.GetBoneTransform(HumanBodyBones.LeftFoot);
+                cachedRightFoot = animator.GetBoneTransform(HumanBodyBones.RightFoot);
+                footBonesSearched = true;
+            }
+            if (cachedLeftFoot == null || cachedRightFoot == null) return;
+
+            var meshT = animator.transform;
+            if (meshT == transform) return; // 자식이 아니면 스킵
+
+            // ★ 안정적 오프셋 계산 (피드백 루프 없음):
+            // footBoneLocalY = footWorldY - parentWorldY - meshLocalY
+            // 원하는 결과: 발이 parentWorldY에 위치 → newMeshLocalY = -footBoneLocalY
+            float parentWorldY = transform.position.y;
+            float currentMeshLocalY = meshT.localPosition.y;
+            float lowestFootWorldY = Mathf.Min(cachedLeftFoot.position.y, cachedRightFoot.position.y);
+            float footBoneLocalY = lowestFootWorldY - parentWorldY - currentMeshLocalY;
+
+            // 발이 지면 아래일 때만 보정 (위로만 밀어올림)
+            float neededOffsetY = Mathf.Max(0f, -footBoneLocalY);
+
+            meshT.localPosition = new Vector3(
+                meshT.localPosition.x,
+                neededOffsetY,
+                meshT.localPosition.z
+            );
         }
 
         // ─── 디버그 ───
