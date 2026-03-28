@@ -43,7 +43,24 @@ namespace FreeFlowHero.Combat.HitReaction
         private void Awake()
         {
             rb = GetComponent<Rigidbody2D>();
-            animator = GetComponentInChildren<Animator>();
+
+            // ★ PlayerCombatFSM과 동일한 패턴: enabled + Controller 있는 Animator 우선 탐색
+            //   루트에 비활성/컨트롤러 없는 Animator가 있으면 그걸 잡아서 트리거가 안 먹는 버그 방지
+            foreach (var anim in GetComponentsInChildren<Animator>(true))
+            {
+                if (anim.enabled && anim.runtimeAnimatorController != null)
+                {
+                    animator = anim;
+                    break;
+                }
+            }
+            // 폴백: Controller 없어도 활성 Animator
+            if (animator == null)
+                animator = GetComponentInChildren<Animator>();
+
+            // ★ 루트 모션 강제 비활성화 (메쉬 이탈 방지 런타임 안전장치)
+            if (animator != null)
+                animator.applyRootMotion = false;
         }
 
         /// <summary>

@@ -51,6 +51,9 @@ namespace FreeFlowHero.Combat.Enemy
         [Tooltip("피격 경직 시간")]
         [SerializeField] private float hitStunDuration = 0.35f;
 
+        // ─── 현재 공격 인덱스 (0=Punch, 1=Kick) ───
+        private int currentAttackIndex;
+
         // ─── 상태 ───
         private enum AIState
         {
@@ -331,18 +334,19 @@ namespace FreeFlowHero.Combat.Enemy
                     stateTimer = 0.3f; // 공격 지속
                     cooldownTimer = attackCooldown + Random.Range(-0.3f, 0.5f);
 
-                    // 애니메이션: 랜덤 공격 인덱스 선택
-                    SafeSetInteger("AttackIndex", Random.Range(0, 5));
+                    // 애니메이션: 랜덤 공격 인덱스 선택 (Punch=0, Kick=1)
+                    currentAttackIndex = Random.Range(0, 2);
+                    SafeSetInteger("AttackIndex", currentAttackIndex);
                     SafeSetTrigger("Attack");
 
                     ExecuteAttack();
                     break;
 
                 case AIState.HitStun:
-                    // freezeTime을 HitReactionHandler에서 가져옴 (없으면 기본값)
-                    stateTimer = (reactionHandler != null && reactionHandler.FreezeTimeRemaining > 0f)
-                        ? reactionHandler.FreezeTimeRemaining
-                        : hitStunDuration;
+                    // freezeTime을 HitReactionHandler에서 가져옴
+                    // ★ Knockdown 후 기상 경직: FreezeTimeRemaining이 0이면 최소 hitStunDuration 보장
+                    float freezeRemaining = (reactionHandler != null) ? reactionHandler.FreezeTimeRemaining : 0f;
+                    stateTimer = Mathf.Max(freezeRemaining, hitStunDuration);
                     isTelegraphing = false;
                     currentTelegraph = TelegraphType.None;
                     if (spriteRenderer != null)
@@ -529,9 +533,23 @@ namespace FreeFlowHero.Combat.Enemy
             Vector2 playerPos = playerTransform.position;
             Vector2 knockDir = (playerPos - myPos).normalized;
 
+            // ★ 적 공격 → 플레이어 피격 리액션: Punch(0)=Flinch, Kick(1)=Knockdown
+            bool isKick = (currentAttackIndex == 1);
+            HitReactionData reaction;
+            if (isKick)
+            {
+                var knockdownData = BattleSettings.GetKnockdownPreset(HitPreset.Light);
+                reaction = HitReactionData.CreateKnockdown(knockdownData);
+            }
+            else
+            {
+                var flinchData = BattleSettings.GetFlinchPreset(HitPreset.Light);
+                reaction = HitReactionData.CreateFlinch(flinchData);
+            }
+
             var hitData = new HitData
             {
-                AttackType = AttackType.Light,
+                AttackType = isKick ? AttackType.Heavy : AttackType.Light,
                 AttackerTeam = CombatTeam.Enemy,
                 BaseDamage = attackDamage,
                 KnockbackDirection = knockDir,
@@ -539,9 +557,10 @@ namespace FreeFlowHero.Combat.Enemy
                 ComboCount = 0,
                 IsExecutionKill = false,
                 IsLaunchAttack = false,
-                IsKnockdown = false,
+                IsKnockdown = isKick,
                 AttackerPosition = myPos,
-                ContactPoint = Vector2.Lerp(myPos, playerPos, 0.7f)
+                ContactPoint = Vector2.Lerp(myPos, playerPos, 0.7f),
+                Reaction = reaction
             };
 
             // 플레이어 피격
