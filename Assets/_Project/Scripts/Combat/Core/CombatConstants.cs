@@ -53,5 +53,9 @@ namespace FreeFlowHero.Combat.Core
         public const int ComboThresholdGreat = 10;
         public const int ComboThresholdAwesome = 20;
         public const int ComboThresholdUnstoppable = 50;
+
+        // ─── 적 사망 연출 ───
+        public const float EnemyDeathDelay = 0.5f;       // 사망 후 페이드 시작까지 대기
+        public const float EnemyDeathFadeDuration = 0.8f; // 페이드아웃 지속 시간
     }
 }

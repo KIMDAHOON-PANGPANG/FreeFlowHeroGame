@@ -176,6 +176,20 @@ namespace FreeFlowHero.Combat.Core
         public float huxleyMaxCharge = CombatConstants.HuxleyMaxCharge;
 
         // ════════════════════════════════════════════
+        //  적 사망 연출
+        // ════════════════════════════════════════════
+
+        [Header("적 사망 연출")]
+
+        [Tooltip("사망 후 페이드아웃 시작까지 대기 시간 (초)")]
+        [Range(0f, 3f)]
+        public float enemyDeathDelay = CombatConstants.EnemyDeathDelay;
+
+        [Tooltip("페이드아웃 지속 시간 (초)")]
+        [Range(0.1f, 3f)]
+        public float enemyDeathFadeDuration = CombatConstants.EnemyDeathFadeDuration;
+
+        // ════════════════════════════════════════════
         //  유틸리티
         // ════════════════════════════════════════════
 
@@ -210,6 +224,8 @@ namespace FreeFlowHero.Combat.Core
             executionRange = CombatConstants.ExecutionRange;
             huxleyBaseChargePerHit = CombatConstants.HuxleyBaseChargePerHit;
             huxleyMaxCharge = CombatConstants.HuxleyMaxCharge;
+            enemyDeathDelay = CombatConstants.EnemyDeathDelay;
+            enemyDeathFadeDuration = CombatConstants.EnemyDeathFadeDuration;
         }
 
         // ════════════════════════════════════════════
@@ -295,5 +311,13 @@ namespace FreeFlowHero.Combat.Core
         /// <summary>콤보 임계치 Unstoppable.</summary>
         public static int GetComboThresholdUnstoppable()
             => IsLoaded ? _instance.comboThresholdUnstoppable : CombatConstants.ComboThresholdUnstoppable;
+
+        /// <summary>적 사망 후 페이드 대기 시간.</summary>
+        public static float GetEnemyDeathDelay()
+            => IsLoaded ? _instance.enemyDeathDelay : CombatConstants.EnemyDeathDelay;
+
+        /// <summary>적 사망 페이드아웃 시간.</summary>
+        public static float GetEnemyDeathFadeDuration()
+            => IsLoaded ? _instance.enemyDeathFadeDuration : CombatConstants.EnemyDeathFadeDuration;
     }
 }

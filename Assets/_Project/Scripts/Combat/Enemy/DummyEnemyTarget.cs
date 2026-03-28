@@ -16,13 +16,6 @@ namespace FreeFlowHero.Combat.Enemy
         [Header("시각 피드백")]
         [SerializeField] private float flashDuration = 0.15f;
 
-        // ★ 데이터 튜닝: 사망 연출
-        [Header("사망 연출")]
-        [Tooltip("사망 후 페이드아웃 시작까지 대기 시간 (초)")]
-        [SerializeField] private float deathDelay = 0.5f;
-        [Tooltip("페이드아웃 지속 시간 (초)")]
-        [SerializeField] private float fadeDuration = 0.8f;
-
         private SpriteRenderer spriteRenderer;
         private Color originalColor;
         private float flashTimer;
@@ -97,15 +90,18 @@ namespace FreeFlowHero.Combat.Enemy
             {
                 deathTimer += Time.deltaTime;
 
+                float deathDelay = BattleSettings.GetEnemyDeathDelay();
+                float fadeDur = BattleSettings.GetEnemyDeathFadeDuration();
+
                 if (deathTimer >= deathDelay && spriteRenderer != null)
                 {
-                    float fadeT = Mathf.Clamp01((deathTimer - deathDelay) / fadeDuration);
+                    float fadeT = Mathf.Clamp01((deathTimer - deathDelay) / fadeDur);
                     Color c = spriteRenderer.color;
                     c.a = Mathf.Lerp(1f, 0f, fadeT);
                     spriteRenderer.color = c;
                 }
 
-                if (deathTimer >= deathDelay + fadeDuration)
+                if (deathTimer >= deathDelay + fadeDur)
                 {
                     Destroy(gameObject);
                 }
