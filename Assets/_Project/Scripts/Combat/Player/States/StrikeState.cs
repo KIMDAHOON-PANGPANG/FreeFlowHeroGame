@@ -860,18 +860,22 @@ namespace FreeFlowHero.Combat.Player
                 {
                     var hitType = (HitType)cn.hitType;
                     var preset = (HitPreset)cn.hitPreset;
+                    var facing = (HitFacing)cn.hitFacing;
+                    bool flip = cn.forceFlip;
 
                     if (hitType == HitType.Knockdown)
                     {
                         var baseData = BattleSettings.GetKnockdownPreset(preset);
                         hitData.Reaction = HitReactionData.CreateKnockdown(
-                            baseData.WithOffset(cn.knockLaunchOffset, cn.knockAirTimeOffset, cn.knockDistanceOffset));
+                            baseData.WithOffset(cn.knockLaunchOffset, cn.knockAirTimeOffset, cn.knockDistanceOffset),
+                            facing, flip);
                     }
                     else
                     {
                         var baseData = BattleSettings.GetFlinchPreset(preset);
                         hitData.Reaction = HitReactionData.CreateFlinch(
-                            baseData.WithOffset(cn.flinchPushOffset, cn.flinchFreezeOffset, cn.flinchHitStopOffset));
+                            baseData.WithOffset(cn.flinchPushOffset, cn.flinchFreezeOffset, cn.flinchHitStopOffset),
+                            facing, flip);
 
                         // ★ 히트스탑 적용 (공격자 측 — Flinch만)
                         float hitStopFrames = hitData.Reaction.flinch.hitStop;

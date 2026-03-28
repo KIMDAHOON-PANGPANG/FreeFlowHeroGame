@@ -24,6 +24,20 @@ namespace FreeFlowHero.Combat.Core
         Heavy = 2
     }
 
+    /// <summary>
+    /// 피격 시 피격자가 바라보는 방향.
+    /// COLLISION 노티파이에서 설정.
+    /// </summary>
+    public enum HitFacing
+    {
+        /// <summary>공격자를 바라봄 (기본값)</summary>
+        Attacker = 0,
+        /// <summary>타격 접촉 지점을 바라봄</summary>
+        HitPoint = 1,
+        /// <summary>넉백 방향을 바라봄 (공격자 반대쪽)</summary>
+        KnockDirection = 2
+    }
+
     /// <summary>Flinch(경직) 리액션 파라미터.</summary>
     [System.Serializable]
     public struct FlinchData
@@ -94,17 +108,19 @@ namespace FreeFlowHero.Combat.Core
     public struct HitReactionData
     {
         public HitType type;
+        public HitFacing facing;
+        public bool forceFlip;       // true: 현재 방향과 무관하게 강제 플립
         public FlinchData flinch;
         public KnockdownData knockdown;
 
-        public static HitReactionData CreateFlinch(FlinchData data)
+        public static HitReactionData CreateFlinch(FlinchData data, HitFacing facing = HitFacing.Attacker, bool forceFlip = true)
         {
-            return new HitReactionData { type = HitType.Flinch, flinch = data };
+            return new HitReactionData { type = HitType.Flinch, flinch = data, facing = facing, forceFlip = forceFlip };
         }
 
-        public static HitReactionData CreateKnockdown(KnockdownData data)
+        public static HitReactionData CreateKnockdown(KnockdownData data, HitFacing facing = HitFacing.Attacker, bool forceFlip = true)
         {
-            return new HitReactionData { type = HitType.Knockdown, knockdown = data };
+            return new HitReactionData { type = HitType.Knockdown, knockdown = data, facing = facing, forceFlip = forceFlip };
         }
     }
 }

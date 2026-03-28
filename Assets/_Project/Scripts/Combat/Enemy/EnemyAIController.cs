@@ -176,11 +176,10 @@ namespace FreeFlowHero.Combat.Enemy
             }
 
             // 피격 감지 (HP 감소 → HitStun 또는 Knockdown)
+            // ★ HitStun 중 재피격도 허용 (경직 리셋)
             float curHP = enemyTarget.CurrentHP;
-            if (curHP < lastHP && currentState != AIState.HitStun
-                && currentState != AIState.Knockdown && currentState != AIState.Dead)
+            if (curHP < lastHP && currentState != AIState.Dead)
             {
-                // Knockdown 판정: HitReactionHandler가 넉다운 중이면 Knockdown 상태로
                 if (reactionHandler != null && reactionHandler.IsKnockdownActive)
                     TransitionTo(AIState.Knockdown);
                 else
@@ -340,7 +339,10 @@ namespace FreeFlowHero.Combat.Enemy
                     break;
 
                 case AIState.HitStun:
-                    stateTimer = hitStunDuration;
+                    // freezeTime을 HitReactionHandler에서 가져옴 (없으면 기본값)
+                    stateTimer = (reactionHandler != null && reactionHandler.FreezeTimeRemaining > 0f)
+                        ? reactionHandler.FreezeTimeRemaining
+                        : hitStunDuration;
                     isTelegraphing = false;
                     currentTelegraph = TelegraphType.None;
                     if (spriteRenderer != null)

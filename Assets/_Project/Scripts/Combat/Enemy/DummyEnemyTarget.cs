@@ -47,13 +47,9 @@ namespace FreeFlowHero.Combat.Enemy
             transform.localScale = originalScale * 1.15f;
 
             // ★ 피격 리액션: HitReactionHandler로 Flinch/Knockdown 분기
-            float knockDir = hitData.KnockbackDirection.x;
-            if (Mathf.Approximately(knockDir, 0f)) knockDir = 1f;
-            knockDir = Mathf.Sign(knockDir);
-
             if (reactionHandler != null)
             {
-                reactionHandler.ApplyReaction(hitData.Reaction, knockDir);
+                reactionHandler.ApplyReaction(hitData.Reaction, hitData);
             }
             else
             {
@@ -62,7 +58,9 @@ namespace FreeFlowHero.Combat.Enemy
                 if (rb != null)
                 {
                     rb.linearVelocity = Vector2.zero;
-                    Vector2 knockPos = rb.position + new Vector2(knockDir * 0.3f, 0f);
+                    float fallbackDir = hitData.KnockbackDirection.x;
+                    if (Mathf.Approximately(fallbackDir, 0f)) fallbackDir = 1f;
+                    Vector2 knockPos = rb.position + new Vector2(Mathf.Sign(fallbackDir) * 0.3f, 0f);
                     rb.position = knockPos;
                 }
             }

@@ -1318,6 +1318,15 @@ namespace FreeFlowHero.Editor
                     notify.hitPreset = (int)hitPreset;
                     Tip("Light/Medium/Heavy 프리셋. BattleSettings에서 기본값 정의.");
 
+                    // Facing 드롭다운
+                    var hitFacing = (FreeFlowHero.Combat.Core.HitFacing)notify.hitFacing;
+                    hitFacing = (FreeFlowHero.Combat.Core.HitFacing)EditorGUILayout.EnumPopup("Facing", hitFacing);
+                    notify.hitFacing = (int)hitFacing;
+                    Tip("피격자가 바라보는 방향.\nAttacker: 공격자\nHitPoint: 타격점\nKnockDirection: 넉백 방향");
+
+                    notify.forceFlip = EditorGUILayout.Toggle("Force Flip", notify.forceFlip);
+                    Tip("true: 항상 강제 플립\nfalse: 이미 해당 방향을 보고 있으면 스킵");
+
                     EditorGUILayout.Space(4);
 
                     if (hitType == FreeFlowHero.Combat.Core.HitType.Flinch)

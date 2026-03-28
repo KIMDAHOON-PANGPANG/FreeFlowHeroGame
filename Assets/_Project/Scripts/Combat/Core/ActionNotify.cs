@@ -100,9 +100,11 @@ namespace FreeFlowHero.Combat.Core
         public float hitboxSizeZ;    // 히트박스 Z 크기 (깊이, 기본 0.5)
 
         // ─── COLLISION 히트 리액션 ───
-        // hitType/hitPreset은 int로 저장 (JSON enum 호환)
+        // hitType/hitPreset/hitFacing은 int로 저장 (JSON enum 호환)
         public int hitType;              // (int)HitType: 0=Flinch, 1=Knockdown
         public int hitPreset;            // (int)HitPreset: 0=Light, 1=Medium, 2=Heavy
+        public int hitFacing;            // (int)HitFacing: 0=Attacker, 1=HitPoint, 2=KnockDirection
+        public bool forceFlip = true;    // 강제 플립 (기본 true)
         // Flinch 오프셋 (프리셋 기본값에 더함)
         public float flinchPushOffset;   // cm
         public float flinchFreezeOffset; // 초

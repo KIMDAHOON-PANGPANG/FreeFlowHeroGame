@@ -6,9 +6,10 @@ namespace FreeFlowHero.Combat.HitReaction
     /// <summary>
     /// 피격 리액션 실행기. 적/플레이어 공용 MonoBehaviour.
     /// HitReactionData를 받아 Flinch(즉시 밀림+경직) 또는 Knockdown(커브 체공)을 실행한다.
-    /// 리액션 타입별 애니메이션 클립도 재생 (BattleSettings에서 경로 참조).
+    /// facing/forceFlip으로 피격 시 바라보는 방향을 제어한다.
     ///
     /// ★ Knockdown 중에는 IsKnockdownActive=true → AI/중력 시스템에서 이동을 스킵해야 함.
+    /// ★ 재피격 시: Flinch→Flinch 리셋 가능, Knockdown 중 Flinch는 무시.
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     public class HitReactionHandler : MonoBehaviour
@@ -24,10 +25,10 @@ namespace FreeFlowHero.Combat.HitReaction
         private bool knockdownActive;
         private float knockdownTimer;
         private float knockdownAirTime;
-        private float knockdownLaunchHeight; // 유닛 (cm→유닛 변환 후)
-        private float knockdownDistance;     // 유닛
-        private float knockdownDir;          // +1 또는 -1
-        private float knockdownBaseY;        // 발사 시점 Y 위치
+        private float knockdownLaunchHeight;
+        private float knockdownDistance;
+        private float knockdownDir;
+        private float knockdownBaseY;
 
         /// <summary>넉다운 체공 중인지. true이면 외부 중력/AI 이동을 스킵할 것.</summary>
         public bool IsKnockdownActive => knockdownActive;
@@ -35,6 +36,9 @@ namespace FreeFlowHero.Combat.HitReaction
         /// <summary>경직(Flinch) 중인지</summary>
         public bool IsFlinchActive { get; private set; }
         private float flinchTimer;
+
+        /// <summary>현재 freezeTime 잔여 (EnemyAIController가 참조)</summary>
+        public float FreezeTimeRemaining => flinchTimer;
 
         private void Awake()
         {
@@ -44,12 +48,20 @@ namespace FreeFlowHero.Combat.HitReaction
 
         /// <summary>
         /// HitReactionData 기반으로 리액션 실행.
-        /// knockDir: 밀리는/날아가는 방향 (+1 또는 -1).
+        /// hitData: 공격자 위치, 접촉점 등 방향 계산에 사용.
         /// </summary>
-        public void ApplyReaction(HitReactionData reaction, float knockDir)
+        public void ApplyReaction(HitReactionData reaction, HitData hitData)
         {
-            Debug.Log($"[HitReaction][Handler] type={reaction.type} animator={(animator != null ? animator.name : "NULL")} " +
-                      $"controller={(animator?.runtimeAnimatorController != null ? "있음" : "NULL")} dir={knockDir:F1}");
+            // ★ Knockdown 중 Flinch는 무시 (체공 중 경직 불가)
+            if (knockdownActive && reaction.type == HitType.Flinch)
+                return;
+
+            // 방향 계산
+            float knockDir = CalculateKnockDir(hitData);
+
+            // 페이싱 적용
+            ApplyFacing(reaction, hitData, knockDir);
+
             switch (reaction.type)
             {
                 case HitType.Flinch:
@@ -62,24 +74,74 @@ namespace FreeFlowHero.Combat.HitReaction
         }
 
         // ═══════════════════════════════════════════
+        //  방향 & 페이싱
+        // ═══════════════════════════════════════════
+
+        private float CalculateKnockDir(HitData hitData)
+        {
+            float dir = hitData.KnockbackDirection.x;
+            if (Mathf.Approximately(dir, 0f)) dir = 1f;
+            return Mathf.Sign(dir);
+        }
+
+        private void ApplyFacing(HitReactionData reaction, HitData hitData, float knockDir)
+        {
+            float facingDir = 0f;
+
+            switch (reaction.facing)
+            {
+                case HitFacing.Attacker:
+                    // 공격자를 바라봄 = 공격자 방향으로 플립
+                    float toAttacker = hitData.AttackerPosition.x - rb.position.x;
+                    facingDir = Mathf.Approximately(toAttacker, 0f) ? -knockDir : Mathf.Sign(toAttacker);
+                    break;
+
+                case HitFacing.HitPoint:
+                    // 타격 접촉 지점을 바라봄
+                    float toHitPoint = hitData.ContactPoint.x - rb.position.x;
+                    facingDir = Mathf.Approximately(toHitPoint, 0f) ? -knockDir : Mathf.Sign(toHitPoint);
+                    break;
+
+                case HitFacing.KnockDirection:
+                    // 넉백 방향을 바라봄 (공격자 반대쪽)
+                    facingDir = knockDir;
+                    break;
+            }
+
+            if (Mathf.Approximately(facingDir, 0f)) return;
+
+            // forceFlip=true면 무조건, false면 이미 맞는 방향이면 스킵
+            if (reaction.forceFlip || !IsAlreadyFacing(facingDir))
+            {
+                FlipToFace(facingDir);
+            }
+        }
+
+        private bool IsAlreadyFacing(float dir)
+        {
+            return Mathf.Sign(transform.localScale.x) == Mathf.Sign(dir);
+        }
+
+        private void FlipToFace(float dir)
+        {
+            Vector3 scale = transform.localScale;
+            scale.x = Mathf.Abs(scale.x) * (dir >= 0 ? 1f : -1f);
+            transform.localScale = scale;
+        }
+
+        // ═══════════════════════════════════════════
         //  애니메이션 트리거
         // ═══════════════════════════════════════════
 
         private void PlayFlinchAnim()
         {
-            if (animator == null) { Debug.LogWarning("[HitReaction][Anim] Flinch 실패 — Animator NULL"); return; }
-            if (animator.runtimeAnimatorController == null) { Debug.LogWarning("[HitReaction][Anim] Flinch 실패 — Controller NULL"); return; }
-            string ctrlName = animator.runtimeAnimatorController != null ? animator.runtimeAnimatorController.name : "null";
-            Debug.Log($"[HitReaction][Anim] Flinch 트리거 — animator={animator.gameObject.name} controller={ctrlName}");
+            if (animator == null || animator.runtimeAnimatorController == null) return;
             animator.SetTrigger(FlinchTrigger);
         }
 
         private void PlayKnockdownAnim()
         {
-            if (animator == null) { Debug.LogWarning("[HitReaction][Anim] Knockdown 실패 — Animator NULL"); return; }
-            if (animator.runtimeAnimatorController == null) { Debug.LogWarning("[HitReaction][Anim] Knockdown 실패 — Controller NULL"); return; }
-            string ctrlName = animator.runtimeAnimatorController != null ? animator.runtimeAnimatorController.name : "null";
-            Debug.Log($"[HitReaction][Anim] Knockdown 트리거 — animator={animator.gameObject.name} controller={ctrlName}");
+            if (animator == null || animator.runtimeAnimatorController == null) return;
             animator.SetTrigger(KnockdownTrigger);
         }
 
@@ -91,19 +153,16 @@ namespace FreeFlowHero.Combat.HitReaction
         {
             if (rb == null) return;
 
-            // cm → 유닛 변환 (100cm = 1유닛)
             float pushUnits = data.pushDistance * 0.01f;
 
-            // 즉시 텔레포트 밀림 (수평만)
             Vector2 pos = rb.position;
             pos.x += dir * pushUnits;
             rb.position = pos;
 
-            // 경직 시간 설정
+            // 경직 타이머 (재피격 시 리셋)
             flinchTimer = data.freezeTime;
             IsFlinchActive = true;
 
-            // 피격 모션 재생
             PlayFlinchAnim();
         }
 
@@ -115,15 +174,18 @@ namespace FreeFlowHero.Combat.HitReaction
         {
             if (rb == null) return;
 
+            // 기존 Flinch 중단
+            IsFlinchActive = false;
+            flinchTimer = 0f;
+
             knockdownActive = true;
             knockdownTimer = 0f;
             knockdownAirTime = Mathf.Max(data.airTime, 0.1f);
-            knockdownLaunchHeight = data.launchHeight * 0.01f; // cm → 유닛
-            knockdownDistance = data.knockDistance * 0.01f;     // cm → 유닛
+            knockdownLaunchHeight = data.launchHeight * 0.01f;
+            knockdownDistance = data.knockDistance * 0.01f;
             knockdownDir = dir;
             knockdownBaseY = rb.position.y;
 
-            // 넉다운 모션 재생
             PlayKnockdownAnim();
         }
 
@@ -143,15 +205,11 @@ namespace FreeFlowHero.Combat.HitReaction
             knockdownTimer += Time.deltaTime;
             float t = Mathf.Clamp01(knockdownTimer / knockdownAirTime);
 
-            // Y축: sin(π * t) 커브 — 부드럽게 올라갔다 내려옴
             float y = knockdownBaseY + knockdownLaunchHeight * Mathf.Sin(Mathf.PI * t);
-
-            // X축: 선형 이동
             float x = rb.position.x + knockdownDir * (knockdownDistance / knockdownAirTime) * Time.deltaTime;
 
             rb.position = new Vector2(x, y);
 
-            // 체공 종료
             if (t >= 1f)
             {
                 knockdownActive = false;
