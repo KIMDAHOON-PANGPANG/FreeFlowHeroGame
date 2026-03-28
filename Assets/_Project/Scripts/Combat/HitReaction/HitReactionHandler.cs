@@ -30,10 +30,6 @@ namespace FreeFlowHero.Combat.HitReaction
         private float knockdownDir;
         private float knockdownBaseY;
 
-        // ─── Hips 본 보정 ───
-        private Transform cachedHipsBone;
-        private Vector3 hipsRestLocalPos; // T-Pose 시 Hips 로컬 위치
-
         /// <summary>넉다운 체공 중인지. true이면 외부 중력/AI 이동을 스킵할 것.</summary>
         public bool IsKnockdownActive => knockdownActive;
 
@@ -68,29 +64,14 @@ namespace FreeFlowHero.Combat.HitReaction
             if (animator == null)
                 animator = GetComponentInChildren<Animator>();
 
-            // ★ 루트모션 추출 모드: applyRootMotion=true + OnAnimatorMove(빈) 조합
-            //   applyRootMotion=false면 Animator가 루트 본 위치를 애니메이션대로 평가하여
-            //   SkinnedMeshRenderer가 rb.position에서 시각적으로 이탈함.
-            //   applyRootMotion=true + 빈 OnAnimatorMove()로 루트 본을 원점에 고정하면서
-            //   실제 이동은 스크립트(rb.position)가 전담한다.
+            // ★ applyRootMotion=false: FBX가 Bake Into Pose로 설정되어 루트모션이 없으므로
+            //   Animator GO(메쉬 컨테이너)가 스스로 이동하지 않음.
+            //   LateUpdate에서 meshT.localPosition=Vector3.zero로 강제하여
+            //   메쉬가 항상 rb.position에 위치하도록 보장.
+            //   (applyRootMotion=true + RootMotionCanceller 방식은 매 프레임 누적 이탈 버그 발생)
             if (animator != null)
             {
-                animator.applyRootMotion = true;
-                // Animator가 자식에 있으면 OnAnimatorMove 헬퍼 부착
-                if (animator.gameObject != gameObject)
-                {
-                    if (animator.gameObject.GetComponent<RootMotionCanceller>() == null)
-                        animator.gameObject.AddComponent<RootMotionCanceller>();
-                }
-
-                // ★ Hips 본 캐시 (Humanoid 루트 본 드리프트 보상용)
-                cachedHipsBone = animator.GetBoneTransform(HumanBodyBones.Hips);
-                if (cachedHipsBone != null)
-                {
-                    hipsRestLocalPos = cachedHipsBone.localPosition;
-                    Debug.Log($"[HitReaction] Hips 본 캐시: {cachedHipsBone.name} " +
-                        $"restLocalPos={hipsRestLocalPos}");
-                }
+                animator.applyRootMotion = false;
             }
         }
 
@@ -264,8 +245,7 @@ namespace FreeFlowHero.Combat.HitReaction
             }
 
             // ── Knockdown 체공 (sin-curve) ──
-            // ★ 애니메이션에 루트모션이 없을 수 있으므로 sin-curve로 rb.position을 직접 구동.
-            //   applyRootMotion=true + RootMotionCanceller가 시각 이탈만 방지.
+            // ★ FBX는 Bake Into Pose로 제자리 재생. 실제 포물선 이동은 sin-curve로 rb.position을 직접 구동.
             if (!knockdownActive) return;
 
             knockdownTimer += Time.deltaTime;
@@ -288,34 +268,11 @@ namespace FreeFlowHero.Combat.HitReaction
             var meshT = animator.transform;
             if (meshT == transform) return; // Animator가 루트 자체면 스킵
 
-            // ★ Hips 본 드리프트 보상
-            // Humanoid 리그에서 applyRootMotion=true + OnAnimatorMove(빈)로도
-            // Hips 본이 애니메이션 내에서 이동할 수 있음.
-            // Hips의 현재 localPosition과 T-Pose(rest) 위치의 차이를 계산하여
-            // 메쉬 컨테이너를 역방향으로 오프셋 → Hips가 항상 rb.position + restOffset에 위치.
-            if (cachedHipsBone != null)
-            {
-                Vector3 hipsDrift = cachedHipsBone.localPosition - hipsRestLocalPos;
-
-                // 메쉬 컨테이너를 -drift로 오프셋 → Hips 드리프트 상쇄
-                meshT.localPosition = new Vector3(-hipsDrift.x, -hipsDrift.y, -hipsDrift.z);
-
-                // [DEBUG] 10프레임마다 드리프트 로그 (넉다운 중에만)
-                if (knockdownActive && Time.frameCount % 10 == 0)
-                {
-                    Debug.Log($"[HipsDrift][{gameObject.name}] " +
-                        $"hipsLocal={cachedHipsBone.localPosition} " +
-                        $"rest={hipsRestLocalPos} " +
-                        $"drift={hipsDrift} " +
-                        $"meshOffset={meshT.localPosition} " +
-                        $"rb.pos={rb.position}");
-                }
-            }
-            else
-            {
-                // Hips 본 없으면 기존 방식: 컨테이너 리셋
-                meshT.localPosition = Vector3.zero;
-            }
+            // ★ 메쉬 컨테이너를 항상 루트 위치(0,0,0)에 고정
+            // FBX가 Bake Into Pose로 설정되어 있으므로 Hips 본은 제자리에서 애니메이션됨.
+            // meshT.localPosition=(0,0,0) → 메쉬가 rb.position에 위치.
+            // 이전 applyRootMotion=true 방식의 누적 이탈(Z=2.76 등)을 완전히 차단.
+            meshT.localPosition = Vector3.zero;
         }
     }
 }
