@@ -61,5 +61,31 @@ namespace FreeFlowHero.Combat.Core
         // ─── 히트 플래시 ───
         public const float HitFlashDuration = 0.15f;     // 플래시 지속 시간
         public const float HitFlashIntensity = 1.0f;     // 플래시 강도 (0~1)
+
+        // ─── 피격 리액션: Flinch 프리셋 (cm / 초 / 프레임) ───
+        public const float FlinchLightPush = 30f;
+        public const float FlinchLightFreeze = 0.08f;
+        public const float FlinchLightHitStop = 1.5f;
+
+        public const float FlinchMediumPush = 60f;
+        public const float FlinchMediumFreeze = 0.12f;
+        public const float FlinchMediumHitStop = 2.5f;
+
+        public const float FlinchHeavyPush = 100f;
+        public const float FlinchHeavyFreeze = 0.18f;
+        public const float FlinchHeavyHitStop = 4.0f;
+
+        // ─── 피격 리액션: Knockdown 프리셋 (cm / 초 / cm) ───
+        public const float KnockdownLightHeight = 80f;
+        public const float KnockdownLightAirTime = 0.4f;
+        public const float KnockdownLightDistance = 100f;
+
+        public const float KnockdownMediumHeight = 150f;
+        public const float KnockdownMediumAirTime = 0.6f;
+        public const float KnockdownMediumDistance = 180f;
+
+        public const float KnockdownHeavyHeight = 250f;
+        public const float KnockdownHeavyAirTime = 0.85f;
+        public const float KnockdownHeavyDistance = 300f;
     }
 }

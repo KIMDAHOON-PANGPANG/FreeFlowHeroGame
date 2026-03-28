@@ -59,6 +59,7 @@ namespace FreeFlowHero.Combat.Player
         private float flashTimer;
         private float facing;
         private float stateElapsedTime;
+        private float hitStopRemaining; // 히트스탑 잔여 시간 (초)
 
         // 레거시 모드 프레임 데이터
         private int startupFrames;
@@ -101,6 +102,7 @@ namespace FreeFlowHero.Combat.Player
         {
             base.Enter();
             hitConnected = false;
+            hitStopRemaining = 0f;
             stateElapsedTime = 0f;
             hitboxSubscribed = false;
             isAttacking = true;             // ★ 공격 시작 → 공격 입력 잠금
@@ -236,6 +238,21 @@ namespace FreeFlowHero.Combat.Player
         public override void Update(float deltaTime)
         {
             base.Update(deltaTime);
+
+            // ★ 히트스탑: 잔여 시간 동안 프레임 카운터/애니메이션 정지
+            if (hitStopRemaining > 0f)
+            {
+                hitStopRemaining -= deltaTime;
+                if (context.playerAnimator != null)
+                    context.playerAnimator.speed = 0f;
+                UpdateFlashTimer(deltaTime); // 플래시는 계속 진행
+                return; // 프레임 진행 스킵
+            }
+            else if (context.playerAnimator != null && context.playerAnimator.speed < 0.01f)
+            {
+                // 히트스탑 종료 → 애니메이션 속도 복원
+                context.playerAnimator.speed = 1f;
+            }
 
             int frame = context.stateFrameCounter;
             stateElapsedTime += deltaTime;
@@ -832,10 +849,38 @@ namespace FreeFlowHero.Combat.Player
             var hitData = HitData.CreateLightAttack(attackerPos, targetPos, context.comboCount);
             hitData.ContactPoint = contactPoint;
 
-            // 노티파이 모드: damageScale 적용
+            // 노티파이 모드: damageScale + 히트 리액션 데이터 조립
             if (useNotifyMode && notifyProcessor != null)
             {
                 hitData.DamageMultiplier *= notifyProcessor.DamageScale;
+
+                // ★ 히트 리액션 데이터 조립: 프리셋 기본값 + 노티파이 오프셋
+                var cn = notifyProcessor.ActiveCollisionNotify;
+                if (cn != null)
+                {
+                    var hitType = (HitType)cn.hitType;
+                    var preset = (HitPreset)cn.hitPreset;
+
+                    if (hitType == HitType.Knockdown)
+                    {
+                        var baseData = BattleSettings.GetKnockdownPreset(preset);
+                        hitData.Reaction = HitReactionData.CreateKnockdown(
+                            baseData.WithOffset(cn.knockLaunchOffset, cn.knockAirTimeOffset, cn.knockDistanceOffset));
+                    }
+                    else
+                    {
+                        var baseData = BattleSettings.GetFlinchPreset(preset);
+                        hitData.Reaction = HitReactionData.CreateFlinch(
+                            baseData.WithOffset(cn.flinchPushOffset, cn.flinchFreezeOffset, cn.flinchHitStopOffset));
+
+                        // ★ 히트스탑 적용 (공격자 측 — Flinch만)
+                        float hitStopFrames = hitData.Reaction.flinch.hitStop;
+                        if (hitStopFrames > 0f)
+                        {
+                            hitStopRemaining = hitStopFrames * CombatConstants.FrameDuration;
+                        }
+                    }
+                }
             }
 
             CombatEventBus.Publish(new OnAttackHit

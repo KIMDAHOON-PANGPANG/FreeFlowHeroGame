@@ -1301,6 +1301,85 @@ namespace FreeFlowHero.Editor
                         notify.ResetHitboxToDefaults();
                         isDirty = true;
                     }
+
+                    // ─── 히트 리액션 ───
+                    EditorGUILayout.Space(8);
+                    EditorGUILayout.LabelField("히트 리액션", EditorStyles.boldLabel);
+
+                    // Hit Type 드롭다운
+                    var hitType = (FreeFlowHero.Combat.Core.HitType)notify.hitType;
+                    hitType = (FreeFlowHero.Combat.Core.HitType)EditorGUILayout.EnumPopup("Hit Type", hitType);
+                    notify.hitType = (int)hitType;
+                    Tip("Flinch: 경직 (밀림+멈춤)\nKnockdown: 에어본 (떠서 날아감)");
+
+                    // Preset 드롭다운
+                    var hitPreset = (FreeFlowHero.Combat.Core.HitPreset)notify.hitPreset;
+                    hitPreset = (FreeFlowHero.Combat.Core.HitPreset)EditorGUILayout.EnumPopup("Preset", hitPreset);
+                    notify.hitPreset = (int)hitPreset;
+                    Tip("Light/Medium/Heavy 프리셋. BattleSettings에서 기본값 정의.");
+
+                    EditorGUILayout.Space(4);
+
+                    if (hitType == FreeFlowHero.Combat.Core.HitType.Flinch)
+                    {
+                        // ─ Flinch 프리셋 기본값 로드 (읽기 전용 표시) ─
+                        var baseF = FreeFlowHero.Combat.Core.BattleSettings.GetFlinchPreset(hitPreset);
+                        EditorGUILayout.LabelField("Flinch 오프셋", EditorStyles.boldLabel);
+
+                        EditorGUILayout.BeginHorizontal();
+                        EditorGUILayout.LabelField("Push Distance", GUILayout.Width(100));
+                        notify.flinchPushOffset = EditorGUILayout.FloatField(notify.flinchPushOffset, GUILayout.Width(60));
+                        EditorGUILayout.LabelField("cm", GUILayout.Width(22));
+                        float finalPush = baseF.pushDistance + notify.flinchPushOffset;
+                        EditorGUILayout.LabelField($"(최종: {finalPush:F0}cm)", EditorStyles.miniLabel);
+                        EditorGUILayout.EndHorizontal();
+
+                        EditorGUILayout.BeginHorizontal();
+                        EditorGUILayout.LabelField("Freeze Time", GUILayout.Width(100));
+                        notify.flinchFreezeOffset = EditorGUILayout.FloatField(notify.flinchFreezeOffset, GUILayout.Width(60));
+                        EditorGUILayout.LabelField("sec", GUILayout.Width(22));
+                        float finalFreeze = baseF.freezeTime + notify.flinchFreezeOffset;
+                        EditorGUILayout.LabelField($"(최종: {finalFreeze:F2}s)", EditorStyles.miniLabel);
+                        EditorGUILayout.EndHorizontal();
+
+                        EditorGUILayout.BeginHorizontal();
+                        EditorGUILayout.LabelField("Hit Stop", GUILayout.Width(100));
+                        notify.flinchHitStopOffset = EditorGUILayout.FloatField(notify.flinchHitStopOffset, GUILayout.Width(60));
+                        EditorGUILayout.LabelField("f", GUILayout.Width(22));
+                        float finalStop = baseF.hitStop + notify.flinchHitStopOffset;
+                        EditorGUILayout.LabelField($"(최종: {finalStop:F1}f)", EditorStyles.miniLabel);
+                        EditorGUILayout.EndHorizontal();
+                    }
+                    else // Knockdown
+                    {
+                        var baseK = FreeFlowHero.Combat.Core.BattleSettings.GetKnockdownPreset(hitPreset);
+                        EditorGUILayout.LabelField("Knockdown 오프셋", EditorStyles.boldLabel);
+
+                        EditorGUILayout.BeginHorizontal();
+                        EditorGUILayout.LabelField("Launch Height", GUILayout.Width(100));
+                        notify.knockLaunchOffset = EditorGUILayout.FloatField(notify.knockLaunchOffset, GUILayout.Width(60));
+                        EditorGUILayout.LabelField("cm", GUILayout.Width(22));
+                        float finalH = baseK.launchHeight + notify.knockLaunchOffset;
+                        EditorGUILayout.LabelField($"(최종: {finalH:F0}cm)", EditorStyles.miniLabel);
+                        EditorGUILayout.EndHorizontal();
+
+                        EditorGUILayout.BeginHorizontal();
+                        EditorGUILayout.LabelField("Air Time", GUILayout.Width(100));
+                        notify.knockAirTimeOffset = EditorGUILayout.FloatField(notify.knockAirTimeOffset, GUILayout.Width(60));
+                        EditorGUILayout.LabelField("sec", GUILayout.Width(22));
+                        float finalAir = baseK.airTime + notify.knockAirTimeOffset;
+                        EditorGUILayout.LabelField($"(최종: {finalAir:F2}s)", EditorStyles.miniLabel);
+                        EditorGUILayout.EndHorizontal();
+
+                        EditorGUILayout.BeginHorizontal();
+                        EditorGUILayout.LabelField("Knock Distance", GUILayout.Width(100));
+                        notify.knockDistanceOffset = EditorGUILayout.FloatField(notify.knockDistanceOffset, GUILayout.Width(60));
+                        EditorGUILayout.LabelField("cm", GUILayout.Width(22));
+                        float finalDist = baseK.knockDistance + notify.knockDistanceOffset;
+                        EditorGUILayout.LabelField($"(최종: {finalDist:F0}cm)", EditorStyles.miniLabel);
+                        EditorGUILayout.EndHorizontal();
+                    }
+
                     break;
 
                 case NotifyType.CANCEL_WINDOW:

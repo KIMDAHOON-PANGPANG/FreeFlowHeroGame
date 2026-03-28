@@ -20,6 +20,7 @@ namespace FreeFlowHero.Combat.Enemy
 
         private SpriteRenderer spriteRenderer;
         private HitFlash hitFlash;
+        private HitReactionHandler reactionHandler;
         private float scalePunchTimer;
         private Vector3 originalScale;
         private bool isDying;
@@ -45,17 +46,25 @@ namespace FreeFlowHero.Combat.Enemy
             scalePunchTimer = scalePunchDuration;
             transform.localScale = originalScale * 1.15f;
 
-            // 넉백: Kinematic position-based (Impulse 방식은 반동/진동 유발 가능)
-            var rb = GetComponent<Rigidbody2D>();
-            if (rb != null)
+            // ★ 피격 리액션: HitReactionHandler로 Flinch/Knockdown 분기
+            float knockDir = hitData.KnockbackDirection.x;
+            if (Mathf.Approximately(knockDir, 0f)) knockDir = 1f;
+            knockDir = Mathf.Sign(knockDir);
+
+            if (reactionHandler != null)
             {
-                rb.linearVelocity = Vector2.zero;
-                // ★ 즉시 위치 이동 방식 넉백 (수평 방향만 — Y 성분 포함 시 땅속 관통 유발)
-                float knockbackDist = 0.3f;
-                Vector2 knockDir = new Vector2(hitData.KnockbackDirection.x, 0f);
-                if (knockDir == Vector2.zero) knockDir = Vector2.right;
-                Vector2 knockPos = rb.position + knockDir.normalized * knockbackDist;
-                rb.position = knockPos;
+                reactionHandler.ApplyReaction(hitData.Reaction, knockDir);
+            }
+            else
+            {
+                // 폴백: HitReactionHandler 없으면 기존 고정값 넉백
+                var rb = GetComponent<Rigidbody2D>();
+                if (rb != null)
+                {
+                    rb.linearVelocity = Vector2.zero;
+                    Vector2 knockPos = rb.position + new Vector2(knockDir * 0.3f, 0f);
+                    rb.position = knockPos;
+                }
             }
 
             // 사망 처리
@@ -78,6 +87,7 @@ namespace FreeFlowHero.Combat.Enemy
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
             hitFlash = GetComponent<HitFlash>();
+            reactionHandler = GetComponent<HitReactionHandler>();
             originalScale = transform.localScale;
         }
 

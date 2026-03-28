@@ -99,6 +99,19 @@ namespace FreeFlowHero.Combat.Core
         public float hitboxSizeY;    // 히트박스 Y 크기 (높이, 기본 0.8)
         public float hitboxSizeZ;    // 히트박스 Z 크기 (깊이, 기본 0.5)
 
+        // ─── COLLISION 히트 리액션 ───
+        // hitType/hitPreset은 int로 저장 (JSON enum 호환)
+        public int hitType;              // (int)HitType: 0=Flinch, 1=Knockdown
+        public int hitPreset;            // (int)HitPreset: 0=Light, 1=Medium, 2=Heavy
+        // Flinch 오프셋 (프리셋 기본값에 더함)
+        public float flinchPushOffset;   // cm
+        public float flinchFreezeOffset; // 초
+        public float flinchHitStopOffset;// 프레임
+        // Knockdown 오프셋
+        public float knockLaunchOffset;  // cm
+        public float knockAirTimeOffset; // 초
+        public float knockDistanceOffset;// cm
+
         // ─── CANCEL_WINDOW 파라미터 ───
         public bool skillCancel;    // 공격 캔슬 (콤보 연계) 허용
         public bool moveCancel;     // 이동 캔슬 허용

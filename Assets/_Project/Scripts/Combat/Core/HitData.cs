@@ -40,6 +40,11 @@ namespace FreeFlowHero.Combat.Core
         /// <summary>넉다운 공격 여부</summary>
         public bool IsKnockdown;
 
+        // ─── 피격 리액션 ───
+
+        /// <summary>피격 리액션 데이터. COLLISION 노티파이의 HitType/Preset/Offset에서 조립.</summary>
+        public HitReactionData Reaction;
+
         // ─── 데미지 배율 ───
 
         /// <summary>최종 데미지 배율 (노티파이 damageScale 등). 기본 1.0</summary>

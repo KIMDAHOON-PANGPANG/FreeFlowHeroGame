@@ -204,6 +204,44 @@ namespace FreeFlowHero.Combat.Core
         public float enemyDeathFadeDuration = CombatConstants.EnemyDeathFadeDuration;
 
         // ════════════════════════════════════════════
+        //  피격 리액션: Flinch 프리셋
+        // ════════════════════════════════════════════
+
+        [Header("Flinch — Light")]
+        [Tooltip("밀림 거리 (cm)")] public float flinchLightPush = CombatConstants.FlinchLightPush;
+        [Tooltip("경직 시간 (초)")] public float flinchLightFreeze = CombatConstants.FlinchLightFreeze;
+        [Tooltip("히트스탑 (프레임)")] public float flinchLightHitStop = CombatConstants.FlinchLightHitStop;
+
+        [Header("Flinch — Medium")]
+        [Tooltip("밀림 거리 (cm)")] public float flinchMediumPush = CombatConstants.FlinchMediumPush;
+        [Tooltip("경직 시간 (초)")] public float flinchMediumFreeze = CombatConstants.FlinchMediumFreeze;
+        [Tooltip("히트스탑 (프레임)")] public float flinchMediumHitStop = CombatConstants.FlinchMediumHitStop;
+
+        [Header("Flinch — Heavy")]
+        [Tooltip("밀림 거리 (cm)")] public float flinchHeavyPush = CombatConstants.FlinchHeavyPush;
+        [Tooltip("경직 시간 (초)")] public float flinchHeavyFreeze = CombatConstants.FlinchHeavyFreeze;
+        [Tooltip("히트스탑 (프레임)")] public float flinchHeavyHitStop = CombatConstants.FlinchHeavyHitStop;
+
+        // ════════════════════════════════════════════
+        //  피격 리액션: Knockdown 프리셋
+        // ════════════════════════════════════════════
+
+        [Header("Knockdown — Light")]
+        [Tooltip("뜨는 높이 (cm)")] public float knockdownLightHeight = CombatConstants.KnockdownLightHeight;
+        [Tooltip("체공 시간 (초)")] public float knockdownLightAirTime = CombatConstants.KnockdownLightAirTime;
+        [Tooltip("날아가는 거리 (cm)")] public float knockdownLightDistance = CombatConstants.KnockdownLightDistance;
+
+        [Header("Knockdown — Medium")]
+        [Tooltip("뜨는 높이 (cm)")] public float knockdownMediumHeight = CombatConstants.KnockdownMediumHeight;
+        [Tooltip("체공 시간 (초)")] public float knockdownMediumAirTime = CombatConstants.KnockdownMediumAirTime;
+        [Tooltip("날아가는 거리 (cm)")] public float knockdownMediumDistance = CombatConstants.KnockdownMediumDistance;
+
+        [Header("Knockdown — Heavy")]
+        [Tooltip("뜨는 높이 (cm)")] public float knockdownHeavyHeight = CombatConstants.KnockdownHeavyHeight;
+        [Tooltip("체공 시간 (초)")] public float knockdownHeavyAirTime = CombatConstants.KnockdownHeavyAirTime;
+        [Tooltip("날아가는 거리 (cm)")] public float knockdownHeavyDistance = CombatConstants.KnockdownHeavyDistance;
+
+        // ════════════════════════════════════════════
         //  유틸리티
         // ════════════════════════════════════════════
 
@@ -242,6 +280,26 @@ namespace FreeFlowHero.Combat.Core
             hitFlashIntensity = CombatConstants.HitFlashIntensity;
             enemyDeathDelay = CombatConstants.EnemyDeathDelay;
             enemyDeathFadeDuration = CombatConstants.EnemyDeathFadeDuration;
+            // Flinch
+            flinchLightPush = CombatConstants.FlinchLightPush;
+            flinchLightFreeze = CombatConstants.FlinchLightFreeze;
+            flinchLightHitStop = CombatConstants.FlinchLightHitStop;
+            flinchMediumPush = CombatConstants.FlinchMediumPush;
+            flinchMediumFreeze = CombatConstants.FlinchMediumFreeze;
+            flinchMediumHitStop = CombatConstants.FlinchMediumHitStop;
+            flinchHeavyPush = CombatConstants.FlinchHeavyPush;
+            flinchHeavyFreeze = CombatConstants.FlinchHeavyFreeze;
+            flinchHeavyHitStop = CombatConstants.FlinchHeavyHitStop;
+            // Knockdown
+            knockdownLightHeight = CombatConstants.KnockdownLightHeight;
+            knockdownLightAirTime = CombatConstants.KnockdownLightAirTime;
+            knockdownLightDistance = CombatConstants.KnockdownLightDistance;
+            knockdownMediumHeight = CombatConstants.KnockdownMediumHeight;
+            knockdownMediumAirTime = CombatConstants.KnockdownMediumAirTime;
+            knockdownMediumDistance = CombatConstants.KnockdownMediumDistance;
+            knockdownHeavyHeight = CombatConstants.KnockdownHeavyHeight;
+            knockdownHeavyAirTime = CombatConstants.KnockdownHeavyAirTime;
+            knockdownHeavyDistance = CombatConstants.KnockdownHeavyDistance;
         }
 
         // ════════════════════════════════════════════
@@ -343,5 +401,53 @@ namespace FreeFlowHero.Combat.Core
         /// <summary>적 사망 페이드아웃 시간.</summary>
         public static float GetEnemyDeathFadeDuration()
             => IsLoaded ? _instance.enemyDeathFadeDuration : CombatConstants.EnemyDeathFadeDuration;
+
+        // ─── 피격 리액션 프리셋 접근자 ───
+
+        /// <summary>Flinch 프리셋 기본값 로드. Offset은 포함하지 않음.</summary>
+        public static FlinchData GetFlinchPreset(HitPreset preset)
+        {
+            if (!IsLoaded)
+            {
+                return preset switch
+                {
+                    HitPreset.Light  => new FlinchData(CombatConstants.FlinchLightPush,  CombatConstants.FlinchLightFreeze,  CombatConstants.FlinchLightHitStop),
+                    HitPreset.Medium => new FlinchData(CombatConstants.FlinchMediumPush, CombatConstants.FlinchMediumFreeze, CombatConstants.FlinchMediumHitStop),
+                    HitPreset.Heavy  => new FlinchData(CombatConstants.FlinchHeavyPush,  CombatConstants.FlinchHeavyFreeze,  CombatConstants.FlinchHeavyHitStop),
+                    _ => new FlinchData(CombatConstants.FlinchMediumPush, CombatConstants.FlinchMediumFreeze, CombatConstants.FlinchMediumHitStop)
+                };
+            }
+            var i = _instance;
+            return preset switch
+            {
+                HitPreset.Light  => new FlinchData(i.flinchLightPush,  i.flinchLightFreeze,  i.flinchLightHitStop),
+                HitPreset.Medium => new FlinchData(i.flinchMediumPush, i.flinchMediumFreeze, i.flinchMediumHitStop),
+                HitPreset.Heavy  => new FlinchData(i.flinchHeavyPush,  i.flinchHeavyFreeze,  i.flinchHeavyHitStop),
+                _ => new FlinchData(i.flinchMediumPush, i.flinchMediumFreeze, i.flinchMediumHitStop)
+            };
+        }
+
+        /// <summary>Knockdown 프리셋 기본값 로드. Offset은 포함하지 않음.</summary>
+        public static KnockdownData GetKnockdownPreset(HitPreset preset)
+        {
+            if (!IsLoaded)
+            {
+                return preset switch
+                {
+                    HitPreset.Light  => new KnockdownData(CombatConstants.KnockdownLightHeight,  CombatConstants.KnockdownLightAirTime,  CombatConstants.KnockdownLightDistance),
+                    HitPreset.Medium => new KnockdownData(CombatConstants.KnockdownMediumHeight, CombatConstants.KnockdownMediumAirTime, CombatConstants.KnockdownMediumDistance),
+                    HitPreset.Heavy  => new KnockdownData(CombatConstants.KnockdownHeavyHeight,  CombatConstants.KnockdownHeavyAirTime,  CombatConstants.KnockdownHeavyDistance),
+                    _ => new KnockdownData(CombatConstants.KnockdownMediumHeight, CombatConstants.KnockdownMediumAirTime, CombatConstants.KnockdownMediumDistance)
+                };
+            }
+            var i = _instance;
+            return preset switch
+            {
+                HitPreset.Light  => new KnockdownData(i.knockdownLightHeight,  i.knockdownLightAirTime,  i.knockdownLightDistance),
+                HitPreset.Medium => new KnockdownData(i.knockdownMediumHeight, i.knockdownMediumAirTime, i.knockdownMediumDistance),
+                HitPreset.Heavy  => new KnockdownData(i.knockdownHeavyHeight,  i.knockdownHeavyAirTime,  i.knockdownHeavyDistance),
+                _ => new KnockdownData(i.knockdownMediumHeight, i.knockdownMediumAirTime, i.knockdownMediumDistance)
+            };
+        }
     }
 }

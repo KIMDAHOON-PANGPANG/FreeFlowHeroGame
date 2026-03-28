@@ -70,6 +70,7 @@ namespace FreeFlowHero.Editor
             player.AddComponent<PlayerCombatFSM>();
             player.AddComponent<CombatInputHandler>();
             player.AddComponent<HitFlash>();
+            player.AddComponent<HitReactionHandler>();
 
             // ★ Sprite-Flash 머티리얼 할당
             AssignFlashMaterial(sr);
@@ -144,6 +145,7 @@ namespace FreeFlowHero.Editor
             // DummyEnemyTarget (ICombatTarget 구현)
             enemy.AddComponent<DummyEnemyTarget>();
             enemy.AddComponent<HitFlash>();
+            enemy.AddComponent<HitReactionHandler>();
 
             // ★ Sprite-Flash 머티리얼 할당
             AssignFlashMaterial(sr);
@@ -219,6 +221,14 @@ namespace FreeFlowHero.Editor
                     {
                         root.AddComponent<HitFlash>();
                         Debug.Log($"[REPLACED] HitFlash 추가: {path}");
+                        patched++;
+                    }
+
+                    // HitReactionHandler 컴포넌트 추가
+                    if (root.GetComponent<HitReactionHandler>() == null)
+                    {
+                        root.AddComponent<HitReactionHandler>();
+                        Debug.Log($"[REPLACED] HitReactionHandler 추가: {path}");
                         patched++;
                     }
 

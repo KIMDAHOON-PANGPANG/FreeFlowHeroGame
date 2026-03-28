@@ -60,6 +60,7 @@ namespace FreeFlowHero.Combat.Enemy
             Telegraph,
             Attack,
             HitStun,
+            Knockdown,
             Dead
         }
 
@@ -97,6 +98,7 @@ namespace FreeFlowHero.Combat.Enemy
 
         // ─── 피격 감지용 ───
         private float lastHP;
+        private HitReaction.HitReactionHandler reactionHandler;
 
         // ─── Kinematic 이동 & 충돌 ───
         private CapsuleCollider2D cachedCapsule;
@@ -123,6 +125,7 @@ namespace FreeFlowHero.Combat.Enemy
             animator = GetComponent<Animator>();
             cachedCapsule = GetComponent<CapsuleCollider2D>();
             spriteRenderer = GetComponent<SpriteRenderer>();
+            reactionHandler = GetComponent<HitReaction.HitReactionHandler>();
             if (spriteRenderer != null)
                 originalColor = spriteRenderer.color;
 
@@ -172,16 +175,22 @@ namespace FreeFlowHero.Combat.Enemy
                 return;
             }
 
-            // 피격 감지 (HP 감소 → HitStun)
+            // 피격 감지 (HP 감소 → HitStun 또는 Knockdown)
             float curHP = enemyTarget.CurrentHP;
-            if (curHP < lastHP && currentState != AIState.HitStun && currentState != AIState.Dead)
+            if (curHP < lastHP && currentState != AIState.HitStun
+                && currentState != AIState.Knockdown && currentState != AIState.Dead)
             {
-                TransitionTo(AIState.HitStun);
+                // Knockdown 판정: HitReactionHandler가 넉다운 중이면 Knockdown 상태로
+                if (reactionHandler != null && reactionHandler.IsKnockdownActive)
+                    TransitionTo(AIState.Knockdown);
+                else
+                    TransitionTo(AIState.HitStun);
             }
             lastHP = curHP;
 
-            // ★ 수동 중력 적용
-            ApplyGravity();
+            // ★ 수동 중력 적용 (Knockdown 중에는 HitReactionHandler가 이동 전담)
+            if (currentState != AIState.Knockdown)
+                ApplyGravity();
 
             // 쿨다운 틱
             if (cooldownTimer > 0f)
@@ -198,6 +207,7 @@ namespace FreeFlowHero.Combat.Enemy
                 case AIState.Telegraph: UpdateTelegraph(); break;
                 case AIState.Attack:  UpdateAttack();  break;
                 case AIState.HitStun: UpdateHitStun(); break;
+                case AIState.Knockdown: UpdateKnockdown(); break;
                 case AIState.Dead:    break;
             }
         }
@@ -340,6 +350,16 @@ namespace FreeFlowHero.Combat.Enemy
                     SafeSetTrigger("HitStun");
                     break;
 
+                case AIState.Knockdown:
+                    stateTimer = 5f; // 안전장치: 최대 5초 후 강제 복귀
+                    isTelegraphing = false;
+                    currentTelegraph = TelegraphType.None;
+                    if (spriteRenderer != null)
+                        spriteRenderer.color = HitStunColor;
+
+                    SafeSetTrigger("HitStun"); // TODO: 별도 Knockdown 애니메이션 추가 시 교체
+                    break;
+
                 case AIState.Dead:
                     isTelegraphing = false;
 
@@ -475,6 +495,15 @@ namespace FreeFlowHero.Combat.Enemy
         {
             if (stateTimer <= 0f)
                 TransitionTo(AIState.Chase);
+        }
+
+        private void UpdateKnockdown()
+        {
+            // HitReactionHandler가 체공 완료하면 HitStun(기상 경직)으로 전환
+            if (reactionHandler == null || !reactionHandler.IsKnockdownActive)
+            {
+                TransitionTo(AIState.HitStun); // 짧은 기상 경직 후 Chase
+            }
         }
 
         // ────────────────────────────

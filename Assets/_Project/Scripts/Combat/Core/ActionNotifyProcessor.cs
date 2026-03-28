@@ -46,6 +46,9 @@ namespace FreeFlowHero.Combat.Core
         /// <summary>COLLISION이 이번 프레임에 비활성화되었는지 (퇴출 에지)</summary>
         public bool CollisionJustEnded { get; private set; }
 
+        /// <summary>활성 COLLISION의 히트 리액션 노티파이 (리액션 데이터 조립용)</summary>
+        public ActionNotify ActiveCollisionNotify { get; private set; }
+
         // ─── CANCEL_WINDOW 상태 (스테이트 모드) ───
         /// <summary>현재 프레임에 CANCEL_WINDOW 노티파이(스테이트)가 활성인지</summary>
         public bool IsCancelWindowActive { get; private set; }
@@ -177,6 +180,7 @@ namespace FreeFlowHero.Combat.Core
             IsCollisionActive = false;
             DamageScale = 1f;
             HitboxId = "default";
+            ActiveCollisionNotify = null;
             IsPendingWindowActive = false;
             IsCancelWindowActive = false;
             CanSkillCancel = false;
@@ -244,6 +248,7 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.COLLISION:
                     IsCollisionActive = true;
                     DamageScale = n.damageScale;
+                    ActiveCollisionNotify = n;
                     if (!string.IsNullOrEmpty(n.hitboxId))
                         HitboxId = n.hitboxId;
                     break;
