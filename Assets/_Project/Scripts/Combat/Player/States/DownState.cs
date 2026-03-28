@@ -29,9 +29,10 @@ namespace FreeFlowHero.Combat.Player
                 : 0.5f;
             downTimer = Mathf.Max(downTime, 0f);
 
-            // 애니메이션: Down 포즈 (Knockdown 클립 마지막 프레임 유지)
+            // ★ Play로 직접 진입 — normalizedTime=1.0으로 누운 포즈(마지막 프레임) 고정
+            //   SetTrigger("Down") 사용 시 Knock_A가 처음부터 재생되어 모션 2번 연출 버그 발생
             if (context.playerAnimator != null)
-                context.playerAnimator.SetTrigger("Down");
+                context.playerAnimator.Play("Down", 0, 1.0f);
         }
 
         public override void Update(float deltaTime)

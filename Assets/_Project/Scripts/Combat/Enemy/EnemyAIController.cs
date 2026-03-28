@@ -448,8 +448,8 @@ namespace FreeFlowHero.Combat.Enemy
                     if (spriteRenderer != null)
                         spriteRenderer.color = HitStunColor;
 
-                    // 애니메이션: Knockdown 모션 (Knock_A)
-                    SafeSetTrigger("Knockdown");
+                    // ★ Knockdown 트리거 제거: HitReactionHandler.PlayKnockdownAnim()이 이미 설정함.
+                    //   여기서 중복 SetTrigger 하면 모션이 2번 재생되는 버그 발생.
                     break;
 
                 case AIState.Down:
@@ -458,7 +458,9 @@ namespace FreeFlowHero.Combat.Enemy
                     SafeSetFloat("Speed", 0f);
                     if (spriteRenderer != null)
                         spriteRenderer.color = HitStunColor;
-                    SafeSetTrigger("Down");
+                    // ★ Play로 직접 진입 — normalizedTime=1.0으로 누운 포즈(마지막 프레임) 고정
+                    //   SafeSetTrigger("Down") 사용 시 Knock_A가 처음부터 재생되어 모션 2번 연출 버그 발생
+                    SafePlayState("Down", 1.0f);
                     break;
 
                 case AIState.GetUp:
@@ -871,6 +873,17 @@ namespace FreeFlowHero.Combat.Enemy
             if (animator == null || animator.runtimeAnimatorController == null) return;
             try { animator.SetFloat(paramName, value); }
             catch (System.Exception e) { Debug.LogWarning($"[EnemyAI] Animator 오류 무시: {e.Message}"); }
+        }
+
+        /// <summary>
+        /// Animator.Play로 상태를 직접 전환 (트리거 대신 사용).
+        /// normalizedTime으로 시작 프레임을 지정할 수 있어 Down 등 포즈 고정에 유용.
+        /// </summary>
+        private void SafePlayState(string stateName, float normalizedTime = 0f)
+        {
+            if (animator == null || animator.runtimeAnimatorController == null) return;
+            try { animator.Play(stateName, 0, normalizedTime); }
+            catch (System.Exception e) { Debug.LogWarning($"[EnemyAI] Animator Play 오류 무시: {e.Message}"); }
         }
 
         // ────────────────────────────

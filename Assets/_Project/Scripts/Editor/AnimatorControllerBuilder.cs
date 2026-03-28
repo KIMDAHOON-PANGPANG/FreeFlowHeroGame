@@ -229,6 +229,7 @@ namespace FreeFlowHero.Editor
                 AnimationClip knockClipForDown = LoadClipFromFBX(KnockdownFBX);
                 if (knockClipForDown != null)
                     downState.motion = knockClipForDown; // 누운 포즈 유지
+                downState.speed = 0f; // ★ 애니메이션 정지 — normalizedTime=1.0에서 누운 포즈 고정
 
                 var tr = rootStateMachine.AddAnyStateTransition(downState);
                 tr.AddCondition(AnimatorConditionMode.If, 0, "Down");

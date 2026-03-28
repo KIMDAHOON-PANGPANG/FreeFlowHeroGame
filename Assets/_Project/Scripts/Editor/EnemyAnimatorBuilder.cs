@@ -250,12 +250,14 @@ namespace FreeFlowHero.Editor
             }
 
             // ─── Down 상태 (넉다운 후 누워있기) ───
-            // Knockdown 클립의 마지막 포즈를 유지 (누운 상태)
+            // ★ speed=0: 클립이 진행하지 않고 고정.
+            //   AI가 animator.Play("Down", 0, 1.0f)로 마지막 프레임(누운 포즈)에 직접 진입.
             var downState = sm.AddState("Down", GetStatePosition(stateCount + 1));
             stateCount++;
             {
                 AnimationClip knockClip = LoadClipFromFBX(KnockdownFBX);
                 if (knockClip != null) downState.motion = knockClip;
+                downState.speed = 0f; // ★ 애니메이션 정지 — 누운 포즈 고정
 
                 var tr = sm.AddAnyStateTransition(downState);
                 tr.AddCondition(AnimatorConditionMode.If, 0, "Down");
