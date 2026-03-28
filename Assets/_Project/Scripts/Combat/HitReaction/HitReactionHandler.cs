@@ -5,10 +5,11 @@ namespace FreeFlowHero.Combat.HitReaction
 {
     /// <summary>
     /// 피격 리액션 실행기. 적/플레이어 공용 MonoBehaviour.
-    /// HitReactionData를 받아 Flinch(즉시 밀림+경직) 또는 Knockdown(커브 체공)을 실행한다.
+    /// HitReactionData를 받아 Flinch(즉시 밀림+경직) 또는 Knockdown(애니메이션 루트모션 체공)을 실행한다.
     /// facing/forceFlip으로 피격 시 바라보는 방향을 제어한다.
     ///
     /// ★ Knockdown 중에는 IsKnockdownActive=true → AI/중력 시스템에서 이동을 스킵해야 함.
+    /// ★ Knockdown 이동은 애니메이션 루트모션이 전담. RootMotionCanceller가 deltaPosition을 rb에 적용.
     /// ★ 재피격 시: Flinch→Flinch 리셋 가능, Knockdown 중 Flinch는 무시.
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
@@ -24,11 +25,9 @@ namespace FreeFlowHero.Combat.HitReaction
         // ─── Knockdown 상태 ───
         private bool knockdownActive;
         private float knockdownTimer;
-        private float knockdownAirTime;
-        private float knockdownLaunchHeight;
-        private float knockdownDistance;
-        private float knockdownDir;
-        private float knockdownBaseY;
+        private float knockdownAirTime;  // 넉다운 체공 시간 (종료 판정용)
+        private float knockdownDir;      // 넉백 방향 (+1 또는 -1)
+        private float knockdownBaseY;    // 넉다운 시작 Y (착지 보정용)
 
         /// <summary>넉다운 체공 중인지. true이면 외부 중력/AI 이동을 스킵할 것.</summary>
         public bool IsKnockdownActive => knockdownActive;
@@ -64,14 +63,14 @@ namespace FreeFlowHero.Combat.HitReaction
             if (animator == null)
                 animator = GetComponentInChildren<Animator>();
 
-            // ★ applyRootMotion=true: Unity가 Hips 본에서 루트모션을 추출 → Hips가 제자리 유지.
-            //   빈 OnAnimatorMove()로 추출된 루트모션이 GO에 적용되는 것을 차단.
-            //   LateUpdate에서 meshT.localPosition=Vector3.zero 강제 리셋으로 누적 이탈도 방지.
-            //   (applyRootMotion=false면 루트모션이 추출되지 않아 Hips 본이 애니메이션대로 이동함)
+            // ★ applyRootMotion=true: Unity가 Hips 본에서 루트모션을 추출.
+            //   넉다운 중: RootMotionCanceller가 deltaPosition을 rb.position에 적용 → 루트가 메쉬와 이동.
+            //   그 외: RootMotionCanceller가 차단 → 제자리 재생.
+            //   (Knock_/Hit_/GetUp_ FBX는 Bake Into Pose OFF로 루트모션 보존)
             if (animator != null)
             {
                 animator.applyRootMotion = true;
-                // Animator가 자식 GO에 있으면 RootMotionCanceller 부착 (빈 OnAnimatorMove)
+                // Animator가 자식 GO에 있으면 RootMotionCanceller 부착
                 if (animator.gameObject != gameObject)
                 {
                     if (animator.gameObject.GetComponent<RootMotionCanceller>() == null)
@@ -81,12 +80,20 @@ namespace FreeFlowHero.Combat.HitReaction
         }
 
         /// <summary>
-        /// Animator가 같은 GO에 있을 때 루트모션 무효화.
+        /// Animator가 같은 GO에 있을 때 루트모션을 상태별 제어.
         /// Animator가 자식에 있으면 RootMotionCanceller가 대신 처리.
         /// </summary>
         private void OnAnimatorMove()
         {
-            // 의도적으로 비어있음: 루트모션 적용 차단
+            // 넉다운 중: 루트모션을 rb에 적용
+            if (knockdownActive && animator != null && rb != null)
+            {
+                Vector3 delta = animator.deltaPosition;
+                float xMove = Mathf.Abs(delta.x) * knockdownDir;
+                rb.position += new Vector2(xMove, delta.y);
+                return;
+            }
+            // 그 외: 루트모션 차단
         }
 
         /// <summary>
@@ -210,7 +217,7 @@ namespace FreeFlowHero.Combat.HitReaction
         }
 
         // ═══════════════════════════════════════════
-        //  Knockdown — sin 커브 체공
+        //  Knockdown — 애니메이션 루트모션 체공
         // ═══════════════════════════════════════════
 
         private void ExecuteKnockdown(KnockdownData data, float dir)
@@ -225,16 +232,12 @@ namespace FreeFlowHero.Combat.HitReaction
             knockdownTimer = 0f;
             LastDownTime = data.downTime;
             knockdownAirTime = Mathf.Max(data.airTime, 0.1f);
-            knockdownLaunchHeight = data.launchHeight * 0.01f;
-            knockdownDistance = data.knockDistance * 0.01f;
             knockdownDir = dir;
             knockdownBaseY = rb.position.y;
 
-            // [DEBUG] 넉다운 시작 로그
             Debug.Log($"[Knockdown][START][{gameObject.name}] baseY={knockdownBaseY:F3} " +
-                $"launchH={knockdownLaunchHeight:F3} airTime={knockdownAirTime:F3} " +
-                $"dist={knockdownDistance:F3} dir={knockdownDir:F1} " +
-                $"rb.pos={rb.position} animator={animator?.name} applyRoot={animator?.applyRootMotion}");
+                $"airTime={knockdownAirTime:F3} dir={knockdownDir:F1} " +
+                $"rb.pos={rb.position} applyRoot={animator?.applyRootMotion}");
 
             PlayKnockdownAnim();
         }
@@ -249,20 +252,16 @@ namespace FreeFlowHero.Combat.HitReaction
                     IsFlinchActive = false;
             }
 
-            // ── Knockdown 체공 (sin-curve) ──
-            // ★ FBX는 Bake Into Pose로 제자리 재생. 실제 포물선 이동은 sin-curve로 rb.position을 직접 구동.
+            // ── Knockdown 종료 판정 ──
+            // ★ 이동은 애니메이션 루트모션이 전담 (RootMotionCanceller / OnAnimatorMove).
+            //   여기서는 타이머로 체공 종료만 판정.
             if (!knockdownActive) return;
 
             knockdownTimer += Time.deltaTime;
-            float t = Mathf.Clamp01(knockdownTimer / knockdownAirTime);
-
-            float y = knockdownBaseY + knockdownLaunchHeight * Mathf.Sin(Mathf.PI * t);
-            float x = rb.position.x + knockdownDir * (knockdownDistance / knockdownAirTime) * Time.deltaTime;
-            rb.position = new Vector2(x, y);
-
-            if (t >= 1f)
+            if (knockdownTimer >= knockdownAirTime)
             {
                 knockdownActive = false;
+                // 착지 Y 보정: 지면 높이로 스냅
                 rb.position = new Vector2(rb.position.x, knockdownBaseY);
             }
         }
@@ -274,9 +273,8 @@ namespace FreeFlowHero.Combat.HitReaction
             if (meshT == transform) return; // Animator가 루트 자체면 스킵
 
             // ★ 메쉬 컨테이너를 항상 루트 위치(0,0,0)에 고정
-            // FBX가 Bake Into Pose로 설정되어 있으므로 Hips 본은 제자리에서 애니메이션됨.
-            // meshT.localPosition=(0,0,0) → 메쉬가 rb.position에 위치.
-            // 이전 applyRootMotion=true 방식의 누적 이탈(Z=2.76 등)을 완전히 차단.
+            // 루트모션 deltaPosition은 rb.position에 적용됨 (OnAnimatorMove/RootMotionCanceller).
+            // meshT는 rb 자식이므로 localPosition=zero면 rb와 동일 위치.
             meshT.localPosition = Vector3.zero;
         }
     }

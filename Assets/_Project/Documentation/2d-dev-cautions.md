@@ -222,3 +222,67 @@ if (currentState != AIState.Knockdown
 **Files**: `EnemyAIController.cs`
 
 **Rule**: 상태 전환 시 타이머를 외부 소스에서 가져올 때, 반드시 최소값(fallback)을 보장할 것. `Mathf.Max(externalValue, minimumDuration)` 패턴 사용.
+
+---
+
+## 11. 넉다운 시 메쉬-루트(rb) 위치 이탈 — Humanoid 루트모션 문제
+
+**Symptom**: 넉다운으로 날아갈 때 메쉬(SkinnedMeshRenderer)는 날아가지만 루트(Rigidbody2D/콜라이더)는 제자리에 남아 시각 위치가 이탈.
+
+**Root Cause (3 layers)**:
+
+### 11a. applyRootMotion=false → Hips 본 드리프트
+`applyRootMotion=false`이면 Unity가 루트모션을 추출하지 않아 Hips 본이 FBX 애니메이션 데이터 그대로 이동. meshT.localPosition을 리셋해도 Hips 본 자체가 이동하면 SkinnedMeshRenderer가 본 월드 위치 기준으로 렌더링되어 이탈.
+
+### 11b. applyRootMotion=true + 빈 OnAnimatorMove → 누적 이탈
+`applyRootMotion=true` + 빈 `OnAnimatorMove()`로 루트모션 적용을 차단하면 Hips 본 드리프트는 줄어들지만, 자식 Animator GO(meshT)의 transform에 매 프레임 미세한 루트모션 델타가 누적 → Z=2.76 등 대량 이탈 발생.
+
+### 11c. Bake Into Pose ON + sin-curve → 루트-메쉬 분리
+FBX Import의 `Bake Into Pose = ON` + 코드(sin-curve)로 rb.position 이동 방식은 두 시스템이 독립적으로 동작하여 동기화 실패.
+
+**Fix (최종 해결)**:
+1. FBX Import 설정: **Root Transform Position Y/XZ** → **Bake Into Pose 체크 해제**. 애니메이션 클립이 루트모션을 보존.
+2. `applyRootMotion = true` + `OnAnimatorMove()`에서 **넉다운 중에만** `animator.deltaPosition`을 `rb.position`에 적용. 그 외 상태에서는 차단.
+3. sin-curve 코드 **제거**. 넉다운 이동을 애니메이션 루트모션에 전담.
+4. `meshT.localPosition = Vector3.zero` LateUpdate 유지 (Z축 누적 방지).
+
+```csharp
+// RootMotionCanceller.OnAnimatorMove()
+if (handler != null && handler.IsKnockdownActive && parentRb != null)
+{
+    Vector3 delta = anim.deltaPosition;
+    float xMove = Mathf.Abs(delta.x) * handler.KnockdownDir;
+    parentRb.position += new Vector2(xMove, delta.y);
+    return;
+}
+// 그 외: 아무것도 적용하지 않음 (루트모션 차단)
+```
+
+**Files**: `HitReactionHandler.cs`, `RootMotionCanceller.cs`, `FBXImportSetup.cs` (Knock_/Hit_/GetUp_ 클립 설정)
+
+**Rules**:
+- 2D 횡스크롤에서 3D Humanoid 넉다운 이동은 **애니메이션 루트모션**에 맡기고, 코드는 방향 플립만 담당.
+- `Bake Into Pose`는 제자리 재생이 필요한 Idle/Attack 클립에만 ON. 넉다운/피격 클립은 OFF.
+- `applyRootMotion=true` + 커스텀 `OnAnimatorMove()`로 상태별 루트모션 적용을 선택적으로 제어.
+- 코드(sin-curve)와 애니메이션 루트모션을 **동시에** 사용하면 반드시 충돌. 하나만 선택할 것.
+
+---
+
+## 12. Attacker 넉백 방향 — 워핑 후 위치 기반 방향 계산 불안정
+
+**Symptom**: `hitKnockDirection = Attacker` 설정 시 넉백 방향이 불안정하거나 반대로 적용됨. Defender 모드는 정상 동작.
+
+**Root Cause**: `HitData.CreateLightAttack(attackerPos, targetPos)`에서 `KnockbackDirection = (targetPos - attackerPos).normalized` 계산. 워핑 후 공격자가 피격자 바로 옆(또는 반대편)에 위치하면 방향 벡터가 매우 짧거나 반전됨.
+
+**Fix**: Attacker 모드에서 위치 기반 방향 대신 **공격자의 facing 방향(localScale.x)**을 사용.
+```csharp
+if (knockDirType == HitKnockDirection.Attacker)
+{
+    float attackerFacing = Mathf.Sign(fsm.transform.localScale.x);
+    hitData.KnockbackDirection = new Vector2(attackerFacing, 0f);
+}
+```
+
+**Files**: `StrikeState.cs` — `OnHitDetected()`
+
+**Rule**: 워핑(텔레포트) 후 위치 기반 방향 계산은 신뢰할 수 없다. facing 방향(localScale.x)이 더 안정적.

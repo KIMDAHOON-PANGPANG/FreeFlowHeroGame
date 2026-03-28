@@ -864,9 +864,16 @@ namespace FreeFlowHero.Combat.Player
                     bool flip = cn.forceFlip;
                     var knockDirType = (HitKnockDirection)cn.hitKnockDirection;
 
-                    // ★ 넉백 방향 결정: Defender면 피격자가 바라보는 방향으로 날아감
-                    if (knockDirType == HitKnockDirection.Defender)
+                    // ★ 넉백 방향 결정
+                    if (knockDirType == HitKnockDirection.Attacker)
                     {
+                        // 공격자가 바라보는 방향으로 넉백 (워핑 후 위치 기반 계산은 불안정)
+                        float attackerFacing = Mathf.Sign(fsm.transform.localScale.x);
+                        hitData.KnockbackDirection = new Vector2(attackerFacing, 0f);
+                    }
+                    else if (knockDirType == HitKnockDirection.Defender)
+                    {
+                        // 피격자가 바라보는 방향으로 넉백
                         float defenderFacing = Mathf.Sign(target.GetTransform().localScale.x);
                         hitData.KnockbackDirection = new Vector2(defenderFacing, 0f);
                     }
