@@ -1387,6 +1387,14 @@ namespace FreeFlowHero.Editor
                         float finalDist = baseK.knockDistance + notify.knockDistanceOffset;
                         EditorGUILayout.LabelField($"(최종: {finalDist:F0}cm)", EditorStyles.miniLabel);
                         EditorGUILayout.EndHorizontal();
+
+                        EditorGUILayout.BeginHorizontal();
+                        EditorGUILayout.LabelField("Down Time", GUILayout.Width(100));
+                        notify.knockDownTimeOffset = EditorGUILayout.FloatField(notify.knockDownTimeOffset, GUILayout.Width(60));
+                        EditorGUILayout.LabelField("sec", GUILayout.Width(22));
+                        float finalDown = baseK.downTime + notify.knockDownTimeOffset;
+                        EditorGUILayout.LabelField($"(최종: {finalDown:F2}s)", EditorStyles.miniLabel);
+                        EditorGUILayout.EndHorizontal();
                     }
 
                     break;

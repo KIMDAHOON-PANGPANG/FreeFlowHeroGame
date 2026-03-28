@@ -40,6 +40,9 @@ namespace FreeFlowHero.Combat.HitReaction
         /// <summary>현재 freezeTime 잔여 (EnemyAIController가 참조)</summary>
         public float FreezeTimeRemaining => flinchTimer;
 
+        /// <summary>마지막 Knockdown의 Down 지속 시간 (EnemyAIController가 참조)</summary>
+        public float LastDownTime { get; private set; }
+
         private void Awake()
         {
             rb = GetComponent<Rigidbody2D>();
@@ -197,6 +200,7 @@ namespace FreeFlowHero.Combat.HitReaction
 
             knockdownActive = true;
             knockdownTimer = 0f;
+            LastDownTime = data.downTime;
             knockdownAirTime = Mathf.Max(data.airTime, 0.1f);
             knockdownLaunchHeight = data.launchHeight * 0.01f;
             knockdownDistance = data.knockDistance * 0.01f;

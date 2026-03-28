@@ -91,5 +91,10 @@ namespace FreeFlowHero.Combat.Core
         public const float KnockdownHeavyHeight = 250f;
         public const float KnockdownHeavyAirTime = 0.85f;
         public const float KnockdownHeavyDistance = 300f;
+
+        // ─── 피격 리액션: Knockdown Down 프리셋 (착지 후 누워있는 시간, 초) ───
+        public const float KnockdownLightDownTime = 0.5f;
+        public const float KnockdownMediumDownTime = 1.0f;
+        public const float KnockdownHeavyDownTime = 1.5f;
     }
 }

@@ -21,6 +21,7 @@ namespace FreeFlowHero.Editor
         // 히트 리액션 클립
         private const string FlinchFBX = "Assets/Martial Art Animations Sample/Animations/Hit_A.fbx";
         private const string KnockdownFBX = "Assets/Martial Art Animations Sample/Animations/Knock_A.fbx";
+        private const string GetUpFBX = "Assets/Martial Art Animations Sample/Animations/GetUp_A.fbx";
 
         // 적 공격 애니메이션 매핑 (Martial Art Animations Sample)
         private const string AttackKickFBX = "Assets/Martial Art Animations Sample/Animations/Atk_K_1.fbx";
@@ -52,6 +53,8 @@ namespace FreeFlowHero.Editor
             controller.AddParameter("HitStun", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Flinch", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Knockdown", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("Down", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("GetUp", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Die", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Idle", AnimatorControllerParameterType.Trigger);
 
@@ -242,8 +245,49 @@ namespace FreeFlowHero.Editor
                 tr.duration = 0.05f;
                 tr.canTransitionToSelf = false;
 
-                // ★ Knockdown → Idle 자동 전환 없음
-                // AI가 HitStun 진입 시 SafeSetTrigger("Flinch") 또는 SafeSetTrigger("Idle")로 제어
+                // ★ Knockdown → Idle/Down 자동 전환 없음
+                // AI가 Down 상태로 직접 전환
+            }
+
+            // ─── Down 상태 (넉다운 후 누워있기) ───
+            // Knockdown 클립의 마지막 포즈를 유지 (누운 상태)
+            var downState = sm.AddState("Down", GetStatePosition(stateCount + 1));
+            stateCount++;
+            {
+                AnimationClip knockClip = LoadClipFromFBX(KnockdownFBX);
+                if (knockClip != null) downState.motion = knockClip;
+
+                var tr = sm.AddAnyStateTransition(downState);
+                tr.AddCondition(AnimatorConditionMode.If, 0, "Down");
+                tr.hasExitTime = false;
+                tr.duration = 0.05f;
+                tr.canTransitionToSelf = false;
+                // ★ Down → 자동 전환 없음 (AI가 GetUp 트리거로 직접 전환)
+            }
+
+            // ─── GetUp 상태 (기상 모션) ───
+            var getUpState = sm.AddState("GetUp", GetStatePosition(stateCount + 1));
+            stateCount++;
+            {
+                AnimationClip getUpClip = LoadClipFromFBX(GetUpFBX);
+                if (getUpClip != null)
+                {
+                    getUpState.motion = getUpClip;
+                    clipCount++;
+                    Debug.Log($"[EnemyAnimBuilder] ✓ GetUp 클립: {getUpClip.name}");
+                }
+
+                var tr = sm.AddAnyStateTransition(getUpState);
+                tr.AddCondition(AnimatorConditionMode.If, 0, "GetUp");
+                tr.hasExitTime = false;
+                tr.duration = 0.1f;
+                tr.canTransitionToSelf = false;
+
+                // GetUp → Idle: 모션 종료 후 자동 복귀
+                var toIdle = getUpState.AddTransition(idleState);
+                toIdle.hasExitTime = true;
+                toIdle.exitTime = 0.9f;
+                toIdle.duration = 0.15f;
             }
 
             // ─── Die 상태 ───

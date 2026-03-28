@@ -230,16 +230,19 @@ namespace FreeFlowHero.Combat.Core
         [Tooltip("뜨는 높이 (cm)")] public float knockdownLightHeight = CombatConstants.KnockdownLightHeight;
         [Tooltip("체공 시간 (초)")] public float knockdownLightAirTime = CombatConstants.KnockdownLightAirTime;
         [Tooltip("날아가는 거리 (cm)")] public float knockdownLightDistance = CombatConstants.KnockdownLightDistance;
+        [Tooltip("착지 후 누워있는 시간 (초)")] public float knockdownLightDownTime = CombatConstants.KnockdownLightDownTime;
 
         [Header("Knockdown — Medium")]
         [Tooltip("뜨는 높이 (cm)")] public float knockdownMediumHeight = CombatConstants.KnockdownMediumHeight;
         [Tooltip("체공 시간 (초)")] public float knockdownMediumAirTime = CombatConstants.KnockdownMediumAirTime;
         [Tooltip("날아가는 거리 (cm)")] public float knockdownMediumDistance = CombatConstants.KnockdownMediumDistance;
+        [Tooltip("착지 후 누워있는 시간 (초)")] public float knockdownMediumDownTime = CombatConstants.KnockdownMediumDownTime;
 
         [Header("Knockdown — Heavy")]
         [Tooltip("뜨는 높이 (cm)")] public float knockdownHeavyHeight = CombatConstants.KnockdownHeavyHeight;
         [Tooltip("체공 시간 (초)")] public float knockdownHeavyAirTime = CombatConstants.KnockdownHeavyAirTime;
         [Tooltip("날아가는 거리 (cm)")] public float knockdownHeavyDistance = CombatConstants.KnockdownHeavyDistance;
+        [Tooltip("착지 후 누워있는 시간 (초)")] public float knockdownHeavyDownTime = CombatConstants.KnockdownHeavyDownTime;
 
         // ════════════════════════════════════════════
         //  피격 리액션: 모션 클립
@@ -311,6 +314,9 @@ namespace FreeFlowHero.Combat.Core
             knockdownHeavyHeight = CombatConstants.KnockdownHeavyHeight;
             knockdownHeavyAirTime = CombatConstants.KnockdownHeavyAirTime;
             knockdownHeavyDistance = CombatConstants.KnockdownHeavyDistance;
+            knockdownLightDownTime = CombatConstants.KnockdownLightDownTime;
+            knockdownMediumDownTime = CombatConstants.KnockdownMediumDownTime;
+            knockdownHeavyDownTime = CombatConstants.KnockdownHeavyDownTime;
             flinchClipPath = CombatConstants.FlinchClipPath;
             knockdownClipPath = CombatConstants.KnockdownClipPath;
         }
@@ -447,19 +453,19 @@ namespace FreeFlowHero.Combat.Core
             {
                 return preset switch
                 {
-                    HitPreset.Light  => new KnockdownData(CombatConstants.KnockdownLightHeight,  CombatConstants.KnockdownLightAirTime,  CombatConstants.KnockdownLightDistance),
-                    HitPreset.Medium => new KnockdownData(CombatConstants.KnockdownMediumHeight, CombatConstants.KnockdownMediumAirTime, CombatConstants.KnockdownMediumDistance),
-                    HitPreset.Heavy  => new KnockdownData(CombatConstants.KnockdownHeavyHeight,  CombatConstants.KnockdownHeavyAirTime,  CombatConstants.KnockdownHeavyDistance),
-                    _ => new KnockdownData(CombatConstants.KnockdownMediumHeight, CombatConstants.KnockdownMediumAirTime, CombatConstants.KnockdownMediumDistance)
+                    HitPreset.Light  => new KnockdownData(CombatConstants.KnockdownLightHeight,  CombatConstants.KnockdownLightAirTime,  CombatConstants.KnockdownLightDistance,  CombatConstants.KnockdownLightDownTime),
+                    HitPreset.Medium => new KnockdownData(CombatConstants.KnockdownMediumHeight, CombatConstants.KnockdownMediumAirTime, CombatConstants.KnockdownMediumDistance, CombatConstants.KnockdownMediumDownTime),
+                    HitPreset.Heavy  => new KnockdownData(CombatConstants.KnockdownHeavyHeight,  CombatConstants.KnockdownHeavyAirTime,  CombatConstants.KnockdownHeavyDistance,  CombatConstants.KnockdownHeavyDownTime),
+                    _ => new KnockdownData(CombatConstants.KnockdownMediumHeight, CombatConstants.KnockdownMediumAirTime, CombatConstants.KnockdownMediumDistance, CombatConstants.KnockdownMediumDownTime)
                 };
             }
             var i = _instance;
             return preset switch
             {
-                HitPreset.Light  => new KnockdownData(i.knockdownLightHeight,  i.knockdownLightAirTime,  i.knockdownLightDistance),
-                HitPreset.Medium => new KnockdownData(i.knockdownMediumHeight, i.knockdownMediumAirTime, i.knockdownMediumDistance),
-                HitPreset.Heavy  => new KnockdownData(i.knockdownHeavyHeight,  i.knockdownHeavyAirTime,  i.knockdownHeavyDistance),
-                _ => new KnockdownData(i.knockdownMediumHeight, i.knockdownMediumAirTime, i.knockdownMediumDistance)
+                HitPreset.Light  => new KnockdownData(i.knockdownLightHeight,  i.knockdownLightAirTime,  i.knockdownLightDistance,  i.knockdownLightDownTime),
+                HitPreset.Medium => new KnockdownData(i.knockdownMediumHeight, i.knockdownMediumAirTime, i.knockdownMediumDistance, i.knockdownMediumDownTime),
+                HitPreset.Heavy  => new KnockdownData(i.knockdownHeavyHeight,  i.knockdownHeavyAirTime,  i.knockdownHeavyDistance, i.knockdownHeavyDownTime),
+                _ => new KnockdownData(i.knockdownMediumHeight, i.knockdownMediumAirTime, i.knockdownMediumDistance, i.knockdownMediumDownTime)
             };
         }
 

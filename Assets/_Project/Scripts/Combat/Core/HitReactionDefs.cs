@@ -82,20 +82,25 @@ namespace FreeFlowHero.Combat.Core
         /// <summary>수평 날아가는 거리 (cm).</summary>
         public float knockDistance;
 
-        public KnockdownData(float height, float air, float dist)
+        /// <summary>착지 후 누워있는 시간 (초). Down 상태 지속.</summary>
+        public float downTime;
+
+        public KnockdownData(float height, float air, float dist, float down = 0.5f)
         {
             launchHeight = height;
             airTime = air;
             knockDistance = dist;
+            downTime = down;
         }
 
         /// <summary>오프셋 적용</summary>
-        public KnockdownData WithOffset(float heightOff, float airOff, float distOff)
+        public KnockdownData WithOffset(float heightOff, float airOff, float distOff, float downOff = 0f)
         {
             return new KnockdownData(
                 launchHeight + heightOff,
                 airTime + airOff,
-                knockDistance + distOff
+                knockDistance + distOff,
+                downTime + downOff
             );
         }
     }

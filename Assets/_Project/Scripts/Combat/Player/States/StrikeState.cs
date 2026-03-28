@@ -867,7 +867,7 @@ namespace FreeFlowHero.Combat.Player
                     {
                         var baseData = BattleSettings.GetKnockdownPreset(preset);
                         hitData.Reaction = HitReactionData.CreateKnockdown(
-                            baseData.WithOffset(cn.knockLaunchOffset, cn.knockAirTimeOffset, cn.knockDistanceOffset),
+                            baseData.WithOffset(cn.knockLaunchOffset, cn.knockAirTimeOffset, cn.knockDistanceOffset, cn.knockDownTimeOffset),
                             facing, flip);
                     }
                     else

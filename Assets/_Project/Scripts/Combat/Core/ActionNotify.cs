@@ -113,6 +113,7 @@ namespace FreeFlowHero.Combat.Core
         public float knockLaunchOffset;  // cm
         public float knockAirTimeOffset; // 초
         public float knockDistanceOffset;// cm
+        public float knockDownTimeOffset;// 초 (Down 상태 지속 시간 오프셋)
 
         // ─── CANCEL_WINDOW 파라미터 ───
         public bool skillCancel;    // 공격 캔슬 (콤보 연계) 허용

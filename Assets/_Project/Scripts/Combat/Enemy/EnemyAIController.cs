@@ -64,6 +64,8 @@ namespace FreeFlowHero.Combat.Enemy
             Attack,
             HitStun,
             Knockdown,
+            Down,
+            GetUp,
             Dead
         }
 
@@ -236,6 +238,8 @@ namespace FreeFlowHero.Combat.Enemy
             //   Attack/Telegraph: 공격 모션 중 Y 스냅 방지
             //   HitStun: Flinch 밀림 중 중력과 충돌 방지
             if (currentState != AIState.Knockdown
+                && currentState != AIState.Down
+                && currentState != AIState.GetUp
                 && currentState != AIState.Attack
                 && currentState != AIState.Telegraph
                 && currentState != AIState.HitStun)
@@ -257,6 +261,8 @@ namespace FreeFlowHero.Combat.Enemy
                 case AIState.Attack:  UpdateAttack();  break;
                 case AIState.HitStun: UpdateHitStun(); break;
                 case AIState.Knockdown: UpdateKnockdown(); break;
+                case AIState.Down:    UpdateDown();      break;
+                case AIState.GetUp:   UpdateGetUp();     break;
                 case AIState.Dead:    break;
             }
         }
@@ -347,6 +353,10 @@ namespace FreeFlowHero.Combat.Enemy
                         AttackCoordinator.Instance.ReleaseAttackSlot(this);
                     break;
                 case AIState.HitStun:
+                case AIState.Down:
+                    RestoreColor();
+                    break;
+                case AIState.GetUp:
                     RestoreColor();
                     break;
                 case AIState.Attack:
@@ -440,6 +450,22 @@ namespace FreeFlowHero.Combat.Enemy
 
                     // 애니메이션: Knockdown 모션 (Knock_A)
                     SafeSetTrigger("Knockdown");
+                    break;
+
+                case AIState.Down:
+                    // downTime: HitReactionHandler에서 데이터 드리븐 값 사용
+                    stateTimer = (reactionHandler != null) ? reactionHandler.LastDownTime : 0.5f;
+                    SafeSetFloat("Speed", 0f);
+                    if (spriteRenderer != null)
+                        spriteRenderer.color = HitStunColor;
+                    SafeSetTrigger("Down");
+                    break;
+
+                case AIState.GetUp:
+                    stateTimer = 1.2f; // GetUp_A 모션 길이 (안전값)
+                    SafeSetFloat("Speed", 0f);
+                    RestoreColor();
+                    SafeSetTrigger("GetUp");
                     break;
 
                 case AIState.Dead:
@@ -592,11 +618,25 @@ namespace FreeFlowHero.Combat.Enemy
 
         private void UpdateKnockdown()
         {
-            // HitReactionHandler가 체공 완료하면 HitStun(기상 경직)으로 전환
+            // HitReactionHandler가 체공 완료하면 Down(누워있기)으로 전환
             if (reactionHandler == null || !reactionHandler.IsKnockdownActive)
             {
-                TransitionTo(AIState.HitStun); // 짧은 기상 경직 후 Chase
+                TransitionTo(AIState.Down);
             }
+        }
+
+        private void UpdateDown()
+        {
+            // downTime 경과 후 GetUp(기상 모션)으로 전환
+            if (stateTimer <= 0f)
+                TransitionTo(AIState.GetUp);
+        }
+
+        private void UpdateGetUp()
+        {
+            // GetUp 모션 완료 후 Chase로 복귀
+            if (stateTimer <= 0f)
+                TransitionTo(AIState.Chase);
         }
 
         // ────────────────────────────
