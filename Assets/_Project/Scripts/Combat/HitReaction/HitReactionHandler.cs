@@ -30,6 +30,10 @@ namespace FreeFlowHero.Combat.HitReaction
         private float knockdownDir;
         private float knockdownBaseY;
 
+        // ─── Hips 본 보정 ───
+        private Transform cachedHipsBone;
+        private Vector3 hipsRestLocalPos; // T-Pose 시 Hips 로컬 위치
+
         /// <summary>넉다운 체공 중인지. true이면 외부 중력/AI 이동을 스킵할 것.</summary>
         public bool IsKnockdownActive => knockdownActive;
 
@@ -77,6 +81,15 @@ namespace FreeFlowHero.Combat.HitReaction
                 {
                     if (animator.gameObject.GetComponent<RootMotionCanceller>() == null)
                         animator.gameObject.AddComponent<RootMotionCanceller>();
+                }
+
+                // ★ Hips 본 캐시 (Humanoid 루트 본 드리프트 보상용)
+                cachedHipsBone = animator.GetBoneTransform(HumanBodyBones.Hips);
+                if (cachedHipsBone != null)
+                {
+                    hipsRestLocalPos = cachedHipsBone.localPosition;
+                    Debug.Log($"[HitReaction] Hips 본 캐시: {cachedHipsBone.name} " +
+                        $"restLocalPos={hipsRestLocalPos}");
                 }
             }
         }
@@ -271,10 +284,38 @@ namespace FreeFlowHero.Combat.HitReaction
 
         private void LateUpdate()
         {
-            // ★ 메쉬 위치 보정
-            // applyRootMotion=true + RootMotionCanceller 조합으로 루트 본 이탈은 해결됨.
-            // 넉다운 중에는 RootMotionCanceller가 rb.position을 직접 구동하므로 리셋 불필요.
-            // 일반 상태에서도 OnAnimatorMove(빈)로 루트 본이 원점 고정되므로 리셋 불필요.
+            if (animator == null) return;
+            var meshT = animator.transform;
+            if (meshT == transform) return; // Animator가 루트 자체면 스킵
+
+            // ★ Hips 본 드리프트 보상
+            // Humanoid 리그에서 applyRootMotion=true + OnAnimatorMove(빈)로도
+            // Hips 본이 애니메이션 내에서 이동할 수 있음.
+            // Hips의 현재 localPosition과 T-Pose(rest) 위치의 차이를 계산하여
+            // 메쉬 컨테이너를 역방향으로 오프셋 → Hips가 항상 rb.position + restOffset에 위치.
+            if (cachedHipsBone != null)
+            {
+                Vector3 hipsDrift = cachedHipsBone.localPosition - hipsRestLocalPos;
+
+                // 메쉬 컨테이너를 -drift로 오프셋 → Hips 드리프트 상쇄
+                meshT.localPosition = new Vector3(-hipsDrift.x, -hipsDrift.y, -hipsDrift.z);
+
+                // [DEBUG] 10프레임마다 드리프트 로그 (넉다운 중에만)
+                if (knockdownActive && Time.frameCount % 10 == 0)
+                {
+                    Debug.Log($"[HipsDrift][{gameObject.name}] " +
+                        $"hipsLocal={cachedHipsBone.localPosition} " +
+                        $"rest={hipsRestLocalPos} " +
+                        $"drift={hipsDrift} " +
+                        $"meshOffset={meshT.localPosition} " +
+                        $"rb.pos={rb.position}");
+                }
+            }
+            else
+            {
+                // Hips 본 없으면 기존 방식: 컨테이너 리셋
+                meshT.localPosition = Vector3.zero;
+            }
         }
     }
 }
