@@ -890,8 +890,11 @@ namespace FreeFlowHero.Combat.Enemy
         {
             if (animator == null) return;
 
-            // Knockdown 중에는 HitReactionHandler가 이동 전담
+            // Knockdown 중: HitReactionHandler가 이동 전담
             if (reactionHandler != null && reactionHandler.IsKnockdownActive) return;
+
+            // Down/GetUp 중: 누운 포즈/기상 모션에 발 보정 개입 금지
+            if (currentState == AIState.Down || currentState == AIState.GetUp) return;
 
             // 발 본 캐시 (한 번만 탐색)
             if (!footBonesSearched)

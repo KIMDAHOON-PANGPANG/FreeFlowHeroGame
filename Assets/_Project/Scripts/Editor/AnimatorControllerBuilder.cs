@@ -36,6 +36,7 @@ namespace FreeFlowHero.Editor
         // ─── 히트 리액션 클립 (Martial Art) ───
         private const string FlinchFBX = MartialArtRoot + "/Hit_A.fbx";
         private const string KnockdownFBX = MartialArtRoot + "/Knock_A.fbx";
+        private const string GetUpFBX = MartialArtRoot + "/GetUp_A.fbx";
 
         // 애니메이션 → 전투 액션 매핑 (1~3타: Martial Art, 나머지: EEJANAI)
         private static readonly (string fbxName, string stateName, string triggerName)[] AnimMap = new[]
@@ -89,6 +90,8 @@ namespace FreeFlowHero.Editor
             controller.AddParameter("Hit", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Flinch", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Knockdown", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("Down", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("GetUp", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("CounterStrike", AnimatorControllerParameterType.Trigger);
 
             // ─── 베이스 레이어 ───
@@ -215,15 +218,65 @@ namespace FreeFlowHero.Editor
                 tr.hasExitTime = false;
                 tr.duration = 0.05f;
                 tr.canTransitionToSelf = false;
+                // ★ 자동 전환 없음: HitReactionHandler 체공 완료 후 DownState가 "Down" 트리거를 보냄
+            }
+
+            // ─── Down 상태 (착지 후 누워있기) ───
+            // Knockdown 클립 마지막 포즈 유지. 자동 전환 없음 (DownState가 GetUp 트리거로 전환).
+            {
+                var downState = rootStateMachine.AddState("Down", GetStatePosition(stateCount + 1));
+                stateCount++;
+                AnimationClip knockClipForDown = LoadClipFromFBX(KnockdownFBX);
+                if (knockClipForDown != null)
+                    downState.motion = knockClipForDown; // 누운 포즈 유지
+
+                var tr = rootStateMachine.AddAnyStateTransition(downState);
+                tr.AddCondition(AnimatorConditionMode.If, 0, "Down");
+                tr.hasExitTime = false;
+                tr.duration = 0.05f;
+                tr.canTransitionToSelf = false;
+                // ★ 자동 전환 없음: GetUpState가 "GetUp" 트리거로 전환
+            }
+
+            // ─── GetUp 상태 (기상 모션) ───
+            AnimatorState getUpStateRef;
+            {
+                getUpStateRef = rootStateMachine.AddState("GetUp", GetStatePosition(stateCount + 1));
+                stateCount++;
+                AnimationClip getUpClip = LoadClipFromFBX(GetUpFBX);
+                if (getUpClip != null)
+                {
+                    getUpStateRef.motion = getUpClip;
+                    clipFoundCount++;
+                    Debug.Log($"[AnimBuilder] ✓ GetUp 클립: {getUpClip.name} ({getUpClip.length:F2}초)");
+                }
+                else
+                {
+                    Debug.LogWarning("[AnimBuilder] ❌ GetUp 클립 미발견: " + GetUpFBX);
+                }
+
+                var tr = rootStateMachine.AddAnyStateTransition(getUpStateRef);
+                tr.AddCondition(AnimatorConditionMode.If, 0, "GetUp");
+                tr.hasExitTime = false;
+                tr.duration = 0.1f;
+                tr.canTransitionToSelf = false;
+
+                // GetUp 모션 완료 → Locomotion 자동 복귀
+                var toLocomotion = getUpStateRef.AddTransition(locomotionState);
+                toLocomotion.hasExitTime = true;
+                toLocomotion.exitTime = 0.9f;
+                toLocomotion.duration = 0.15f;
             }
 
             // ─── 모든 전투 상태 → Locomotion 복귀 (Exit Time) ───
-            // ★ Knockdown은 제외: HitReactionHandler 체공 완료 후 AI가 직접 Idle 트리거로 전환.
-            //   exitTime 자동 전환이 있으면 체공 중 메쉬가 Locomotion 원점으로 스냅되는 버그 발생.
+            // ★ Knockdown/Down은 제외: 자동 전환 시 체공/누운 상태에서 Locomotion으로 스냅되는 버그 발생.
+            // ★ GetUp은 위에서 직접 추가했으므로 여기서도 제외.
             foreach (var childState in rootStateMachine.states)
             {
                 if (childState.state != locomotionState
-                    && childState.state.name != "Knockdown")
+                    && childState.state.name != "Knockdown"
+                    && childState.state.name != "Down"
+                    && childState.state.name != "GetUp")
                 {
                     var toLocomotion = childState.state.AddTransition(locomotionState);
                     toLocomotion.hasExitTime = true;

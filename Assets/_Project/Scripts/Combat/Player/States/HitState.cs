@@ -79,7 +79,13 @@ namespace FreeFlowHero.Combat.Player
                 bool knockdownDone = !context.hitReactionHandler.IsKnockdownActive;
                 if (flinchDone && knockdownDone && context.stateFrameCounter >= InvulnerableFrames)
                 {
-                    fsm.TransitionTo<IdleState>();
+                    // Hard Hit(Knockdown) → Down → GetUp 흐름
+                    // Soft Hit(Flinch) → 바로 Idle 복귀
+                    bool wasKnockdown = context.lastHitData.Reaction.type == HitType.Knockdown;
+                    if (wasKnockdown)
+                        fsm.TransitionTo<DownState>();
+                    else
+                        fsm.TransitionTo<IdleState>();
                 }
             }
             else

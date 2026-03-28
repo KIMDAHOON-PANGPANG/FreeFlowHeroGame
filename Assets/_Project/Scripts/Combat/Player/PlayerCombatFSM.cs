@@ -101,6 +101,9 @@ namespace FreeFlowHero.Combat.Player
             // WarpState 제거됨: 워핑은 StrikeState 내부 WARP 노티파이로 처리
             RegisterState(new DodgeState());
             RegisterState(new CounterState());
+            // 상태 등록 — Hard Hit 기상 흐름 (Down → GetUp)
+            RegisterState(new DownState());
+            RegisterState(new GetUpState());
         }
 
         // ─── Kinematic 중력 시뮬레이션 ───
@@ -172,6 +175,10 @@ namespace FreeFlowHero.Combat.Player
 
             // 워핑 중이면 중력 스킵 (워프가 Y 위치를 직접 제어)
             if (context.isWarping) return;
+
+            // ★ 넉다운 체공 중: HitReactionHandler가 Y 위치 직접 제어 → 중력 스킵
+            // 이 스킵 없이는 바닥 스냅 로직이 체공 포물선과 충돌하여 캐릭터가 날지 못하는 버그 발생
+            if (context.hitReactionHandler != null && context.hitReactionHandler.IsKnockdownActive) return;
 
             Vector2 pos = context.playerRigidbody.position;
 
