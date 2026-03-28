@@ -16,10 +16,19 @@ namespace FreeFlowHero.Combat.Enemy
         [Header("시각 피드백")]
         [SerializeField] private float flashDuration = 0.15f;
 
+        // ★ 데이터 튜닝: 사망 연출
+        [Header("사망 연출")]
+        [Tooltip("사망 후 페이드아웃 시작까지 대기 시간 (초)")]
+        [SerializeField] private float deathDelay = 0.5f;
+        [Tooltip("페이드아웃 지속 시간 (초)")]
+        [SerializeField] private float fadeDuration = 0.8f;
+
         private SpriteRenderer spriteRenderer;
         private Color originalColor;
         private float flashTimer;
         private Vector3 originalScale;
+        private bool isDying;
+        private float deathTimer;
 
         // ─── ICombatTarget 구현 ───
         public bool IsTargetable => currentHP > 0f;
@@ -58,10 +67,11 @@ namespace FreeFlowHero.Combat.Enemy
 
 
             // 사망 처리
-            if (currentHP <= 0f)
+            if (currentHP <= 0f && !isDying)
             {
+                isDying = true;
+                deathTimer = 0f;
                 CombatEventBus.Publish(new OnEnemyDeath { Enemy = this });
-
             }
         }
 
@@ -82,6 +92,26 @@ namespace FreeFlowHero.Combat.Enemy
 
         private void Update()
         {
+            // ── 사망 페이드아웃 → Destroy ──
+            if (isDying)
+            {
+                deathTimer += Time.deltaTime;
+
+                if (deathTimer >= deathDelay && spriteRenderer != null)
+                {
+                    float fadeT = Mathf.Clamp01((deathTimer - deathDelay) / fadeDuration);
+                    Color c = spriteRenderer.color;
+                    c.a = Mathf.Lerp(1f, 0f, fadeT);
+                    spriteRenderer.color = c;
+                }
+
+                if (deathTimer >= deathDelay + fadeDuration)
+                {
+                    Destroy(gameObject);
+                }
+                return; // 사망 중에는 플래시 처리 스킵
+            }
+
             // 플래시 타이머 + 스케일 복원
             if (flashTimer > 0f)
             {

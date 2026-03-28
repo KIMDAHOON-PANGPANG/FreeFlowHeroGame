@@ -343,6 +343,10 @@ namespace FreeFlowHero.Combat.Enemy
                 case AIState.Dead:
                     isTelegraphing = false;
 
+                    // 콜라이더 비활성화 (사망 후 히트 판정에 안 잡히도록)
+                    if (cachedCapsule != null)
+                        cachedCapsule.enabled = false;
+
                     // 애니메이션
                     SafeSetTrigger("Die");
                     break;
