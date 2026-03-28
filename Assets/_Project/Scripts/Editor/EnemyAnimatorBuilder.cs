@@ -172,8 +172,9 @@ namespace FreeFlowHero.Editor
                 toIdle.duration = 0.1f;
             }
 
-            // ─── 텔레그래프 상태 (빈 상태 — 색상 변경으로 대체) ───
+            // ─── 텔레그래프 상태 (Idle 포즈 유지 + 색상 변경으로 시각 피드백) ───
             var telegraphState = sm.AddState("Telegraph", GetStatePosition(stateCount + 1));
+            if (idleClip != null) telegraphState.motion = idleClip;
             stateCount++;
             {
                 var tr = sm.AddAnyStateTransition(telegraphState);
@@ -189,8 +190,9 @@ namespace FreeFlowHero.Editor
                 toAttack.duration = 0.1f;
             }
 
-            // ─── HitStun 상태 ───
+            // ─── HitStun 상태 (Idle 포즈 유지) ───
             var hitStunState = sm.AddState("HitStun", GetStatePosition(stateCount + 1));
+            if (idleClip != null) hitStunState.motion = idleClip;
             stateCount++;
             {
                 var tr = sm.AddAnyStateTransition(hitStunState);
