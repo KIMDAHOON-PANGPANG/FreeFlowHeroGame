@@ -190,7 +190,7 @@ namespace FreeFlowHero.Combat.Player
 
             // 블로킹 플래시 (잠깐 하얗게)
             if (context.hitFlash != null)
-                context.hitFlash.Flash(BlockFlashColor, 0.08f);
+                context.hitFlash.Play(BlockFlashColor);
 
             Debug.Log($"[Guard] BLOCK — 블로킹 성공! 넉백:{knockbackDir} → 반격 발동");
 
