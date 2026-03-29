@@ -9,7 +9,8 @@ namespace FreeFlowHero.Combat.HitReaction
     /// facing/forceFlip으로 피격 시 바라보는 방향을 제어한다.
     ///
     /// ★ Knockdown 중에는 IsKnockdownActive=true → AI/중력 시스템에서 이동을 스킵해야 함.
-    /// ★ Knockdown 이동은 애니메이션 루트모션이 전담. RootMotionCanceller가 deltaPosition을 rb에 적용.
+    /// ★ Knockdown 이동은 코드 드리븐 궤적이 전담 (AnimationCurve 포물선 Y + 선형 X).
+    ///   루트모션은 전면 차단되고, rb.position을 Update()에서 직접 제어.
     /// ★ 재피격 시: Flinch→Flinch 리셋 가능, Knockdown 중 Flinch는 무시.
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
@@ -28,6 +29,19 @@ namespace FreeFlowHero.Combat.HitReaction
         private float knockdownAirTime;  // 넉다운 체공 시간 (종료 판정용)
         private float knockdownDir;      // 넉백 방향 (+1 또는 -1)
         private float knockdownBaseY;    // 넉다운 시작 Y (착지 보정용)
+        private float knockdownLaunchHeight;  // 최대 Y 오프셋 (Unity 단위)
+        private float knockdownKnockDistance; // 총 X 이동 거리 (Unity 단위)
+
+        // ★ 데이터 튜닝: 넉다운 궤적 커브
+        //   X축: 시간 비율 (0=시작, 1=착지), Y축: 높이 비율 (0=지면, 1=최고점)
+        //   기본값: 빠르게 상승 → 천천히 낙하 (피크 t=0.35 지점)
+        //   Inspector에서 커브 에디터로 자유롭게 조절 가능
+        [SerializeField]
+        private AnimationCurve knockdownArcCurve = new AnimationCurve(
+            new Keyframe(0f, 0f, 0f, 4f),      // 시작: 급상승
+            new Keyframe(0.35f, 1f, 0f, 0f),    // 최고점: t=0.35 (비대칭 — 빠르게 올라감)
+            new Keyframe(1f, 0f, -2f, 0f)        // 착지: 자연 낙하
+        );
 
         /// <summary>넉다운 체공 중인지. true이면 외부 중력/AI 이동을 스킵할 것.</summary>
         public bool IsKnockdownActive => knockdownActive;
@@ -64,9 +78,8 @@ namespace FreeFlowHero.Combat.HitReaction
                 animator = GetComponentInChildren<Animator>();
 
             // ★ applyRootMotion=true: Unity가 Hips 본에서 루트모션을 추출.
-            //   넉다운 중: RootMotionCanceller가 deltaPosition을 rb.position에 적용 → 루트가 메쉬와 이동.
+            //   넉다운 중: 루트모션 전면 차단. 궤적은 Update()에서 AnimationCurve 포물선으로 제어.
             //   그 외: RootMotionCanceller가 차단 → 제자리 재생.
-            //   (Knock_/Hit_/GetUp_ FBX는 Bake Into Pose OFF로 루트모션 보존)
             if (animator != null)
             {
                 animator.applyRootMotion = true;
@@ -80,20 +93,14 @@ namespace FreeFlowHero.Combat.HitReaction
         }
 
         /// <summary>
-        /// Animator가 같은 GO에 있을 때 루트모션을 상태별 제어.
-        /// Animator가 자식에 있으면 RootMotionCanceller가 대신 처리.
+        /// Animator가 같은 GO에 있을 때 루트모션 차단.
+        /// 넉다운 궤적은 Update()에서 AnimationCurve로 제어.
+        /// Animator가 자식에 있으면 RootMotionCanceller가 대신 차단.
         /// </summary>
         private void OnAnimatorMove()
         {
-            // 넉다운 중: X 루트모션만 rb에 적용 (Y는 적용하지 않음 — 시각적 체공은 포즈가 담당)
-            if (knockdownActive && animator != null && rb != null)
-            {
-                Vector3 delta = animator.deltaPosition;
-                float xMove = Mathf.Abs(delta.x) * knockdownDir;
-                rb.position += new Vector2(xMove, 0f);
-                return;
-            }
-            // 그 외: 루트모션 차단
+            // 넉다운 중: 궤적은 Update()에서 코드로 제어. 루트모션 전면 차단.
+            // 그 외: 루트모션 차단 (아무것도 적용하지 않음 = 제자리 재생)
         }
 
         /// <summary>
@@ -242,6 +249,8 @@ namespace FreeFlowHero.Combat.HitReaction
             knockdownAirTime = Mathf.Max(data.airTime, 0.1f);
             knockdownDir = dir;
             knockdownBaseY = rb.position.y;
+            knockdownLaunchHeight = data.launchHeight * 0.01f;  // cm → Unity 단위
+            knockdownKnockDistance = data.knockDistance * 0.01f; // cm → Unity 단위
 
             Debug.Log($"[Knockdown][START][{gameObject.name}] baseY={knockdownBaseY:F3} " +
                 $"airTime={knockdownAirTime:F3} dir={knockdownDir:F1} " +
@@ -260,16 +269,25 @@ namespace FreeFlowHero.Combat.HitReaction
                     IsFlinchActive = false;
             }
 
-            // ── Knockdown 종료 판정 ──
-            // ★ 이동은 애니메이션 루트모션이 전담 (RootMotionCanceller / OnAnimatorMove).
-            //   여기서는 타이머로 체공 종료만 판정.
+            // ── Knockdown 궤적 (코드 드리븐) ──
+            // ★ AnimationCurve로 Y 궤적, 선형으로 X 이동. 루트모션은 차단됨.
             if (!knockdownActive) return;
 
             knockdownTimer += Time.deltaTime;
-            if (knockdownTimer >= knockdownAirTime)
+            float t = Mathf.Clamp01(knockdownTimer / knockdownAirTime);
+
+            // Y: AnimationCurve로 비대칭 포물선 (빠르게 상승 → 천천히 낙하)
+            float arcY = knockdownBaseY + knockdownLaunchHeight * knockdownArcCurve.Evaluate(t);
+
+            // X: knockDistance를 airTime에 걸쳐 균등 분배
+            float xSpeed = knockdownKnockDistance / knockdownAirTime;
+            float xDelta = xSpeed * Time.deltaTime * knockdownDir;
+
+            rb.position = new Vector2(rb.position.x + xDelta, arcY);
+
+            if (t >= 1f)
             {
                 knockdownActive = false;
-                // 착지 Y 보정: 지면 높이로 스냅
                 rb.position = new Vector2(rb.position.x, knockdownBaseY);
             }
         }

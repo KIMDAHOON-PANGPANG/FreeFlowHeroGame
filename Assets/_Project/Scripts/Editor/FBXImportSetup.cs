@@ -139,6 +139,23 @@ namespace FreeFlowHero.Editor
                 needsReimport = true;
             }
 
+            // ★ GetUp 클립: Translation DOF 활성화
+            //   GetUp 모션은 Hips 본이 Y축으로 이동(눕기→서기)하는 데이터를 포함.
+            //   Translation DOF 미활성 시 Humanoid 리타겟팅이 Hips translation을 삭제하여
+            //   캐릭터가 지면에 파묻히는 현상 발생.
+            string fileNameForDof = System.IO.Path.GetFileNameWithoutExtension(path);
+            if (fileNameForDof.StartsWith("GetUp_") || fileNameForDof.StartsWith("Knock_"))
+            {
+                var hd = importer.humanDescription;
+                if (!hd.hasTranslationDoF)
+                {
+                    hd.hasTranslationDoF = true;
+                    importer.humanDescription = hd;
+                    needsReimport = true;
+                    Debug.Log($"  [TranslationDOF] ✓ 활성화: {fileNameForDof}");
+                }
+            }
+
             // 애니메이션 FBX: 소스 Avatar 지정
             if (!isModel)
             {
@@ -207,11 +224,22 @@ namespace FreeFlowHero.Editor
                 return false;
             }
 
-            // ★ 피격 모션(Knock_, Hit_) 판별: 루트 Y를 Original 기준으로 고정
-            //   발 기준(heightFromFeet)이면 넉다운 중 발 위치 변화로 루트 Y가 흔들림
+            // ★ 클립 타입 판별
             string fileName = System.IO.Path.GetFileNameWithoutExtension(importer.assetPath);
-            bool isHitReactionClip = fileName.StartsWith("Knock_") || fileName.StartsWith("Hit_")
-                || fileName.StartsWith("GetUp_");
+
+            // ★ 클립 타입 분류
+            // 넉다운/피격: Bake Y ON + Original (체공 중 발 위치 불안정)
+            bool isKnockdownClip = fileName.StartsWith("Knock_") || fileName.StartsWith("Hit_");
+
+            // GetUp: Bake Y OFF → 루트모션 Y로 눕기→서기 높이 변화 보존
+            //   + Translation DOF 활성화로 Hips 이동 데이터도 보존
+            bool isGetUpClip = fileName.StartsWith("GetUp_");
+
+            // 이동 + 회피 + 넉다운: Bake XZ OFF → 루트모션 delta 보존
+            //   Knock_: 넉다운 넉백 이동을 루트모션 또는 코드에서 제어하므로 Bake OFF 필요
+            bool isLocomotionClip = fileName.StartsWith("Walk_") || fileName.StartsWith("Run_")
+                || fileName.StartsWith("Sprint_") || fileName.StartsWith("Jog_")
+                || fileName.StartsWith("Dodge_") || fileName.StartsWith("Knock_");
 
             for (int i = 0; i < clips.Length; i++)
             {
@@ -219,31 +247,43 @@ namespace FreeFlowHero.Editor
                 clips[i].lockRootRotation = true;
                 clips[i].keepOriginalOrientation = true;
 
-                // Root Transform Position (Y) → Bake Into Pose
-                clips[i].lockRootHeightY = true;
-                if (isHitReactionClip)
+                // Root Transform Position (Y)
+                if (isGetUpClip)
                 {
-                    // ★ 피격 모션: Based Upon = Original (원점 고정)
-                    //   넉다운/피격 모션은 체공/넘어짐 중 발 위치가 크게 변하므로
-                    //   Feet 기준이면 루트 Y가 흔들린다. Original로 원점 고정.
+                    // ★ GetUp: Bake Y ON + Based Upon = Feet (지면 기준)
+                    //   루트 Y는 발 기준으로 지면에 고정. Translation DOF가 Hips Y 이동을
+                    //   보존하여 눕기→서기 메쉬 높이 변화를 정상 표현.
+                    clips[i].lockRootHeightY = true;
+                    clips[i].keepOriginalPositionY = false;
+                    clips[i].heightFromFeet = true;
+                }
+                else if (isKnockdownClip)
+                {
+                    // ★ 넉다운/피격: Bake Y ON + Based Upon = Original (원점 고정)
+                    //   체공/넘어짐 중 발 위치가 크게 변하므로 Feet 기준 사용 불가
+                    clips[i].lockRootHeightY = true;
                     clips[i].keepOriginalPositionY = true;
                     clips[i].heightFromFeet = false;
                 }
                 else
                 {
-                    // 일반 전투 모션: Based Upon = Feet (지면 기준)
+                    // 일반 전투 모션: Bake Y ON + Based Upon = Feet (지면 기준)
+                    clips[i].lockRootHeightY = true;
                     clips[i].keepOriginalPositionY = false;
                     clips[i].heightFromFeet = true;
                 }
 
-                // Root Transform Position (XZ) → Bake Into Pose (Based Upon: Original)
-                clips[i].lockRootPositionXZ = true;
+                // Root Transform Position (XZ)
+                // 이동/회피 클립: Bake OFF → 루트모션 delta 추출
+                // 전투/피격 클립: Bake ON → 제자리 재생
+                clips[i].lockRootPositionXZ = !isLocomotionClip;
                 clips[i].keepOriginalPositionXZ = true;
             }
 
             importer.clipAnimations = clips;
-            string yBasis = isHitReactionClip ? "Original" : "Feet";
-            Debug.Log($"  [BakeRoot] ✓ {clips.Length}개 클립 Bake Into Pose 적용 (Y={yBasis} 기준): {fileName}");
+            string yBasis = isGetUpClip ? "ON(Feet+TransDOF)" : (isKnockdownClip ? "ON(Original)" : "ON(Feet)");
+            string xzBake = isLocomotionClip ? "OFF(이동)" : "ON(제자리)";
+            Debug.Log($"  [BakeRoot] ✓ {clips.Length}개 클립 Bake Into Pose 적용 (Y={yBasis}, XZ={xzBake}): {fileName}");
             return true;
         }
 

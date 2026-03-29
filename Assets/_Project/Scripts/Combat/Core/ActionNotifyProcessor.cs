@@ -108,6 +108,13 @@ namespace FreeFlowHero.Combat.Core
         private AnimationCurve rootMotionCurve;
         private ActionNotify activeRootMotionNotify;
 
+        // ─── HOMING 상태 (스테이트 모드) ───
+        /// <summary>현재 프레임에 HOMING 노티파이가 활성인지</summary>
+        public bool IsHomingActive { get; private set; }
+
+        /// <summary>활성 HOMING의 회전 속도 제한 (도/초, 0=즉시 스냅)</summary>
+        public float HomingTurnRate { get; private set; }
+
         // ─── WARP 상태 (인스턴스 모드) ───
         /// <summary>이번 프레임에 WARP 노티파이가 발화되었는지</summary>
         public bool IsWarpTriggered { get; private set; }
@@ -195,6 +202,8 @@ namespace FreeFlowHero.Combat.Core
             StartupMoveSpeed = 0f;
             IsRootMotionActive = false;
             RootMotionSpeed = 0f;
+            IsHomingActive = false;
+            HomingTurnRate = 0f;
             IsWarpTriggered = false;
             WarpNotify = null;
 
@@ -293,6 +302,11 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.WARP:
                     IsWarpTriggered = true;
                     WarpNotify = n;
+                    break;
+
+                case NotifyType.HOMING:
+                    IsHomingActive = true;
+                    HomingTurnRate = n.homingTurnRate;
                     break;
             }
         }

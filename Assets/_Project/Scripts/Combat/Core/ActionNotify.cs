@@ -45,6 +45,14 @@ namespace FreeFlowHero.Combat.Core
         /// Unity 루트모션 대체: 2D Kinematic 환경에서 스크립트 기반 구현.
         /// </summary>
         ROOT_MOTION = 5,
+
+        /// <summary>
+        /// 호밍 — 공격 중 타겟 방향 회전 추적 허용 구간.
+        /// startFrame~endFrame 동안 액터가 타겟을 향해 회전(플립) 가능.
+        /// 기본 동작: HOMING 노티파이가 없으면 공격 중 회전 잠금.
+        /// homingTurnRate: 회전 속도 제한 (도/초). 0 = 즉시 스냅.
+        /// </summary>
+        HOMING = 6,
     }
 
     /// <summary>
@@ -150,6 +158,13 @@ namespace FreeFlowHero.Combat.Core
         //   바이브 코딩: JSON 배열 직접 수정 / GUI: CurveField로 드래그 편집
         public float[] rootMotionKeys;      // 커브 키프레임 배열
         public float rootMotionScale = 1f;  // 전체 스케일 배율 (★ 데이터 튜닝)
+
+        // ─── HOMING 파라미터 ───
+        // ★ 공격 중 타겟 방향 회전 추적 허용 구간.
+        //   homingTurnRate: 회전 속도 제한 (도/초). 0 = 즉시 스냅.
+        //   2D 횡스크롤에서 "회전" = localScale.x 플립.
+        //   turnRate > 0이면 turnRate × deltaTime ≥ 180° 일 때만 플립 허용 (지연 효과).
+        public float homingTurnRate;  // ★ 데이터 튜닝: 0=즉시, 360=0.5초 지연, 720=0.25초 지연
 
         /// <summary>rootMotionKeys 배열을 AnimationCurve로 변환</summary>
         public AnimationCurve BuildRootMotionCurve()
@@ -414,6 +429,25 @@ namespace FreeFlowHero.Combat.Core
             };
         }
 
+        /// <summary>HOMING 노티파이 생성</summary>
+        public static ActionNotify CreateHoming(int start, int end, float turnRate = 0f)
+        {
+            return new ActionNotify
+            {
+                type = NotifyType.HOMING.ToString(),
+                startFrame = start,
+                endFrame = end,
+                track = 6,
+                disabled = false,
+                isInstance = false,  // STATE 모드: 구간 동안 활성
+                homingTurnRate = turnRate,
+                damageScale = 1f,
+                hitboxId = "",
+                moveSpeed = 0f,
+                nextAction = "",
+            };
+        }
+
         /// <summary>워핑 이징 커브 적용</summary>
         public static float ApplyWarpEasing(float t, int easeType)
         {
@@ -453,6 +487,7 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.WARP:           return new Color(0.2f, 0.9f, 0.5f, 0.8f);  // 초록
                 case NotifyType.PENDING_WINDOW: return new Color(0.9f, 0.5f, 0.2f, 0.8f);  // 주황
                 case NotifyType.ROOT_MOTION:    return new Color(0.7f, 0.3f, 0.9f, 0.8f);  // 보라
+                case NotifyType.HOMING:         return new Color(0.2f, 0.8f, 0.9f, 0.8f);  // 시안
                 default:                        return new Color(0.5f, 0.5f, 0.5f, 0.8f);  // 회색
             }
         }
@@ -468,6 +503,7 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.WARP:           return "WARP";
                 case NotifyType.PENDING_WINDOW: return "PENDING";
                 case NotifyType.ROOT_MOTION:    return "ROOT_MOTION";
+                case NotifyType.HOMING:         return "HOMING";
                 default:                        return type.ToString();
             }
         }
@@ -483,7 +519,8 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.WARP:           return 3;
                 case NotifyType.PENDING_WINDOW: return 4;
                 case NotifyType.ROOT_MOTION:    return 5;
-                default:                        return 6;
+                case NotifyType.HOMING:         return 6;
+                default:                        return 7;
             }
         }
 
@@ -498,6 +535,7 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.WARP:           return 3;  // 인스턴스: 시각 표시용 최소 길이
                 case NotifyType.PENDING_WINDOW: return 5;  // 팔로스루 강제 재생 구간
                 case NotifyType.ROOT_MOTION:    return 20; // 액션 전체 범위 (동기화 시 자동 설정)
+                case NotifyType.HOMING:         return 10; // 추적 허용 구간
                 default:                        return 5;
             }
         }

@@ -39,7 +39,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7101106746823839109}
-  - {fileID: 6246667489528985664}
+  - {fileID: 2079713071602952209}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &1993583070725131474
@@ -220,6 +220,39 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d760023c03327d5469b36ebc7de96764, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FreeFlowHero.Combat.HitReaction.HitReactionHandler
+  knockdownArcCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 4
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.35
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: -2
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!114 &4467772035751655078
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -266,6 +299,7 @@ MonoBehaviour:
   attackCooldown: 1.8
   attackDamage: 10
   telegraphType: 2
+  postAttackDuration: 0.3
   hitStunDuration: 0.35
 --- !u!1 &8501082563586531858
 GameObject:
@@ -359,7 +393,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FreeFlowHero.Common.HurtboxController
   ownerTeam: 1
---- !u!1001 &5853034101697044395
+--- !u!1001 &1969789892038496250
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -428,8 +462,8 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 311536138b8622a4895fa913884605e9, type: 3}
---- !u!4 &6246667489528985664 stripped
+--- !u!4 &2079713071602952209 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 311536138b8622a4895fa913884605e9, type: 3}
-  m_PrefabInstance: {fileID: 5853034101697044395}
+  m_PrefabInstance: {fileID: 1969789892038496250}
   m_PrefabAsset: {fileID: 0}

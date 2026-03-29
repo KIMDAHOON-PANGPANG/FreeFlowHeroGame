@@ -18,9 +18,9 @@ namespace FreeFlowHero.Combat.Player
         [Range(0.05f, 1.0f)]
         public float strikeCancelDelay = 0.3f;
 
-        [Tooltip("Dodge 진입 후 캔슬 가능 시간")]
-        [Range(0.05f, 1.0f)]
-        public float dodgeCancelDelay = 0.3f;
+        [Tooltip("Dodge 캔슬 가능 시점 (클립 비율: 0.5 = 50% 지점에서 캔슬 오픈)")]
+        [Range(0.1f, 0.95f)]
+        public float dodgeCancelDelay = 0.5f;
 
         [Tooltip("Counter 진입 후 캔슬 가능 시간")]
         [Range(0.05f, 1.0f)]

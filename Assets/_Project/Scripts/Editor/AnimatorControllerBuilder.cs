@@ -33,6 +33,10 @@ namespace FreeFlowHero.Editor
         // ─── 4타 (EEJANAI knee strike) ───
         private const string Atk4FBX = FBXFolder + "/knee strike.fbx";
 
+        // ─── 회피 클립 (Martial Art) ───
+        private const string DodgeBackFBX = MartialArtRoot + "/Dodge_B.fbx";
+        private const string DodgeForwardFBX = MartialArtRoot + "/Dodge_F.fbx";
+
         // ─── 히트 리액션 클립 (Martial Art) ───
         private const string FlinchFBX = MartialArtRoot + "/Hit_A.fbx";
         private const string KnockdownFBX = MartialArtRoot + "/Knock_A.fbx";
@@ -82,6 +86,7 @@ namespace FreeFlowHero.Editor
             controller.AddParameter("CounterPerfect", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("DodgeAttack", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Dodge", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("DodgeForward", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Execution", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Launch", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("AirFinisher", AnimatorControllerParameterType.Trigger);
@@ -182,6 +187,56 @@ namespace FreeFlowHero.Editor
                 csTransition.hasExitTime = false;
                 csTransition.duration = 0.05f;
                 csTransition.canTransitionToSelf = false;
+            }
+
+            // ─── Dodge 상태 (백대시 회피) ───
+            {
+                var dodgeState = rootStateMachine.AddState("Dodge", GetStatePosition(stateCount + 1));
+                stateCount++;
+                AnimationClip dodgeClip = LoadClipFromFBX(DodgeBackFBX);
+                // ★ 데이터 튜닝: 대쉬 재생 배속 (2.0 = 2배속)
+                dodgeState.speed = 2.0f;
+                if (dodgeClip != null)
+                {
+                    dodgeState.motion = dodgeClip;
+                    clipFoundCount++;
+                    Debug.Log($"[AnimBuilder] ✓ Dodge 클립: {dodgeClip.name} ({dodgeClip.length:F2}초, {dodgeState.speed}x)");
+                }
+                else
+                {
+                    Debug.LogWarning("[AnimBuilder] ❌ Dodge 클립 미발견: " + DodgeBackFBX);
+                }
+
+                var tr = rootStateMachine.AddAnyStateTransition(dodgeState);
+                tr.AddCondition(AnimatorConditionMode.If, 0, "Dodge");
+                tr.hasExitTime = false;
+                tr.duration = 0.05f;
+                tr.canTransitionToSelf = false;
+            }
+
+            // ─── DodgeForward 상태 (전방 대시 회피) ───
+            {
+                var dodgeFwdState = rootStateMachine.AddState("DodgeForward", GetStatePosition(stateCount + 1));
+                stateCount++;
+                AnimationClip dodgeFwdClip = LoadClipFromFBX(DodgeForwardFBX);
+                // ★ 데이터 튜닝: 전방 대쉬 재생 배속 (2.0 = 2배속)
+                dodgeFwdState.speed = 2.0f;
+                if (dodgeFwdClip != null)
+                {
+                    dodgeFwdState.motion = dodgeFwdClip;
+                    clipFoundCount++;
+                    Debug.Log($"[AnimBuilder] ✓ DodgeForward 클립: {dodgeFwdClip.name} ({dodgeFwdClip.length:F2}초, {dodgeFwdState.speed}x)");
+                }
+                else
+                {
+                    Debug.LogWarning("[AnimBuilder] ❌ DodgeForward 클립 미발견: " + DodgeForwardFBX);
+                }
+
+                var tr = rootStateMachine.AddAnyStateTransition(dodgeFwdState);
+                tr.AddCondition(AnimatorConditionMode.If, 0, "DodgeForward");
+                tr.hasExitTime = false;
+                tr.duration = 0.05f;
+                tr.canTransitionToSelf = false;
             }
 
             // ─── Flinch 상태 (경직 피격) ───

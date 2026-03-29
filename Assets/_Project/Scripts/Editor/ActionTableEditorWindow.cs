@@ -507,24 +507,37 @@ namespace FreeFlowHero.Editor
                     wordWrap = true,
                     richText = false,
                     padding = new RectOffset(8, 8, 6, 6),
-                    normal = { textColor = new Color(0.9f, 0.9f, 0.9f) },
                     alignment = TextAnchor.UpperLeft
                 };
                 var tex = new Texture2D(1, 1);
                 tex.SetPixel(0, 0, new Color(0.18f, 0.18f, 0.18f, 0.96f));
                 tex.Apply();
-                tooltipStyle.normal.background = tex;
+                // ★ 모든 GUIStyle 상태에 흰색 텍스트 + 동일 배경 강제
+                Color tooltipTextColor = new Color(0.92f, 0.92f, 0.92f);
+                tooltipStyle.normal.textColor  = tooltipTextColor;
+                tooltipStyle.normal.background  = tex;
+                tooltipStyle.hover.textColor   = tooltipTextColor;
+                tooltipStyle.hover.background   = tex;
+                tooltipStyle.active.textColor  = tooltipTextColor;
+                tooltipStyle.active.background  = tex;
+                tooltipStyle.focused.textColor = tooltipTextColor;
+                tooltipStyle.focused.background = tex;
+                tooltipStyle.onNormal.textColor  = tooltipTextColor;
+                tooltipStyle.onNormal.background  = tex;
+                tooltipStyle.onHover.textColor   = tooltipTextColor;
+                tooltipStyle.onHover.background   = tex;
+                tooltipStyle.onActive.textColor  = tooltipTextColor;
+                tooltipStyle.onActive.background  = tex;
+                tooltipStyle.onFocused.textColor = tooltipTextColor;
+                tooltipStyle.onFocused.background = tex;
             }
 
             var content = new GUIContent(pendingTooltip);
-            Vector2 size = tooltipStyle.CalcSize(content);
-
-            // 최대 너비 제한 → 높이 재계산
-            if (size.x > TooltipMaxWidth)
-            {
-                size.x = TooltipMaxWidth;
-                size.y = tooltipStyle.CalcHeight(content, TooltipMaxWidth);
-            }
+            // ★ wordWrap 기반 크기 계산: CalcSize는 wrap 무시 → 항상 MaxWidth 기준으로 높이 계산 후 축소
+            float naturalWidth = tooltipStyle.CalcSize(content).x;
+            float usedWidth = Mathf.Min(naturalWidth, TooltipMaxWidth);
+            float usedHeight = tooltipStyle.CalcHeight(content, usedWidth);
+            Vector2 size = new Vector2(usedWidth, usedHeight);
 
             // ── 위치 계산: 마우스 오른쪽 위 ──
             float x = mouse.x + TooltipOffset.x;
@@ -1553,6 +1566,29 @@ namespace FreeFlowHero.Editor
                     GUI.backgroundColor = Color.white;
                     Tip("현재 액션의 FBX 클립에서 루트 본 이동량을 분석하여 커브를 자동 생성합니다");
                     break;
+
+                case NotifyType.HOMING:
+                    EditorGUILayout.LabelField("HOMING 파라미터", EditorStyles.boldLabel);
+                    notify.homingTurnRate = EditorGUILayout.Slider(
+                        "회전 속도 (도/초)", notify.homingTurnRate, 0f, 720f);
+                    if (Mathf.Approximately(notify.homingTurnRate, 0f))
+                    {
+                        EditorGUILayout.HelpBox(
+                            "0 = 즉시 스냅 (타겟 방향으로 바로 플립)", MessageType.Info);
+                    }
+                    else
+                    {
+                        float flipDelay = 180f / notify.homingTurnRate;
+                        EditorGUILayout.HelpBox(
+                            $"플립 지연: ~{flipDelay:F2}초 (180° ÷ {notify.homingTurnRate:F0}°/초)\n" +
+                            "값이 클수록 빠르게 추적, 작을수록 느리게 추적",
+                            MessageType.None);
+                    }
+                    Tip("공격 중 타겟 방향으로 회전(플립)하는 속도.\n" +
+                        "0 = 즉시 스냅.\n" +
+                        "360 = 약 0.5초 지연 후 플립.\n" +
+                        "720 = 약 0.25초 지연 후 플립.");
+                    break;
             }
 
             EditorGUILayout.Space(4);
@@ -2529,6 +2565,15 @@ namespace FreeFlowHero.Editor
                 SearchTag = "pending 펜딩 윈도우 입력수집 팔로스루 follow through buffer 버퍼",
                 OnSelected = () => AddNotifyToTrack(action,
                     ActionNotify.CreatePendingWindow(clickedFrame, clickedFrame + 5), targetTrack)
+            });
+
+            // ── HOMING ──
+            items.Add(new NotifySearchPopup.PopupItem
+            {
+                Label = "HOMING — 타겟 추적 회전",
+                SearchTag = "homing 호밍 추적 회전 tracking rotation face target 타겟 방향 플립",
+                OnSelected = () => AddNotifyToTrack(action,
+                    ActionNotify.CreateHoming(clickedFrame, clickedFrame + 10), targetTrack)
             });
 
             items.Add(new NotifySearchPopup.PopupItem { IsSeparator = true });

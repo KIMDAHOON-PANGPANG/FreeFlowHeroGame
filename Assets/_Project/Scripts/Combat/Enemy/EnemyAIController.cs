@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using FreeFlowHero.Combat.Core;
 using FreeFlowHero.Combat.Player;
 
@@ -47,6 +48,10 @@ namespace FreeFlowHero.Combat.Enemy
         [Tooltip("텔레그래프 타입 (Red=회피만, Yellow=카운터 가능)")]
         [SerializeField] private TelegraphType telegraphType = TelegraphType.Yellow_Counter;
 
+        [Header("공격 후 대기 (PostAttack)")]
+        [Tooltip("★ 데이터 튜닝: 공격 종료 후 자세를 유지하며 대기하는 시간 (초). AI 노드의 PostAttack 딜레이.")]
+        [SerializeField] private float postAttackDuration = 0.3f;
+
         [Header("피격")]
         [Tooltip("피격 경직 시간")]
         [SerializeField] private float hitStunDuration = 0.35f;
@@ -54,14 +59,26 @@ namespace FreeFlowHero.Combat.Enemy
         // ─── 현재 공격 인덱스 (0=Punch, 1=Kick) ───
         private int currentAttackIndex;
 
+        // ─── COLLISION 노티파이 기반 공격 판정 ───
+        private ActionNotifyProcessor attackNotifyProcessor;
+        private int attackFrameCounter;
+        private bool attackHitConnected;
+        private static readonly string[] AttackActionIds = { "Attack_Punch", "Attack_Kick" };
+
+        // ─── 히트박스 디버그 시각화 ───
+        private static bool showHitboxDebug;
+        private bool isCollisionActive;
+        private ActionNotify activeCollisionNotify;
+
         // ─── 상태 ───
-        private enum AIState
+        protected enum AIState
         {
             Idle,
             Patrol,
             Chase,
             Telegraph,
             Attack,
+            PostAttack,   // 공격 종료 후 잠시 대기 (자세 유지)
             HitStun,
             Knockdown,
             Down,
@@ -69,7 +86,7 @@ namespace FreeFlowHero.Combat.Enemy
             Dead
         }
 
-        private AIState currentState = AIState.Idle;
+        protected AIState currentState = AIState.Idle;
         private float stateTimer;
         private float cooldownTimer;
 
@@ -181,6 +198,13 @@ namespace FreeFlowHero.Combat.Enemy
 
         private void Update()
         {
+            // ★ 1번 키: 히트박스 디버그 시각화 토글
+            if (Keyboard.current != null && Keyboard.current[Key.Digit1].wasPressedThisFrame)
+            {
+                showHitboxDebug = !showHitboxDebug;
+                Debug.Log($"[HitboxDebug] 히트박스 시각화 {(showHitboxDebug ? "ON" : "OFF")}");
+            }
+
             // [DEBUG] 3D 모델 자식의 localPosition 추적 (0.5초마다)
             // 이 값이 (0,0,0)이 아니면 Animator가 메쉬를 이동시키고 있음
             meshLogCooldown -= Time.deltaTime;
@@ -241,6 +265,7 @@ namespace FreeFlowHero.Combat.Enemy
                 && currentState != AIState.Down
                 && currentState != AIState.GetUp
                 && currentState != AIState.Attack
+                && currentState != AIState.PostAttack
                 && currentState != AIState.Telegraph
                 && currentState != AIState.HitStun)
                 ApplyGravity();
@@ -258,8 +283,9 @@ namespace FreeFlowHero.Combat.Enemy
                 case AIState.Patrol:  UpdatePatrol();  break;
                 case AIState.Chase:   UpdateChase();   break;
                 case AIState.Telegraph: UpdateTelegraph(); break;
-                case AIState.Attack:  UpdateAttack();  break;
-                case AIState.HitStun: UpdateHitStun(); break;
+                case AIState.Attack:     UpdateAttack();     break;
+                case AIState.PostAttack: UpdatePostAttack(); break;
+                case AIState.HitStun:    UpdateHitStun();    break;
                 case AIState.Knockdown: UpdateKnockdown(); break;
                 case AIState.Down:    UpdateDown();      break;
                 case AIState.GetUp:   UpdateGetUp();     break;
@@ -365,6 +391,9 @@ namespace FreeFlowHero.Combat.Enemy
                     if (AttackCoordinator.Instance != null)
                         AttackCoordinator.Instance.ReleaseAttackSlot(this);
                     break;
+                case AIState.PostAttack:
+                    // PostAttack 중 피격 등으로 중단 시 정리
+                    break;
             }
 
             currentState = newState;
@@ -413,7 +442,6 @@ namespace FreeFlowHero.Combat.Enemy
                     break;
 
                 case AIState.Attack:
-                    stateTimer = 0.3f; // 공격 지속
                     cooldownTimer = attackCooldown + Random.Range(-0.3f, 0.5f);
                     SafeSetFloat("Speed", 0f);
 
@@ -422,7 +450,33 @@ namespace FreeFlowHero.Combat.Enemy
                     SafeSetInteger("AttackIndex", currentAttackIndex);
                     SafeSetTrigger("Attack");
 
-                    ExecuteAttack();
+                    // ★ COLLISION 노티파이 기반 판정: 액션 테이블에서 프레임 데이터 로드
+                    attackFrameCounter = 0;
+                    attackHitConnected = false;
+                    attackNotifyProcessor = null;
+                    isCollisionActive = false;
+                    activeCollisionNotify = null;
+
+                    string actionId = currentAttackIndex < AttackActionIds.Length
+                        ? AttackActionIds[currentAttackIndex] : "Attack_Punch";
+                    var actionEntry = ActionTableManager.Instance.GetAction("Enemy_Grunt", actionId);
+                    if (actionEntry != null && actionEntry.HasNotifies)
+                    {
+                        attackNotifyProcessor = new ActionNotifyProcessor(actionEntry);
+                        // stateTimer를 노티파이 총 프레임으로 설정
+                        stateTimer = attackNotifyProcessor.TotalFrames * CombatConstants.FrameDuration;
+                    }
+                    else
+                    {
+                        // 폴백: 노티파이 없으면 기존 고정 타이머
+                        stateTimer = 0.5f;
+                    }
+                    break;
+
+                case AIState.PostAttack:
+                    stateTimer = postAttackDuration;
+                    SafeSetFloat("Speed", 0f);
+                    // 공격 마지막 포즈 유지 — 별도 애니메이션 트리거 없음
                     break;
 
                 case AIState.HitStun:
@@ -603,13 +657,51 @@ namespace FreeFlowHero.Combat.Enemy
 
         private void UpdateAttack()
         {
+            // ★ COLLISION 노티파이 기반 프레임 판정
+            if (attackNotifyProcessor != null)
+            {
+                attackNotifyProcessor.Tick(attackFrameCounter);
+                attackFrameCounter++;
+
+                // ★ HOMING 노티파이: 활성 구간에서 타겟 추적 회전
+                if (attackNotifyProcessor.IsHomingActive && playerTransform != null)
+                {
+                    float dir = Mathf.Sign(playerTransform.position.x - transform.position.x);
+                    FaceDirection(dir);
+                }
+
+                // COLLISION 활성 구간: 히트 판정
+                isCollisionActive = attackNotifyProcessor.IsCollisionActive;
+                activeCollisionNotify = attackNotifyProcessor.ActiveCollisionNotify;
+
+                if (isCollisionActive && !attackHitConnected)
+                {
+                    TryCollisionHit();
+                }
+
+                if (!isCollisionActive && activeCollisionNotify == null)
+                {
+                    // COLLISION 비활성 → 디버그 표시 리셋
+                    activeCollisionNotify = null;
+                }
+            }
+
             if (stateTimer <= 0f)
             {
+                isCollisionActive = false;
+                activeCollisionNotify = null;
                 // 공격 슬롯 반환
                 if (AttackCoordinator.Instance != null)
                     AttackCoordinator.Instance.ReleaseAttackSlot(this);
-                TransitionTo(AIState.Chase);
+                TransitionTo(AIState.PostAttack);
             }
+        }
+
+        private void UpdatePostAttack()
+        {
+            // 공격 후 잠시 대기 → Chase 복귀
+            if (stateTimer <= 0f)
+                TransitionTo(AIState.Chase);
         }
 
         private void UpdateHitStun()
@@ -645,59 +737,91 @@ namespace FreeFlowHero.Combat.Enemy
         //  공격 실행
         // ────────────────────────────
 
-        private void ExecuteAttack()
+        /// <summary>
+        /// COLLISION 노티파이 활성 구간에서 히트박스 기반 판정.
+        /// 노티파이의 hitboxOffset/Size로 히트 영역을 계산하고,
+        /// 플레이어가 해당 영역 안에 있으면 히트.
+        /// </summary>
+        private void TryCollisionHit()
         {
             if (playerFSM == null || playerTransform == null) return;
+            var cn = attackNotifyProcessor?.ActiveCollisionNotify;
+            if (cn == null) return;
 
-            float dist = GetDistToPlayer();
-            if (dist > attackRange * 1.5f)
-            {
+            // ★ 무적 상태 체크
+            if (playerFSM.Context.isInvulnerable) return;
 
-                return;
-            }
+            // ★ 방향 체크: 적이 바라보는 방향에 플레이어가 있어야 적중
+            float facingDir = Mathf.Sign(transform.localScale.x);
+            float toPlayerDir = Mathf.Sign(playerTransform.position.x - transform.position.x);
+            if (!Mathf.Approximately(facingDir, toPlayerDir)) return;
 
-            // HitData 생성
-            Vector2 myPos = transform.position;
+            // ★ 히트박스 영역 판정 (COLLISION 노티파이 데이터 사용)
+            //   Physics2D.OverlapBox로 히트박스 영역 내 플레이어 콜라이더 검출
+            Vector2 myPos = rb != null ? rb.position : (Vector2)transform.position;
             Vector2 playerPos = playerTransform.position;
+
+            // 히트박스 중심 = 캐릭터 위치 + offset (facing 반영)
+            Vector2 hitboxCenter = myPos + new Vector2(cn.hitboxOffsetX * facingDir, cn.hitboxOffsetY);
+            Vector2 hitboxSize = new Vector2(cn.hitboxSizeX, cn.hitboxSizeY);
+
+            // OverlapBox로 Player 레이어 콜라이더 검출
+            int playerLayer = LayerMask.GetMask("Player");
+            Collider2D hit = Physics2D.OverlapBox(hitboxCenter, hitboxSize, 0f, playerLayer);
+            if (hit == null) return;
+
+            // ── 히트 확정 ──
+            attackHitConnected = true;
+
             Vector2 knockDir = (playerPos - myPos).normalized;
 
-            // ★ 적 공격 → 플레이어 피격 리액션: Punch(0)=Flinch, Kick(1)=Knockdown
-            bool isKick = (currentAttackIndex == 1);
+            // COLLISION 노티파이에서 히트 리액션 데이터 조립
+            var hitType = (HitType)cn.hitType;
+            var preset = (HitPreset)cn.hitPreset;
+            var facing = (HitFacing)cn.hitFacing;
+            bool flip = cn.forceFlip;
+            var knockDirType = (HitKnockDirection)cn.hitKnockDirection;
+
             HitReactionData reaction;
-            if (isKick)
+            if (hitType == HitType.Knockdown)
             {
-                var knockdownData = BattleSettings.GetKnockdownPreset(HitPreset.Light);
-                reaction = HitReactionData.CreateKnockdown(knockdownData);
+                var baseData = BattleSettings.GetKnockdownPreset(preset);
+                reaction = HitReactionData.CreateKnockdown(
+                    baseData.WithOffset(cn.knockLaunchOffset, cn.knockAirTimeOffset,
+                        cn.knockDistanceOffset, cn.knockDownTimeOffset),
+                    facing, flip, knockDirType);
             }
             else
             {
-                var flinchData = BattleSettings.GetFlinchPreset(HitPreset.Light);
-                reaction = HitReactionData.CreateFlinch(flinchData);
+                var baseData = BattleSettings.GetFlinchPreset(preset);
+                reaction = HitReactionData.CreateFlinch(
+                    baseData.WithOffset(cn.flinchPushOffset, cn.flinchFreezeOffset,
+                        cn.flinchHitStopOffset),
+                    facing, flip, knockDirType);
             }
 
             var hitData = new HitData
             {
-                AttackType = isKick ? AttackType.Heavy : AttackType.Light,
+                AttackType = hitType == HitType.Knockdown ? AttackType.Heavy : AttackType.Light,
                 AttackerTeam = CombatTeam.Enemy,
-                BaseDamage = attackDamage,
+                BaseDamage = attackDamage * cn.damageScale,
                 KnockbackDirection = knockDir,
                 IsComboAttack = false,
                 ComboCount = 0,
                 IsExecutionKill = false,
                 IsLaunchAttack = false,
-                IsKnockdown = isKick,
+                IsKnockdown = (hitType == HitType.Knockdown),
                 AttackerPosition = myPos,
                 ContactPoint = Vector2.Lerp(myPos, playerPos, 0.7f),
                 Reaction = reaction
             };
 
-            // 플레이어 피격
+            Debug.Log($"[EnemyAttack] HIT — {AttackActionIds[currentAttackIndex]} " +
+                $"frame:{attackFrameCounter} hitType:{hitType} " +
+                $"hitbox:({cn.hitboxOffsetX:F2},{cn.hitboxOffsetY:F2}) size:({cn.hitboxSizeX:F2},{cn.hitboxSizeY:F2})");
+
             playerFSM.OnPlayerHit(hitData);
-
-            // 이벤트 발행
             CombatEventBus.Publish(new OnPlayerHit { HitData = hitData });
-
-
         }
 
         // ────────────────────────────
@@ -838,12 +962,45 @@ namespace FreeFlowHero.Combat.Enemy
             return Mathf.Abs(playerTransform.position.x - transform.position.x);
         }
 
-        private void FaceDirection(float dir)
+        /// <summary>
+        /// 지정 방향으로 회전(플립). 공격 중에는 회전 불가.
+        /// 하위 몬스터에서 override하여 추가 조건을 넣을 수 있다.
+        /// </summary>
+        protected virtual void FaceDirection(float dir)
         {
             if (Mathf.Approximately(dir, 0f)) return;
-            Vector3 scale = transform.localScale;
-            scale.x = Mathf.Abs(scale.x) * (dir >= 0 ? 1f : -1f);
-            transform.localScale = scale;
+
+            // ★ 공격/공격후대기 중 회전: HOMING 노티파이 활성 프레임만 허용
+            //   노티파이 없으면 회전 잠금 (기본 = 안전)
+            if (currentState == AIState.Attack || currentState == AIState.PostAttack)
+            {
+                if (attackNotifyProcessor == null || !attackNotifyProcessor.IsHomingActive)
+                    return;
+
+                // HomingTurnRate > 0: 점진적 플립 (지연 효과)
+                float turnRate = attackNotifyProcessor.HomingTurnRate;
+                if (turnRate > 0f)
+                {
+                    float currentFacing = Mathf.Sign(transform.localScale.x);
+                    float targetFacing = dir >= 0 ? 1f : -1f;
+                    if (Mathf.Approximately(currentFacing, targetFacing))
+                        return; // 이미 올바른 방향
+
+                    // turnRate도/초 × deltaTime초 ≥ 180° 이면 플립 허용
+                    if (turnRate * Time.deltaTime >= 180f)
+                    {
+                        Vector3 scale = transform.localScale;
+                        scale.x = Mathf.Abs(scale.x) * targetFacing;
+                        transform.localScale = scale;
+                    }
+                    return;
+                }
+                // turnRate == 0: 즉시 스냅 (아래 기본 로직으로 진행)
+            }
+
+            Vector3 s = transform.localScale;
+            s.x = Mathf.Abs(s.x) * (dir >= 0 ? 1f : -1f);
+            transform.localScale = s;
         }
 
         private void RestoreColor()
@@ -959,6 +1116,98 @@ namespace FreeFlowHero.Combat.Enemy
             Vector3 sp = Application.isPlaying ? (Vector3)spawnPos : pos;
             Gizmos.color = new Color(0.3f, 1f, 0.3f, 0.3f);
             Gizmos.DrawLine(sp + Vector3.left * patrolRadius, sp + Vector3.right * patrolRadius);
+        }
+
+        /// <summary>
+        /// 1번 키 토글: COLLISION 히트박스 디버그 시각화.
+        /// 빨강=활성(판정 중), 노랑=비활성(대기 중).
+        /// Game 뷰에서 보려면 Scene/Game 뷰 상단 Gizmos 버튼 활성화 필요.
+        /// </summary>
+        // ═══════════════════════════════════════════
+        //  Game 뷰 히트박스 시각화 (GL 기반)
+        // ═══════════════════════════════════════════
+
+        private static Material hitboxLineMat;
+
+        private static void EnsureLineMaterial()
+        {
+            if (hitboxLineMat != null) return;
+            Shader shader = Shader.Find("Hidden/Internal-Colored");
+            hitboxLineMat = new Material(shader);
+            hitboxLineMat.hideFlags = HideFlags.HideAndDontSave;
+            hitboxLineMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            hitboxLineMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            hitboxLineMat.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+            hitboxLineMat.SetInt("_ZWrite", 0);
+            hitboxLineMat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
+        }
+
+        private void OnRenderObject()
+        {
+            if (!showHitboxDebug || !Application.isPlaying) return;
+            if (currentState != AIState.Attack) return;
+
+            ActionNotify cn = activeCollisionNotify;
+            bool active = isCollisionActive;
+
+            if (cn == null)
+            {
+                // COLLISION 비활성 시에도 액션 테이블에서 히트박스 위치를 표시
+                if (attackNotifyProcessor == null) return;
+                string actionId = currentAttackIndex < AttackActionIds.Length
+                    ? AttackActionIds[currentAttackIndex] : "Attack_Punch";
+                var action = ActionTableManager.Instance.GetAction("Enemy_Grunt", actionId);
+                if (action?.notifies == null) return;
+                foreach (var n in action.notifies)
+                {
+                    if (n.TypeEnum == NotifyType.COLLISION && !n.disabled)
+                    {
+                        cn = n;
+                        active = false;
+                        break;
+                    }
+                }
+                if (cn == null) return;
+            }
+
+            DrawHitboxGL(cn, active);
+        }
+
+        private void DrawHitboxGL(ActionNotify cn, bool active)
+        {
+            EnsureLineMaterial();
+            float facingDir = Mathf.Sign(transform.localScale.x);
+            Vector2 myPos = rb != null ? rb.position : (Vector2)transform.position;
+            Vector2 center = myPos + new Vector2(cn.hitboxOffsetX * facingDir, cn.hitboxOffsetY);
+            Vector2 half = new Vector2(cn.hitboxSizeX * 0.5f, cn.hitboxSizeY * 0.5f);
+
+            Vector3 bl = new Vector3(center.x - half.x, center.y - half.y, 0f);
+            Vector3 br = new Vector3(center.x + half.x, center.y - half.y, 0f);
+            Vector3 tr = new Vector3(center.x + half.x, center.y + half.y, 0f);
+            Vector3 tl = new Vector3(center.x - half.x, center.y + half.y, 0f);
+
+            hitboxLineMat.SetPass(0);
+
+            // 반투명 채우기 (활성 시만)
+            if (active)
+            {
+                GL.Begin(GL.QUADS);
+                GL.Color(new Color(1f, 0f, 0f, 0.3f));
+                GL.Vertex(bl); GL.Vertex(br); GL.Vertex(tr); GL.Vertex(tl);
+                GL.End();
+            }
+
+            // 외곽선
+            GL.Begin(GL.LINES);
+            Color lineColor = active
+                ? new Color(1f, 0f, 0f, 0.9f)
+                : new Color(1f, 1f, 0f, 0.6f);
+            GL.Color(lineColor);
+            GL.Vertex(bl); GL.Vertex(br);
+            GL.Vertex(br); GL.Vertex(tr);
+            GL.Vertex(tr); GL.Vertex(tl);
+            GL.Vertex(tl); GL.Vertex(bl);
+            GL.End();
         }
 #endif
     }

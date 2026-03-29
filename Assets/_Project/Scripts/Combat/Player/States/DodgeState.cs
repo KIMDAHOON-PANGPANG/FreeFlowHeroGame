@@ -1,67 +1,68 @@
 using UnityEngine;
 using FreeFlowHero.Combat.Core;
+using FreeFlowHero.Combat.HitReaction;
 
 namespace FreeFlowHero.Combat.Player
 {
     /// <summary>
     /// Dodge 상태: 회피 대시.
-    /// 입력 방향으로 빠르게 이동 + 12프레임 무적(i-frame).
-    /// 회피 성공 시 콤보가 끊기지 않으며, Recovery 중 공격 입력으로 반격 가능.
+    /// ★ 애니메이션 클립 기반 이동: Dodge_B 루트모션이 캐릭터를 이동시킨다.
+    ///   - 클립 재생 시작 = 이동 시작
+    ///   - 클립 재생 종료 = 상태 종료
+    ///   - 이동 거리/속도는 클립 루트모션이 결정 (하드코딩 없음)
+    ///
     /// REPLACED 원작의 🔴빨간 인디케이터 대응 액션.
     /// </summary>
     public class DodgeState : CombatState
     {
         public override string StateName => "Dodge";
 
-        // ─── 프레임 데이터 ───
-        private const int StartupFrames = 2;                         // 극초반 선딜
-        private const int IFrames = CombatConstants.DodgeIFrames;    // 12f (0.2초)
-        private const int ActiveFrames = StartupFrames + IFrames;    // 14f
-        private const int RecoveryFrames = 8;                        // 후딜
-        private const int TotalFrames = ActiveFrames + RecoveryFrames; // 22f
-        private const int CancelWindowStart = ActiveFrames + 3;      // 17f
-
-        // ─── 이동 ───
-        private const float DodgeDistance = 3.5f;   // 총 이동 거리 (유닛)
-
-        // ─── 시각 피드백 ───
-        private static readonly Color DodgeColor = new Color(0.3f, 1f, 0.3f, 0.6f); // 반투명 초록
-        private static readonly Color DodgeAttackColor = Color.magenta;
-
         // ─── 상태 변수 ───
-        private enum Phase { Startup, IFrame, Recovery }
-        private Phase currentPhase;
         private Vector2 dodgeDirection;
-        private float dodgeSpeed;
         private SpriteRenderer spriteRenderer;
         private Color originalColor;
         private bool dodgeAttackUsed;
         private float stateElapsedTime;
+        private RootMotionCanceller rootMotionCanceller;
+        private bool animStarted;
+        private bool isForwardDodge;       // true: 전방 대시, false: 백대시
+        private string animStateName;      // "Dodge" 또는 "DodgeForward"
+
+        // ─── 시각 피드백 ───
+        private static readonly Color DodgeColor = new Color(0.3f, 1f, 0.3f, 0.6f);
 
         public override void Enter()
         {
             base.Enter();
-            currentPhase = Phase.Startup;
             dodgeAttackUsed = false;
             stateElapsedTime = 0f;
+            animStarted = false;
 
             // 무적 활성화
             context.isInvulnerable = true;
 
-            // 방향 결정: 마지막 입력 방향 또는 현재 facing 반대편
+            // 방향 결정 + 전방/후방 판별
             float inputX = context.lastInputDirection.x;
+            float facing = context.playerTransform.localScale.x >= 0 ? 1f : -1f;
 
-            // 방향이 없으면 현재 facing의 반대 (뒤로 구르기)
             if (Mathf.Abs(inputX) < 0.1f)
             {
-                float facing = context.playerTransform.localScale.x >= 0 ? 1f : -1f;
-                inputX = -facing; // 뒤로 회피
+                // 방향 입력 없음 → 뒤로 회피
+                inputX = -facing;
+                isForwardDodge = false;
+            }
+            else
+            {
+                // 입력 방향이 facing과 같으면 전방, 반대면 후방
+                isForwardDodge = Mathf.Sign(inputX) == Mathf.Sign(facing);
             }
             dodgeDirection = new Vector2(Mathf.Sign(inputX), 0f);
+            animStateName = isForwardDodge ? "DodgeForward" : "Dodge";
 
-            // 이동 속도 계산 (총 거리 / IFrame 구간 시간)
-            float iframeDuration = IFrames * CombatConstants.FrameDuration;
-            dodgeSpeed = DodgeDistance / iframeDuration;
+            // 루트모션 활성화 → RootMotionCanceller가 클립의 delta를 rb에 적용
+            rootMotionCanceller = context.playerAnimator.GetComponent<RootMotionCanceller>();
+            if (rootMotionCanceller != null)
+                rootMotionCanceller.UseRootMotion = true;
 
             // 시각 피드백
             spriteRenderer = context.playerTransform.GetComponent<SpriteRenderer>();
@@ -74,51 +75,57 @@ namespace FreeFlowHero.Combat.Player
             // 이벤트
             CombatEventBus.Publish(new OnDodge { Direction = dodgeDirection });
 
-            // 애니메이션
-            SafeSetTrigger("Dodge");
-
-
+            // 애니메이션 트리거: 전방/후방에 따라 다른 클립
+            SafeSetTrigger(animStateName);
         }
 
         public override void Update(float deltaTime)
         {
             base.Update(deltaTime);
-
-            int frame = context.stateFrameCounter;
             stateElapsedTime += deltaTime;
 
-            // Startup → IFrame 전환
-            if (currentPhase == Phase.Startup && frame >= StartupFrames)
+            // Animator가 대시 상태에 진입했는지 추적
+            var stateInfo = context.playerAnimator.GetCurrentAnimatorStateInfo(0);
+            bool isInDodgeAnim = stateInfo.IsName(animStateName);
+
+            // [DEBUG] 매 프레임 상태 추적
+            if (!animStarted || !context.canCancel)
             {
-                currentPhase = Phase.IFrame;
+                Debug.Log($"[Dodge][DEBUG] elapsed={stateElapsedTime:F3} animStarted={animStarted} " +
+                    $"IsName({animStateName})={isInDodgeAnim} " +
+                    $"nTime={stateInfo.normalizedTime:F3} " +
+                    $"canCancel={context.canCancel} " +
+                    $"curState={stateInfo.shortNameHash}");
             }
 
-            // IFrame 구간: 빠른 이동
-            if (currentPhase == Phase.IFrame)
+            if (!animStarted && isInDodgeAnim)
             {
-                // Kinematic 회피: rb.position 직접 이동
-                Vector2 pos = GetPos();
-                pos += dodgeDirection * dodgeSpeed * deltaTime;
-                MoveTo(pos);
+                animStarted = true;
+                Debug.Log($"[Dodge] animStarted = true (nTime={stateInfo.normalizedTime:F3})");
             }
 
-            // IFrame → Recovery 전환
-            if (currentPhase == Phase.IFrame && frame >= ActiveFrames)
+            // ★ 캔슬 윈도우 — normalizedTime 비율 기반
+            if (!context.canCancel && animStarted
+                && stateInfo.normalizedTime >= context.dodgeCancelDelay)
             {
-                currentPhase = Phase.Recovery;
+                context.canCancel = true;
                 context.isInvulnerable = false;
+                Debug.Log($"[Dodge] ★ 캔슬 OPEN (nTime={stateInfo.normalizedTime:F3} >= {context.dodgeCancelDelay})");
 
-                // 색상을 원래대로
+                // 색상 복원
                 if (spriteRenderer != null)
                     spriteRenderer.color = originalColor;
             }
 
-            // ★ 시간 기반 캔슬 (Inspector: context.dodgeCancelDelay)
-            if (!context.canCancel && stateElapsedTime >= context.dodgeCancelDelay)
+            // ★ 이동 캔슬: 캔슬 윈도우 중 방향키 입력 → 즉시 Idle(→Locomotion)
+            if (context.canCancel && context.lastInputDirection.sqrMagnitude > 0.01f)
             {
-                context.canCancel = true;
+                Debug.Log($"[Dodge] 이동 캔슬 → Idle (dir={context.lastInputDirection})");
+                fsm.TransitionTo<IdleState>();
+                return;
             }
 
+            // 캔슬 입력 처리 (공격 등 버퍼)
             if (context.canCancel && fsm.InputBuffer.HasInput)
             {
                 var buffered = fsm.InputBuffer.Consume();
@@ -126,10 +133,17 @@ namespace FreeFlowHero.Combat.Player
                 return;
             }
 
-            // 프레임 완료 → Idle
-            if (frame >= TotalFrames)
+            // ★ 애니메이션 완료 → 상태 종료
+            if (animStarted)
             {
-                fsm.TransitionTo<IdleState>();
+                bool clipDone = isInDodgeAnim && stateInfo.normalizedTime >= 0.95f;
+                bool transitioned = !isInDodgeAnim;
+
+                if (clipDone || transitioned)
+                {
+                    Debug.Log($"[Dodge] 종료 → Idle (clipDone={clipDone} transitioned={transitioned} nTime={stateInfo.normalizedTime:F3})");
+                    fsm.TransitionTo<IdleState>();
+                }
             }
         }
 
@@ -137,6 +151,13 @@ namespace FreeFlowHero.Combat.Player
         {
             base.Exit();
             context.isInvulnerable = false;
+
+            // 루트모션 비활성화
+            if (rootMotionCanceller != null)
+            {
+                rootMotionCanceller.UseRootMotion = false;
+                rootMotionCanceller = null;
+            }
 
             // 색상 복원
             if (spriteRenderer != null)
@@ -147,7 +168,10 @@ namespace FreeFlowHero.Combat.Player
         {
             if (!context.canCancel)
             {
-                fsm.InputBuffer.BufferInput(input);
+                // ★ 닷지 중 재닷지 입력은 버퍼링하지 않음 → 광클해도 1회만 실행
+                //   공격 입력만 버퍼링 (닷지 후 반격용)
+                if (input.Type != InputType.Dodge)
+                    fsm.InputBuffer.BufferInput(input);
                 return;
             }
             HandleBufferedInput(input);
@@ -163,7 +187,6 @@ namespace FreeFlowHero.Combat.Player
                     if (!dodgeAttackUsed)
                     {
                         dodgeAttackUsed = true;
-                        // 회피 반격은 콤보 카운터 보너스 (+2)
                         context.IncrementCombo(2);
                         fsm.TransitionTo<StrikeState>();
                     }
