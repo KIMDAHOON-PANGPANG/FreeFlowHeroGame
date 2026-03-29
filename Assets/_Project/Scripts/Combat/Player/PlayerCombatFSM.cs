@@ -105,6 +105,9 @@ namespace FreeFlowHero.Combat.Player
             // 상태 등록 — Phase 2: 프리플로우 코어
             // WarpState 제거됨: 워핑은 StrikeState 내부 WARP 노티파이로 처리
             RegisterState(new DodgeState());
+            // 상태 등록 — Phase 4: 가드 + 처형
+            RegisterState(new GuardState());
+            RegisterState(new ExecutionState());
             // 상태 등록 — Hard Hit 기상 흐름 (Down → GetUp)
             RegisterState(new DownState());
             RegisterState(new GetUpState());
@@ -376,11 +379,14 @@ namespace FreeFlowHero.Combat.Player
             string stateColor;
             switch (CurrentStateName)
             {
-                case "Strike":  stateColor = "<color=yellow>"; break;
-                case "Hit":     stateColor = "<color=red>"; break;
-                case "Dodge":   stateColor = "<color=#44FF44>"; break;
-                case "Walk":    stateColor = "<color=#88CCFF>"; break;
-                default:        stateColor = "<color=lime>"; break;
+                case "Strike":       stateColor = "<color=yellow>"; break;
+                case "Hit":          stateColor = "<color=red>"; break;
+                case "Dodge":        stateColor = "<color=#44FF44>"; break;
+                case "Walk":         stateColor = "<color=#88CCFF>"; break;
+                case "Guard":        stateColor = "<color=#4488FF>"; break;
+                case "GuardCounter": stateColor = "<color=#FFAA00>"; break;
+                case "Execution":    stateColor = "<color=#FF00FF>"; break;
+                default:             stateColor = "<color=lime>"; break;
             }
             GUI.Label(new Rect(x, y, boxW, lineH),
                 $"State: {stateColor}{CurrentStateName}</color>  |  Frame: {context.stateFrameCounter}", debugLabelStyle);

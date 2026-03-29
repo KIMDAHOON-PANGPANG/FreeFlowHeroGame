@@ -22,6 +22,10 @@ namespace FreeFlowHero.Combat.Player
         [Range(0.1f, 0.95f)]
         public float dodgeCancelDelay = 0.5f;
 
+        [Tooltip("Guard 유지 시간 (초)")]
+        [Range(0.3f, 3.0f)]
+        public float guardDuration = 1.0f;
+
         [Tooltip("인풋 버퍼 유지 시간 (이 시간 안에 캔슬 윈도우가 열리면 소비됨)")]
         [Range(0.1f, 1.0f)]
         public float inputBufferDuration = 0.5f;
@@ -71,6 +75,9 @@ namespace FreeFlowHero.Combat.Player
 
         // ─── 피격 데이터 (OnHit → HitState.Enter 전달용) ───
         [System.NonSerialized] public HitData lastHitData;
+
+        // ─── 처형 타겟 (HandleInput → ExecutionState.Enter 전달용) ───
+        [System.NonSerialized] public ICombatTarget executionTarget;
 
         /// <summary>콤보 리셋</summary>
         public void ResetCombo()

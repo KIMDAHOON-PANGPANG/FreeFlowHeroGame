@@ -543,9 +543,27 @@ namespace FreeFlowHero.Combat.Player
             switch (input.Type)
             {
                 case InputType.Attack:
+                {
+                    // 처형 체크: 저HP 적이 근처에 있으면 처형 발동
+                    Vector2 pos = GetPos();
+                    float dir = context.playerTransform.localScale.x >= 0 ? 1f : -1f;
+                    var execTarget = ExecutionSystem.FindExecutionTarget(
+                        pos, context.activeEnemies, context.comboCount, dir);
+                    if (execTarget != null)
+                    {
+                        context.executionTarget = execTarget;
+                        fsm.TransitionTo<ExecutionState>();
+                    }
+                    else
+                    {
+                        context.comboChainIndex = (context.comboChainIndex + 1) % MaxComboChain;
+                        ResolveNextComboAttack(input);
+                    }
+                    break;
+                }
+
                 case InputType.Heavy:
-                    context.comboChainIndex = (context.comboChainIndex + 1) % MaxComboChain;
-                    ResolveNextComboAttack(input);
+                    fsm.TransitionTo<GuardState>();
                     break;
 
                 case InputType.Dodge:

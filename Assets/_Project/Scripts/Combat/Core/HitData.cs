@@ -104,6 +104,72 @@ namespace FreeFlowHero.Combat.Core
             };
         }
 
+        /// <summary>Guard 반격용 HitData 생성</summary>
+        public static HitData CreateGuardCounter(
+            Vector2 attackerPos, Vector2 targetPos, int comboCount)
+        {
+            Vector2 direction = (targetPos - attackerPos).normalized;
+            return new HitData
+            {
+                BaseDamage = CombatConstants.GuardCounterDamage,
+                DamageMultiplier = 1f,
+                AttackType = AttackType.Light,
+                AttackerTeam = CombatTeam.Player,
+                KnockbackDirection = direction,
+                IsComboAttack = comboCount > 0,
+                ComboCount = comboCount,
+                IsExecutionKill = false,
+                IsLaunchAttack = false,
+                IsKnockdown = false,
+                ContactPoint = Vector2.Lerp(attackerPos, targetPos, 0.5f),
+                AttackerPosition = attackerPos
+            };
+        }
+
+        /// <summary>처형용 HitData 생성 (즉사 데미지)</summary>
+        public static HitData CreateExecution(
+            Vector2 attackerPos, Vector2 targetPos, int comboCount)
+        {
+            Vector2 direction = (targetPos - attackerPos).normalized;
+            return new HitData
+            {
+                BaseDamage = CombatConstants.ExecutionDamage,
+                DamageMultiplier = 1f,
+                AttackType = AttackType.Execution,
+                AttackerTeam = CombatTeam.Player,
+                KnockbackDirection = direction,
+                IsComboAttack = false,
+                ComboCount = comboCount,
+                IsExecutionKill = true,
+                IsLaunchAttack = false,
+                IsKnockdown = true,
+                ContactPoint = Vector2.Lerp(attackerPos, targetPos, 0.5f),
+                AttackerPosition = attackerPos
+            };
+        }
+
+        /// <summary>처형 AOE용 HitData 생성 (주변 적 스플래시)</summary>
+        public static HitData CreateAOE(
+            Vector2 sourcePos, Vector2 targetPos, float damage)
+        {
+            Vector2 direction = (targetPos - sourcePos).normalized;
+            return new HitData
+            {
+                BaseDamage = damage,
+                DamageMultiplier = 1f,
+                AttackType = AttackType.Execution,
+                AttackerTeam = CombatTeam.Player,
+                KnockbackDirection = direction,
+                IsComboAttack = false,
+                ComboCount = 0,
+                IsExecutionKill = false,
+                IsLaunchAttack = false,
+                IsKnockdown = false,
+                ContactPoint = Vector2.Lerp(sourcePos, targetPos, 0.5f),
+                AttackerPosition = sourcePos
+            };
+        }
+
         /// <summary>Dodge Attack용 HitData 생성 (회피 직후 반격)</summary>
         public static HitData CreateDodgeAttack(
             Vector2 attackerPos, Vector2 targetPos, int comboCount)

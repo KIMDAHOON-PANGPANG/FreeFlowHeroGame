@@ -35,10 +35,30 @@ namespace FreeFlowHero.Combat.Core
         public const int MaxSimultaneousAttackers = 2;
         public const float BreathingTime = 0.5f;           // 연속 공격 사이 최소 간격
 
+        // ─── 가드 ───
+        public const float GuardDuration = 1.0f;            // 가드 유지 시간 (초)
+        public const int GuardCounterComboBonus = 2;        // 가드 반격 콤보 보너스
+        public const float GuardCounterHuxleyCharge = 10f;  // 가드 반격 헉슬리 충전
+        public const float GuardCounterDamage = 15f;        // 가드 반격 데미지
+
         // ─── 처형 ───
         public const float ExecutionHPThreshold = 0.2f;    // HP 20% 이하
         public const float ExecutionHPThresholdHighCombo = 0.3f; // 콤보 x50 시 30%
         public const float ExecutionRange = 2.0f;           // 처형 가능 거리
+        public const int ExecutionHighComboThreshold = 50;  // 고콤보 임계치
+        public const int ExecutionMotionTier2Combo = 20;    // 모션2 콤보 임계치
+        public const int ExecutionMotionTier3Combo = 50;    // 모션3 콤보 임계치
+        public const float ExecutionSlowmoScale = 0.3f;     // 슬로우모션 시간 배율
+        public const int ExecutionSlowmoFrames = 10;        // 슬로우모션 프레임 수
+        public const float ExecutionCameraZoom = 2.0f;      // 카메라 줌 량
+        public const float ExecutionAOERadius = 3.0f;       // AOE 반경
+        public const float ExecutionAOEDamage = 30f;        // AOE 데미지
+        public const float ExecutionHuxleyCharge = 25f;     // 처형 헉슬리 충전
+        public const int ExecutionWarpFrames = 8;           // 워프 프레임
+        public const int ExecutionAttackFrames = 30;        // 공격 프레임
+        public const int ExecutionFinishFrames = 15;        // 마무리 프레임
+        public const int ExecutionRecoveryFrames = 10;      // 회복 프레임
+        public const float ExecutionDamage = 9999f;         // 처형 데미지 (즉사)
 
         // ─── 헉슬리 건 ───
         public const float HuxleyBaseChargePerHit = 5f;    // 히트당 5%

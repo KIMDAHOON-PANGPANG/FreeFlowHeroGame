@@ -100,17 +100,34 @@ namespace FreeFlowHero.Combat.Player
             switch (input.Type)
             {
                 case InputType.Attack:
-                    // 프리플로우: 타겟 선택 → 워핑 필요하면 Warp, 아니면 직접 Strike
-                    ResolveAttack(input);
+                {
+                    // 처형 체크: 저HP 적이 근처에 있으면 처형 발동
+                    Vector2 pos = GetPos();
+                    float inputDir = input.Direction.x;
+                    if (Mathf.Approximately(inputDir, 0f))
+                        inputDir = context.playerTransform.localScale.x >= 0 ? 1f : -1f;
+
+                    var execTarget = ExecutionSystem.FindExecutionTarget(
+                        pos, context.activeEnemies, context.comboCount, inputDir);
+                    if (execTarget != null)
+                    {
+                        context.executionTarget = execTarget;
+                        fsm.TransitionTo<ExecutionState>();
+                    }
+                    else
+                    {
+                        ResolveAttack(input);
+                    }
                     break;
+                }
 
                 case InputType.Dodge:
                     fsm.TransitionTo<DodgeState>();
                     break;
 
                 case InputType.Heavy:
-                    // Phase 2: Heavy → 일단 Strike로 전환 (Phase 4에서 별도 HeavyAttackState)
-                    ResolveAttack(input);
+                    // 가드 상태 진입
+                    fsm.TransitionTo<GuardState>();
                     break;
 
                 case InputType.Huxley:

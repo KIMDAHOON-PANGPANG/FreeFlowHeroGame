@@ -83,7 +83,10 @@ namespace FreeFlowHero.Editor
             controller.AddParameter("DodgeAttack", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Dodge", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("DodgeForward", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("Guard", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("GuardCounter", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Execution", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("ExecutionIndex", AnimatorControllerParameterType.Int);
             controller.AddParameter("Launch", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("AirFinisher", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("HuxleyShot", AnimatorControllerParameterType.Trigger);
@@ -160,7 +163,8 @@ namespace FreeFlowHero.Editor
                 }
 
                 // 트리거 전환: Any State → 이 상태
-                if (triggerName != "Strike") // Strike는 ComboIndex로 분기
+                // Strike는 ComboIndex, Execution은 ExecutionIndex로 분기
+                if (triggerName != "Strike" && triggerName != "Execution")
                 {
                     var transition = rootStateMachine.AddAnyStateTransition(state);
                     transition.AddCondition(AnimatorConditionMode.If, 0, triggerName);
@@ -172,6 +176,9 @@ namespace FreeFlowHero.Editor
 
             // ─── Strike 콤보 분기 (ComboIndex 기반) ───
             SetupStrikeComboTransitions(rootStateMachine, controller);
+
+            // ─── Execution 모션 분기 (ExecutionIndex 기반) ───
+            SetupExecutionTransitions(rootStateMachine);
 
             // ─── Dodge 상태 (백대시 회피) ───
             {
@@ -308,15 +315,62 @@ namespace FreeFlowHero.Editor
                 toLocomotion.duration = 0.15f;
             }
 
+            // ─── Guard 상태 (방어 자세) ───
+            {
+                var guardState = rootStateMachine.AddState("Guard", GetStatePosition(stateCount + 1));
+                stateCount++;
+                // Guard_Idle.fbx (Martial Art Animations Sample)
+                AnimationClip guardClip = LoadClipFromFBX(MartialArtRoot + "/Guard_Idle.fbx");
+                if (guardClip != null)
+                {
+                    guardState.motion = guardClip;
+                    clipFoundCount++;
+                    Debug.Log($"[AnimBuilder] ✓ Guard 클립: {guardClip.name} ({guardClip.length:F2}초)");
+                }
+                else
+                {
+                    Debug.LogWarning("[AnimBuilder] ❌ Guard 클립 미발견: Guard_Idle.fbx");
+                }
+
+                var trGuard = rootStateMachine.AddAnyStateTransition(guardState);
+                trGuard.AddCondition(AnimatorConditionMode.If, 0, "Guard");
+                trGuard.hasExitTime = false;
+                trGuard.duration = 0.05f;
+                trGuard.canTransitionToSelf = false;
+            }
+
+            // ─── GuardCounter 상태 (가드 반격) ───
+            {
+                var guardCounterState = rootStateMachine.AddState("GuardCounter", GetStatePosition(stateCount + 1));
+                stateCount++;
+                // spinning elbow 재사용 (반격 모션)
+                AnimationClip counterClip = FindClipByFBXName("spinning elbow");
+                if (counterClip != null)
+                {
+                    guardCounterState.motion = counterClip;
+                    clipFoundCount++;
+                    Debug.Log($"[AnimBuilder] ✓ GuardCounter 클립: {counterClip.name}");
+                }
+
+                var trGC = rootStateMachine.AddAnyStateTransition(guardCounterState);
+                trGC.AddCondition(AnimatorConditionMode.If, 0, "GuardCounter");
+                trGC.hasExitTime = false;
+                trGC.duration = 0.05f;
+                trGC.canTransitionToSelf = false;
+            }
+
             // ─── 모든 전투 상태 → Locomotion 복귀 (Exit Time) ───
-            // ★ Knockdown/Down은 제외: 자동 전환 시 체공/누운 상태에서 Locomotion으로 스냅되는 버그 발생.
-            // ★ GetUp은 위에서 직접 추가했으므로 여기서도 제외.
+            // ★ Knockdown/Down/GetUp/Guard/Execution은 제외: 해당 상태가 직접 전환 관리.
             foreach (var childState in rootStateMachine.states)
             {
+                string sn = childState.state.name;
                 if (childState.state != locomotionState
-                    && childState.state.name != "Knockdown"
-                    && childState.state.name != "Down"
-                    && childState.state.name != "GetUp")
+                    && sn != "Knockdown"
+                    && sn != "Down"
+                    && sn != "GetUp"
+                    && sn != "Guard"
+                    && sn != "GuardCounter"
+                    && !sn.StartsWith("Execution_"))
                 {
                     var toLocomotion = childState.state.AddTransition(locomotionState);
                     toLocomotion.hasExitTime = true;
@@ -345,6 +399,25 @@ namespace FreeFlowHero.Editor
                 var transition = sm.AddAnyStateTransition(target);
                 transition.AddCondition(AnimatorConditionMode.If, 0, "Strike");
                 transition.AddCondition(AnimatorConditionMode.Equals, i, "ComboIndex");
+                transition.hasExitTime = false;
+                transition.duration = 0.05f;
+                transition.canTransitionToSelf = false;
+            }
+        }
+
+        /// <summary>Execution 트리거 + ExecutionIndex로 3종 분기 (모션 1~3)</summary>
+        private static void SetupExecutionTransitions(AnimatorStateMachine sm)
+        {
+            string[] execStates = { "Execution_1", "Execution_2", "Execution_3" };
+
+            for (int i = 0; i < execStates.Length; i++)
+            {
+                AnimatorState target = FindState(sm, execStates[i]);
+                if (target == null) continue;
+
+                var transition = sm.AddAnyStateTransition(target);
+                transition.AddCondition(AnimatorConditionMode.If, 0, "Execution");
+                transition.AddCondition(AnimatorConditionMode.Equals, i, "ExecutionIndex");
                 transition.hasExitTime = false;
                 transition.duration = 0.05f;
                 transition.canTransitionToSelf = false;
