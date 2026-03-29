@@ -30,6 +30,7 @@ namespace FreeFlowHero.Combat.Core
     public class ActionEntry
     {
         public string id;            // 고유 ID (예: "LightAtk1")
+        public string group = "";    // 액션 그룹 (예: "기본 액션", "기타 액션"). 빈 문자열 = "미분류"
         public string name;          // 표시 이름 (예: "기본공격 1타")
         public string clip;          // 애니메이션 클립 이름 (검색 폴백용)
         public string clipPath;      // FBX 에셋 경로 (Override용, 예: "Assets/.../Atk_P_1.fbx")

@@ -180,13 +180,17 @@ namespace FreeFlowHero.Editor
             // ─── Execution 모션 분기 (ExecutionIndex 기반) ───
             SetupExecutionTransitions(rootStateMachine);
 
+            // ─── 액션 테이블에서 playbackRate 참조 (Dodge 등) ───
+            var actionTable = LoadActionTableForEditor("PC_Hero");
+
             // ─── Dodge 상태 (백대시 회피) ───
             {
                 var dodgeState = rootStateMachine.AddState("Dodge", GetStatePosition(stateCount + 1));
                 stateCount++;
                 AnimationClip dodgeClip = LoadClipFromFBX(DodgeBackFBX);
-                // ★ 데이터 튜닝: 대쉬 재생 배속 (2.0 = 2배속)
-                dodgeState.speed = 2.0f;
+                // ★ 재생 배속: 액션 테이블 playbackRate에서 읽기 (폴백: 2.0)
+                float dodgeBackRate = actionTable?.GetAction("DodgeBack")?.playbackRate ?? 2.0f;
+                dodgeState.speed = dodgeBackRate > 0f ? dodgeBackRate : 2.0f;
                 if (dodgeClip != null)
                 {
                     dodgeState.motion = dodgeClip;
@@ -210,8 +214,9 @@ namespace FreeFlowHero.Editor
                 var dodgeFwdState = rootStateMachine.AddState("DodgeForward", GetStatePosition(stateCount + 1));
                 stateCount++;
                 AnimationClip dodgeFwdClip = LoadClipFromFBX(DodgeForwardFBX);
-                // ★ 데이터 튜닝: 전방 대쉬 재생 배속 (2.0 = 2배속)
-                dodgeFwdState.speed = 2.0f;
+                // ★ 재생 배속: 액션 테이블 playbackRate에서 읽기 (폴백: 2.0)
+                float dodgeFrontRate = actionTable?.GetAction("DodgeFront")?.playbackRate ?? 2.0f;
+                dodgeFwdState.speed = dodgeFrontRate > 0f ? dodgeFrontRate : 2.0f;
                 if (dodgeFwdClip != null)
                 {
                     dodgeFwdState.motion = dodgeFwdClip;
@@ -487,6 +492,17 @@ namespace FreeFlowHero.Editor
         }
 
         /// <summary>절대 경로의 FBX에서 AnimationClip을 로드한다.</summary>
+        /// <summary>에디터 전용: 액션 테이블 JSON 로드 (playbackRate 등 참조용)</summary>
+        private static FreeFlowHero.Combat.Core.ActorActionTable LoadActionTableForEditor(string actorId)
+        {
+            string path = $"Assets/_Project/Resources/ActionTables/{actorId}.json";
+            var textAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(path);
+            if (textAsset == null) return null;
+            var table = JsonUtility.FromJson<FreeFlowHero.Combat.Core.ActorActionTable>(textAsset.text);
+            table?.BuildMap();
+            return table;
+        }
+
         private static AnimationClip LoadClipFromFBX(string fbxPath)
         {
             Object[] assets = AssetDatabase.LoadAllAssetsAtPath(fbxPath);

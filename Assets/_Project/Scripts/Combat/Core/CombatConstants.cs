@@ -18,10 +18,10 @@ namespace FreeFlowHero.Combat.Core
         // ─── 인풋 버퍼 ───
         public const float InputBufferDuration = 0.15f;    // 선입력 유효 시간
 
-        // ─── 회피 ───
-        public const int DodgeIFrames = 12;                // 무적 프레임 수
-        public const float DodgeIFrameDuration = DodgeIFrames * FrameDuration; // 0.2초
-        public const float DodgeSpeed = 15f;               // 유닛/초
+        // ─── 회피 (액션 테이블 startup/active + playbackRate로 이전됨, 레거시 폴백용 유지) ───
+        public const int DodgeIFrames = 12;                // [Deprecated] 무적 프레임 수
+        public const float DodgeIFrameDuration = DodgeIFrames * FrameDuration; // [Deprecated] 0.2초
+        public const float DodgeSpeed = 15f;               // [Deprecated] 유닛/초
 
         // ─── 워핑 ───
         // WarpDuration, WarpArrivalOffset → WARP 노티파이 파라미터로 이전됨

@@ -86,13 +86,13 @@ namespace FreeFlowHero.Combat.Core
         //  회피 (Dodge)
         // ════════════════════════════════════════════
 
-        [Header("회피 (Dodge)")]
+        [Header("회피 (Dodge) — 액션 테이블로 이전됨, 레거시 폴백용")]
 
-        [Tooltip("회피 시 무적 프레임 수 (60fps 기준)")]
+        [Tooltip("(Deprecated) 회피 시 무적 프레임 수 — 액션 테이블 startup/active 사용")]
         [Range(1, 30)]
         public int dodgeIFrames = CombatConstants.DodgeIFrames;
 
-        [Tooltip("회피 이동 속도 (유닛/초)")]
+        [Tooltip("(Deprecated) 회피 이동 속도 — 액션 테이블 moveSpeed 사용")]
         public float dodgeSpeed = CombatConstants.DodgeSpeed;
 
         // ════════════════════════════════════════════

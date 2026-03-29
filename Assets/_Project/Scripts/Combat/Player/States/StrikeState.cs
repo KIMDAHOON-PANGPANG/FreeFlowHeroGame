@@ -596,6 +596,8 @@ namespace FreeFlowHero.Combat.Player
             switch (targetActionId)
             {
                 case "Dodge":
+                case "DodgeBack":
+                case "DodgeFront":
                     fsm.TransitionTo<DodgeState>();
                     break;
                 case "HeavyAtk":

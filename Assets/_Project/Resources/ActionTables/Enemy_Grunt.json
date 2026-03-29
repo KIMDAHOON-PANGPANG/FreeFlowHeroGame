@@ -4,6 +4,7 @@
     "actions": [
         {
             "id": "Idle",
+            "group": "기본 액션",
             "name": "대기",
             "clip": "Fight_Idle",
             "clipPath": "",
@@ -24,6 +25,7 @@
         },
         {
             "id": "Attack_Punch",
+            "group": "공격 액션",
             "name": "펀치 (경직)",
             "clip": "Atk_P_1",
             "clipPath": "",
@@ -97,6 +99,7 @@
         },
         {
             "id": "Attack_Kick",
+            "group": "공격 액션",
             "name": "킥 (넉다운)",
             "clip": "Atk_K_1",
             "clipPath": "",
@@ -170,6 +173,7 @@
         },
         {
             "id": "Telegraph",
+            "group": "기본 액션",
             "name": "공격 예고",
             "clip": "",
             "clipPath": "",
@@ -190,6 +194,7 @@
         },
         {
             "id": "HitStun",
+            "group": "기본 액션",
             "name": "피격 경직",
             "clip": "Hit_A",
             "clipPath": "",
@@ -210,6 +215,7 @@
         },
         {
             "id": "Knockdown",
+            "group": "기본 액션",
             "name": "넉다운",
             "clip": "Knock_A",
             "clipPath": "",
@@ -231,6 +237,7 @@
         },
         {
             "id": "GetUp",
+            "group": "기본 액션",
             "name": "기상",
             "clip": "GetUp_A",
             "clipPath": "",
@@ -251,6 +258,7 @@
         },
         {
             "id": "Die",
+            "group": "기본 액션",
             "name": "사망",
             "clip": "",
             "clipPath": "",

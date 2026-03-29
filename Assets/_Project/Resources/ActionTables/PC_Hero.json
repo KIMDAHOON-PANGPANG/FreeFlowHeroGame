@@ -4,6 +4,7 @@
     "actions": [
         {
             "id": "Idle",
+            "group": "기본 액션",
             "name": "대기",
             "clip": "Fight_Idle",
             "clipPath": "Assets/Martial Art Animations Sample/Animations/Fight_Idle.fbx",
@@ -45,6 +46,7 @@
         },
         {
             "id": "LightAtk1",
+            "group": "기타 액션",
             "name": "기본공격 1타",
             "clip": "Atk_P_1",
             "clipPath": "Assets/Martial Art Animations Sample/Animations/Atk_P_1.fbx",
@@ -129,7 +131,8 @@
                     "warpMaxRange": 0.0,
                     "warpSpeed": 0.0,
                     "rootMotionKeys": [],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 },
                 {
                     "type": "PENDING_WINDOW",
@@ -179,7 +182,8 @@
                     "warpMaxRange": 0.0,
                     "warpSpeed": 0.0,
                     "rootMotionKeys": [],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 },
                 {
                     "type": "CANCEL_WINDOW",
@@ -229,7 +233,8 @@
                     "warpMaxRange": 0.0,
                     "warpSpeed": 0.0,
                     "rootMotionKeys": [],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 },
                 {
                     "type": "WARP",
@@ -279,7 +284,8 @@
                     "warpMaxRange": 3.0,
                     "warpSpeed": 0.0,
                     "rootMotionKeys": [],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 },
                 {
                     "type": "ROOT_MOTION",
@@ -342,12 +348,14 @@
                         1.0,
                         0.0
                     ],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 }
             ]
         },
         {
             "id": "LightAtk2",
+            "group": "기타 액션",
             "name": "기본공격 2타",
             "clip": "Atk_P_2",
             "clipPath": "Assets/Martial Art Animations Sample/Animations/Atk_P_2.fbx",
@@ -432,7 +440,8 @@
                     "warpMaxRange": 0.0,
                     "warpSpeed": 0.0,
                     "rootMotionKeys": [],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 },
                 {
                     "type": "PENDING_WINDOW",
@@ -482,7 +491,8 @@
                     "warpMaxRange": 0.0,
                     "warpSpeed": 0.0,
                     "rootMotionKeys": [],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 },
                 {
                     "type": "CANCEL_WINDOW",
@@ -532,7 +542,8 @@
                     "warpMaxRange": 0.0,
                     "warpSpeed": 0.0,
                     "rootMotionKeys": [],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 },
                 {
                     "type": "WARP",
@@ -582,7 +593,8 @@
                     "warpMaxRange": 3.0,
                     "warpSpeed": 0.0,
                     "rootMotionKeys": [],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 },
                 {
                     "type": "ROOT_MOTION",
@@ -645,12 +657,14 @@
                         1.0,
                         0.0
                     ],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 }
             ]
         },
         {
             "id": "LightAtk3",
+            "group": "기타 액션",
             "name": "기본공격 3타",
             "clip": "Atk_K_1",
             "clipPath": "Assets/Martial Art Animations Sample/Animations/Atk_K_1.fbx",
@@ -735,7 +749,8 @@
                     "warpMaxRange": 0.0,
                     "warpSpeed": 0.0,
                     "rootMotionKeys": [],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 },
                 {
                     "type": "PENDING_WINDOW",
@@ -785,7 +800,8 @@
                     "warpMaxRange": 0.0,
                     "warpSpeed": 0.0,
                     "rootMotionKeys": [],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 },
                 {
                     "type": "CANCEL_WINDOW",
@@ -835,7 +851,8 @@
                     "warpMaxRange": 0.0,
                     "warpSpeed": 0.0,
                     "rootMotionKeys": [],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 },
                 {
                     "type": "WARP",
@@ -885,7 +902,8 @@
                     "warpMaxRange": 3.0,
                     "warpSpeed": 0.0,
                     "rootMotionKeys": [],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 },
                 {
                     "type": "ROOT_MOTION",
@@ -948,12 +966,14 @@
                         1.0,
                         0.0
                     ],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 }
             ]
         },
         {
             "id": "LightAtk4",
+            "group": "기타 액션",
             "name": "기본공격 4타 (니킥)",
             "clip": "knee strike",
             "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/knee strike.fbx",
@@ -1030,7 +1050,8 @@
                     "warpMaxRange": 0.0,
                     "warpSpeed": 0.0,
                     "rootMotionKeys": [],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 },
                 {
                     "type": "PENDING_WINDOW",
@@ -1080,7 +1101,8 @@
                     "warpMaxRange": 0.0,
                     "warpSpeed": 0.0,
                     "rootMotionKeys": [],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 },
                 {
                     "type": "CANCEL_WINDOW",
@@ -1130,7 +1152,8 @@
                     "warpMaxRange": 0.0,
                     "warpSpeed": 0.0,
                     "rootMotionKeys": [],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 },
                 {
                     "type": "ROOT_MOTION",
@@ -1193,12 +1216,14 @@
                         1.0,
                         0.0
                     ],
-                    "rootMotionScale": 1.0
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
                 }
             ]
         },
         {
             "id": "LightAtkDown",
+            "group": "기타 액션",
             "name": "다운 공격",
             "clip": "low kick",
             "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/low kick.fbx",
@@ -1225,6 +1250,7 @@
         },
         {
             "id": "HeavyAtk",
+            "group": "기타 액션",
             "name": "강공격 (아머 파괴)",
             "clip": "charge fist",
             "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/charge fist.fbx",
@@ -1250,14 +1276,15 @@
             "notifies": []
         },
         {
-            "id": "Dodge",
-            "name": "회피",
+            "id": "DodgeBack",
+            "group": "기본 액션",
+            "name": "뒷회피",
             "clip": "Dodge_B",
             "clipPath": "Assets/Martial Art Animations Sample/Animations/Dodge_B.fbx",
             "startup": 2,
             "active": 12,
             "recovery": 8,
-            "playbackRate": 1.0,
+            "playbackRate": 2.0,
             "transitionIn": 0.0,
             "transitionOut": 0.0,
             "cancelRatio": 0.4000000059604645,
@@ -1273,10 +1300,244 @@
                 "dodge",
                 "iFrame"
             ],
-            "notifies": []
+            "notifies": [
+                {
+                    "type": "STARTUP",
+                    "startFrame": 0,
+                    "endFrame": 2,
+                    "track": 0,
+                    "disabled": false,
+                    "isInstance": false,
+                    "moveSpeed": 0.0,
+                    "hitboxId": "",
+                    "damageScale": 1.0,
+                    "hitboxOffsetX": 0.0,
+                    "hitboxOffsetY": 0.0,
+                    "hitboxOffsetZ": 0.0,
+                    "hitboxSizeX": 0.0,
+                    "hitboxSizeY": 0.0,
+                    "hitboxSizeZ": 0.0,
+                    "hitType": 0,
+                    "hitPreset": 0,
+                    "hitFacing": 0,
+                    "forceFlip": false,
+                    "hitKnockDirection": 0,
+                    "flinchPushOffset": 0.0,
+                    "flinchFreezeOffset": 0.0,
+                    "flinchHitStopOffset": 0.0,
+                    "knockLaunchOffset": 0.0,
+                    "knockAirTimeOffset": 0.0,
+                    "knockDistanceOffset": 0.0,
+                    "knockDownTimeOffset": 0.0,
+                    "skillCancel": false,
+                    "moveCancel": false,
+                    "dodgeCancel": false,
+                    "counterCancel": false,
+                    "nextAction": "",
+                    "heavyNext": "",
+                    "dodgeNext": "",
+                    "counterNext": "",
+                    "warpOffsetX": 0.0,
+                    "warpOffsetY": 0.0,
+                    "warpDuration": 0.0,
+                    "warpEaseType": 0,
+                    "warpMinDuration": 0.0,
+                    "warpMaxDuration": 0.0,
+                    "warpInvincible": false,
+                    "warpAutoTarget": false,
+                    "warpMinRange": 0.0,
+                    "warpMaxRange": 0.0,
+                    "warpSpeed": 0.0,
+                    "rootMotionKeys": [],
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
+                },
+                {
+                    "type": "CANCEL_WINDOW",
+                    "startFrame": 55,
+                    "endFrame": 59,
+                    "track": 1,
+                    "disabled": false,
+                    "isInstance": false,
+                    "moveSpeed": 0.0,
+                    "hitboxId": "",
+                    "damageScale": 1.0,
+                    "hitboxOffsetX": 0.0,
+                    "hitboxOffsetY": 0.0,
+                    "hitboxOffsetZ": 0.0,
+                    "hitboxSizeX": 0.0,
+                    "hitboxSizeY": 0.0,
+                    "hitboxSizeZ": 0.0,
+                    "hitType": 0,
+                    "hitPreset": 0,
+                    "hitFacing": 0,
+                    "forceFlip": false,
+                    "hitKnockDirection": 0,
+                    "flinchPushOffset": 0.0,
+                    "flinchFreezeOffset": 0.0,
+                    "flinchHitStopOffset": 0.0,
+                    "knockLaunchOffset": 0.0,
+                    "knockAirTimeOffset": 0.0,
+                    "knockDistanceOffset": 0.0,
+                    "knockDownTimeOffset": 0.0,
+                    "skillCancel": true,
+                    "moveCancel": true,
+                    "dodgeCancel": true,
+                    "counterCancel": false,
+                    "nextAction": "DodgeCounterAtk",
+                    "heavyNext": "",
+                    "dodgeNext": "DodgeBack",
+                    "counterNext": "",
+                    "warpOffsetX": 0.0,
+                    "warpOffsetY": 0.0,
+                    "warpDuration": 0.0,
+                    "warpEaseType": 0,
+                    "warpMinDuration": 0.0,
+                    "warpMaxDuration": 0.0,
+                    "warpInvincible": false,
+                    "warpAutoTarget": false,
+                    "warpMinRange": 0.0,
+                    "warpMaxRange": 0.0,
+                    "warpSpeed": 0.0,
+                    "rootMotionKeys": [],
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
+                }
+            ]
+        },
+        {
+            "id": "DodgeFront",
+            "group": "기본 액션",
+            "name": "앞회피",
+            "clip": "Dodge_F",
+            "clipPath": "Assets/Martial Art Animations Sample/Animations/Dodge_F.fbx",
+            "startup": 2,
+            "active": 12,
+            "recovery": 8,
+            "playbackRate": 2.0,
+            "transitionIn": 0.0,
+            "transitionOut": 0.0,
+            "cancelRatio": 0.4000000059604645,
+            "moveSpeed": 12.0,
+            "cancels": [
+                {
+                    "input": "Attack",
+                    "next": "DodgeCounterAtk"
+                }
+            ],
+            "defaultNext": "Idle",
+            "tags": [
+                "dodge",
+                "iFrame"
+            ],
+            "notifies": [
+                {
+                    "type": "STARTUP",
+                    "startFrame": 0,
+                    "endFrame": 2,
+                    "track": 0,
+                    "disabled": false,
+                    "isInstance": false,
+                    "moveSpeed": 0.0,
+                    "hitboxId": "",
+                    "damageScale": 1.0,
+                    "hitboxOffsetX": 0.0,
+                    "hitboxOffsetY": 0.0,
+                    "hitboxOffsetZ": 0.0,
+                    "hitboxSizeX": 0.0,
+                    "hitboxSizeY": 0.0,
+                    "hitboxSizeZ": 0.0,
+                    "hitType": 0,
+                    "hitPreset": 0,
+                    "hitFacing": 0,
+                    "forceFlip": false,
+                    "hitKnockDirection": 0,
+                    "flinchPushOffset": 0.0,
+                    "flinchFreezeOffset": 0.0,
+                    "flinchHitStopOffset": 0.0,
+                    "knockLaunchOffset": 0.0,
+                    "knockAirTimeOffset": 0.0,
+                    "knockDistanceOffset": 0.0,
+                    "knockDownTimeOffset": 0.0,
+                    "skillCancel": false,
+                    "moveCancel": false,
+                    "dodgeCancel": false,
+                    "counterCancel": false,
+                    "nextAction": "",
+                    "heavyNext": "",
+                    "dodgeNext": "",
+                    "counterNext": "",
+                    "warpOffsetX": 0.0,
+                    "warpOffsetY": 0.0,
+                    "warpDuration": 0.0,
+                    "warpEaseType": 0,
+                    "warpMinDuration": 0.0,
+                    "warpMaxDuration": 0.0,
+                    "warpInvincible": false,
+                    "warpAutoTarget": false,
+                    "warpMinRange": 0.0,
+                    "warpMaxRange": 0.0,
+                    "warpSpeed": 0.0,
+                    "rootMotionKeys": [],
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
+                },
+                {
+                    "type": "CANCEL_WINDOW",
+                    "startFrame": 54,
+                    "endFrame": 58,
+                    "track": 1,
+                    "disabled": false,
+                    "isInstance": false,
+                    "moveSpeed": 0.0,
+                    "hitboxId": "",
+                    "damageScale": 1.0,
+                    "hitboxOffsetX": 0.0,
+                    "hitboxOffsetY": 0.0,
+                    "hitboxOffsetZ": 0.0,
+                    "hitboxSizeX": 0.0,
+                    "hitboxSizeY": 0.0,
+                    "hitboxSizeZ": 0.0,
+                    "hitType": 0,
+                    "hitPreset": 0,
+                    "hitFacing": 0,
+                    "forceFlip": false,
+                    "hitKnockDirection": 0,
+                    "flinchPushOffset": 0.0,
+                    "flinchFreezeOffset": 0.0,
+                    "flinchHitStopOffset": 0.0,
+                    "knockLaunchOffset": 0.0,
+                    "knockAirTimeOffset": 0.0,
+                    "knockDistanceOffset": 0.0,
+                    "knockDownTimeOffset": 0.0,
+                    "skillCancel": true,
+                    "moveCancel": true,
+                    "dodgeCancel": true,
+                    "counterCancel": false,
+                    "nextAction": "DodgeCounterAtk",
+                    "heavyNext": "",
+                    "dodgeNext": "DodgeFront",
+                    "counterNext": "",
+                    "warpOffsetX": 0.0,
+                    "warpOffsetY": 0.0,
+                    "warpDuration": 0.0,
+                    "warpEaseType": 0,
+                    "warpMinDuration": 0.0,
+                    "warpMaxDuration": 0.0,
+                    "warpInvincible": false,
+                    "warpAutoTarget": false,
+                    "warpMinRange": 0.0,
+                    "warpMaxRange": 0.0,
+                    "warpSpeed": 0.0,
+                    "rootMotionKeys": [],
+                    "rootMotionScale": 1.0,
+                    "homingTurnRate": 0.0
+                }
+            ]
         },
         {
             "id": "DodgeCounterAtk",
+            "group": "기본 액션",
             "name": "회피 후속 공격",
             "clip": "front sweep",
             "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/front sweep.fbx",
@@ -1307,6 +1568,7 @@
         },
         {
             "id": "Counter",
+            "group": "기타 액션",
             "name": "카운터 반격",
             "clip": "spinning elbow",
             "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/spinning elbow.fbx",
@@ -1336,6 +1598,7 @@
         },
         {
             "id": "PerfectCounter",
+            "group": "기타 액션",
             "name": "퍼펙트 카운터 강화 반격",
             "clip": "back kick",
             "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/back kick.fbx",
@@ -1366,6 +1629,7 @@
         },
         {
             "id": "Launch",
+            "group": "기타 액션",
             "name": "띄우기 공격",
             "clip": "jumping uppercut",
             "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/jumping uppercut.fbx",
@@ -1392,6 +1656,7 @@
         },
         {
             "id": "AirComboFinisher",
+            "group": "기타 액션",
             "name": "에어 콤보 피니셔",
             "clip": "jumping side kick",
             "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/jumping side kick.fbx",
@@ -1413,6 +1678,7 @@
         },
         {
             "id": "Execution1",
+            "group": "기타 액션",
             "name": "처형 모션 1",
             "clip": "cressent kick",
             "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/cressent kick.fbx",
@@ -1434,6 +1700,7 @@
         },
         {
             "id": "Execution2",
+            "group": "기타 액션",
             "name": "처형 모션 2",
             "clip": "axe kick",
             "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/axe kick.fbx",
@@ -1455,6 +1722,7 @@
         },
         {
             "id": "Execution3",
+            "group": "기타 액션",
             "name": "처형 모션 3 (화려)",
             "clip": "spinning axe kick",
             "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/spinning axe kick.fbx",
@@ -1477,6 +1745,7 @@
         },
         {
             "id": "HuxleyShot",
+            "group": "기타 액션",
             "name": "헉슬리 건 발사",
             "clip": "super blast",
             "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/super blast.fbx",
@@ -1507,6 +1776,7 @@
         },
         {
             "id": "HuxleyFinisher",
+            "group": "기타 액션",
             "name": "헉슬리 100% 피니셔",
             "clip": "webster side kick",
             "clipPath": "Assets/EEJANAI_Team/FreeFighterAnimations/FBX/webster side kick.fbx",
