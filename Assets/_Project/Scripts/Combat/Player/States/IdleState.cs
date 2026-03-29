@@ -108,10 +108,6 @@ namespace FreeFlowHero.Combat.Player
                     fsm.TransitionTo<DodgeState>();
                     break;
 
-                case InputType.Counter:
-                    fsm.TransitionTo<CounterState>();
-                    break;
-
                 case InputType.Heavy:
                     // Phase 2: Heavy → 일단 Strike로 전환 (Phase 4에서 별도 HeavyAttackState)
                     ResolveAttack(input);

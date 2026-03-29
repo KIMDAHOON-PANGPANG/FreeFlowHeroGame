@@ -104,29 +104,6 @@ namespace FreeFlowHero.Combat.Core
             };
         }
 
-        /// <summary>Counter Attack용 HitData 생성</summary>
-        public static HitData CreateCounterAttack(
-            Vector2 attackerPos, Vector2 targetPos, int comboCount,
-            bool isPerfect)
-        {
-            Vector2 direction = (targetPos - attackerPos).normalized;
-            return new HitData
-            {
-                BaseDamage = isPerfect ? 25f : 15f,
-                DamageMultiplier = 1f,
-                AttackType = AttackType.Counter,
-                AttackerTeam = CombatTeam.Player,
-                KnockbackDirection = direction,
-                IsComboAttack = comboCount > 0,
-                ComboCount = comboCount,
-                IsExecutionKill = false,
-                IsLaunchAttack = false,
-                IsKnockdown = isPerfect,
-                ContactPoint = Vector2.Lerp(attackerPos, targetPos, 0.5f),
-                AttackerPosition = attackerPos
-            };
-        }
-
         /// <summary>Dodge Attack용 HitData 생성 (회피 직후 반격)</summary>
         public static HitData CreateDodgeAttack(
             Vector2 attackerPos, Vector2 targetPos, int comboCount)

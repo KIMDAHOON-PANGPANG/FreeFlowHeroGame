@@ -88,16 +88,6 @@ namespace FreeFlowHero.Combat.Player
                 fsm.OnCombatInput(new InputData(InputType.Dodge, direction));
             }
 
-            // ─── 카운터: Keyboard L ───
-            if (kb != null && kb.lKey.wasPressedThisFrame)
-            {
-                inputCount++;
-                lastInput = $"Counter #{inputCount}";
-                inputIndicatorTimer = 0.5f;
-
-                fsm.OnCombatInput(new InputData(InputType.Counter, direction));
-            }
-
             // ─── 헉슬리: Keyboard U ───
             if (kb != null && kb.uKey.wasPressedThisFrame)
             {
@@ -122,7 +112,7 @@ namespace FreeFlowHero.Combat.Player
 
             string text = inputIndicatorTimer > 0f
                 ? $"INPUT: {lastInput}"
-                : "LClick:Attack | RClick:Heavy | Space:Dodge | L:Counter | U:Huxley";
+                : "LClick:Attack | RClick:Heavy | Space:Dodge | U:Huxley";
 
             GUI.Label(new Rect(10, Screen.height - 40, 600, 30), text, style);
 

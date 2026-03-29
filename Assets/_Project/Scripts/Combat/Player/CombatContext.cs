@@ -22,10 +22,6 @@ namespace FreeFlowHero.Combat.Player
         [Range(0.1f, 0.95f)]
         public float dodgeCancelDelay = 0.5f;
 
-        [Tooltip("Counter 진입 후 캔슬 가능 시간")]
-        [Range(0.05f, 1.0f)]
-        public float counterCancelDelay = 0.3f;
-
         [Tooltip("인풋 버퍼 유지 시간 (이 시간 안에 캔슬 윈도우가 열리면 소비됨)")]
         [Range(0.1f, 1.0f)]
         public float inputBufferDuration = 0.5f;

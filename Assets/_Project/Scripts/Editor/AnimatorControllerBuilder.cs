@@ -50,8 +50,6 @@ namespace FreeFlowHero.Editor
             ("combo",              "Strike_ComboChain",  "Strike"),
             ("low kick",           "Strike_LowKick",     "Strike"),
             ("charge fist",        "HeavyAttack",        "Heavy"),
-            ("spinning elbow",     "Counter_Normal",     "Counter"),
-            ("back kick",          "Counter_Perfect",    "CounterPerfect"),
             ("front sweep",        "DodgeAttack",        "DodgeAttack"),
             ("cressent kick",      "Execution_1",        "Execution"),
             ("axe kick",           "Execution_2",        "Execution"),
@@ -82,8 +80,6 @@ namespace FreeFlowHero.Editor
             controller.AddParameter("Idle", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Strike", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Heavy", AnimatorControllerParameterType.Trigger);
-            controller.AddParameter("Counter", AnimatorControllerParameterType.Trigger);
-            controller.AddParameter("CounterPerfect", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("DodgeAttack", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Dodge", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("DodgeForward", AnimatorControllerParameterType.Trigger);
@@ -97,7 +93,6 @@ namespace FreeFlowHero.Editor
             controller.AddParameter("Knockdown", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Down", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("GetUp", AnimatorControllerParameterType.Trigger);
-            controller.AddParameter("CounterStrike", AnimatorControllerParameterType.Trigger);
 
             // ─── 베이스 레이어 ───
             var rootStateMachine = controller.layers[0].stateMachine;
@@ -177,17 +172,6 @@ namespace FreeFlowHero.Editor
 
             // ─── Strike 콤보 분기 (ComboIndex 기반) ───
             SetupStrikeComboTransitions(rootStateMachine, controller);
-
-            // ─── CounterStrike → Counter_Normal 상태로 전환 ───
-            AnimatorState counterNormalState = FindState(rootStateMachine, "Counter_Normal");
-            if (counterNormalState != null)
-            {
-                var csTransition = rootStateMachine.AddAnyStateTransition(counterNormalState);
-                csTransition.AddCondition(AnimatorConditionMode.If, 0, "CounterStrike");
-                csTransition.hasExitTime = false;
-                csTransition.duration = 0.05f;
-                csTransition.canTransitionToSelf = false;
-            }
 
             // ─── Dodge 상태 (백대시 회피) ───
             {

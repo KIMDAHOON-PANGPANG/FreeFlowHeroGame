@@ -80,13 +80,6 @@ namespace FreeFlowHero.Combat.Core
         public Vector2 Direction;
     }
 
-    /// <summary>카운터 성공</summary>
-    public struct OnCounter : ICombatEvent
-    {
-        public CounterType Type;
-        public ICombatTarget CounteredEnemy;
-    }
-
     /// <summary>콤보 카운트 변경</summary>
     public struct OnComboChanged : ICombatEvent
     {

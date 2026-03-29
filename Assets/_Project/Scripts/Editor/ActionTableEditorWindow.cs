@@ -49,7 +49,7 @@ namespace FreeFlowHero.Editor
 
         // ─── 캔슬 경로 편집용 ───
         private static readonly string[] InputTypeOptions = {
-            "Attack", "Heavy", "Dodge", "Counter", "Huxley", "Move", "Skill"
+            "Attack", "Heavy", "Dodge", "Huxley", "Move", "Skill"
         };
 
         // ─── 애니메이션 프리뷰 ───
@@ -1426,12 +1426,10 @@ namespace FreeFlowHero.Editor
                     Tip("이 구간에서 이동 입력으로 Idle 상태 캔슬 가능");
                     notify.dodgeCancel = EditorGUILayout.Toggle("Dodge Cancel (회피)", notify.dodgeCancel);
                     Tip("이 구간에서 회피 입력으로 Dodge 상태 캔슬 가능");
-                    notify.counterCancel = EditorGUILayout.Toggle("Counter Cancel", notify.counterCancel);
-                    Tip("이 구간에서 카운터 입력으로 Counter 상태 캔슬 가능");
 
                     EditorGUILayout.Space(4);
                     EditorGUILayout.LabelField("입력별 캔슬 라우팅", EditorStyles.boldLabel);
-                    EditorGUILayout.HelpBox("비워두면 기본 액션으로 전이 (Dodge→Dodge, Counter→Counter 등)", MessageType.None);
+                    EditorGUILayout.HelpBox("비워두면 기본 액션으로 전이 (Dodge→Dodge 등)", MessageType.None);
                     // ★ 각 캔슬 플래그가 켜져 있을 때만 해당 라우팅 필드 표시
                     if (notify.skillCancel)
                     {
@@ -1444,11 +1442,6 @@ namespace FreeFlowHero.Editor
                     {
                         notify.dodgeNext = EditorGUILayout.TextField("Dodge →", notify.dodgeNext);
                         Tip("회피 캔슬 시 전이할 액션 ID.\n비워두면 기본 Dodge 상태");
-                    }
-                    if (notify.counterCancel)
-                    {
-                        notify.counterNext = EditorGUILayout.TextField("Counter →", notify.counterNext);
-                        Tip("카운터 캔슬 시 전이할 액션 ID.\n비워두면 기본 Counter 상태");
                     }
                     break;
 

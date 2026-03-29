@@ -86,7 +86,6 @@ namespace FreeFlowHero.Editor
         private bool foldCombo = true;
         private bool foldInput = true;
         private bool foldDodge = true;
-        private bool foldCounter = true;
         private bool foldWarp = true;
         private bool foldTelegraph = true;
         private bool foldAttackTurn = true;
@@ -212,22 +211,6 @@ namespace FreeFlowHero.Editor
                 EditorGUILayout.LabelField($"= {bs.DodgeIFrameDuration:F3}초 무적", EditorStyles.miniLabel);
                 bs.dodgeSpeed = EditorGUILayout.FloatField("Dodge Speed (유닛/초)", bs.dodgeSpeed);
                 Tip("회피 이동 속도. (기본: 15)");
-                EditorGUILayout.EndVertical();
-            }
-
-            EditorGUILayout.Space(4);
-
-            // ════════════ 카운터 ════════════
-            foldCounter = EditorGUILayout.Foldout(foldCounter, "카운터 (Counter)", true, headerStyle);
-            if (foldCounter)
-            {
-                EditorGUILayout.BeginVertical(boxStyle);
-                bs.perfectCounterWindow = EditorGUILayout.IntSlider("Perfect Window (±프레임)", bs.perfectCounterWindow, 1, 10);
-                Tip("퍼펙트 카운터 판정 윈도우.\n작을수록 정밀한 타이밍 요구. (기본: ±3f = 0.05초)");
-                EditorGUILayout.LabelField($"= ±{bs.perfectCounterWindow * bs.FrameDuration:F3}초", EditorStyles.miniLabel);
-                bs.normalCounterWindow = EditorGUILayout.IntSlider("Normal Window (±프레임)", bs.normalCounterWindow, 1, 20);
-                Tip("일반 카운터 판정 윈도우. (기본: ±8f = 0.13초)");
-                EditorGUILayout.LabelField($"= ±{bs.normalCounterWindow * bs.FrameDuration:F3}초", EditorStyles.miniLabel);
                 EditorGUILayout.EndVertical();
             }
 
@@ -439,8 +422,6 @@ namespace FreeFlowHero.Editor
             Check("inputBufferDuration", bs.inputBufferDuration, CombatConstants.InputBufferDuration);
             CheckInt("dodgeIFrames", bs.dodgeIFrames, CombatConstants.DodgeIFrames);
             Check("dodgeSpeed", bs.dodgeSpeed, CombatConstants.DodgeSpeed);
-            CheckInt("perfectCounterWindow", bs.perfectCounterWindow, CombatConstants.PerfectCounterWindow);
-            CheckInt("normalCounterWindow", bs.normalCounterWindow, CombatConstants.NormalCounterWindow);
             Check("maxWarpDistance", bs.maxWarpDistance, CombatConstants.MaxWarpDistance);
             Check("telegraphMinDuration", bs.telegraphMinDuration, CombatConstants.TelegraphMinDuration);
             Check("telegraphMaxDuration", bs.telegraphMaxDuration, CombatConstants.TelegraphMaxDuration);

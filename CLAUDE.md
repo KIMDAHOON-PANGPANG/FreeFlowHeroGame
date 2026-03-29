@@ -23,7 +23,7 @@
 |--------|------|-----------|
 | 근접 콤보 | 자동 워핑으로 적 사이를 넘나드는 유려한 연타 체인 | 없음 |
 | 회피(Dodge) | 적의 🔴빨간 신호 공격에 대시+무적 프레임으로 대응 | 🔴 Red |
-| 카운터(Counter) | 적의 🟡노란 신호 공격에 타이밍 맞춰 반격 | 🟡 Yellow |
+| 가드(Guard) | 우클릭으로 N초간 방어 자세, 피격 시 자동 반격 + 적 경직 | 가드 포즈 |
 | 처형(Execution) | HP 임계치 이하 적에게 시네마틱 즉사 | 처형 아이콘 |
 | 헉슬리 건(Huxley) | 콤보로 충전되는 게이지 → 원거리 사격 or 피니셔 | 충전 게이지 |
 | 아머 시스템 | Heavy Attack으로만 파괴 가능한 실드 | 아머 표시 |
@@ -75,8 +75,8 @@ AnimatorController 구성 시 이 매핑을 기준으로 할 것.
 | `knee strike` | knee strike.fbx | **Light Attack 4** (니킥) | 콤보 4타 |
 | `low kick` | low kick.fbx | **Light Attack 변형** | 다운된 적 공격 / 변형 콤보 |
 | `charge fist` | charge fist.fbx | **Heavy Attack** | 아머 파괴 전용 강공격 |
-| `spinning elbow` | spinning elbow.fbx | **Counter 반격** | 카운터 성공 시 반격 모션 |
-| `back kick` | back kick.fbx | **Counter 반격 (강화)** | Perfect Counter 시 강화 반격 |
+| `spinning elbow` | spinning elbow.fbx | **가드 반격** | 가드 성공 시 반격 모션 |
+| `back kick` | back kick.fbx | **가드 반격 (강화)** | 가드 반격 강화 모션 |
 | `front sweep` | front sweep.fbx | **Dodge 회피 후속** | 회피 직후 반격 공격 |
 | `cressent kick` | cressent kick.fbx | **처형(Execution) 모션 1** | 일반 처형 시네마틱 |
 | `axe kick` | axe kick.fbx | **처형(Execution) 모션 2** | 변형 처형 시네마틱 |
@@ -167,7 +167,6 @@ AnimatorController 구성 시 이 매핑을 기준으로 할 것.
 ```
 OnAttackHit(HitData)           — 공격 적중
 OnDodge(Vector2 direction)     — 회피 실행
-OnCounter(CounterType)         — 카운터 성공
 OnComboChanged(int count)      — 콤보 카운트 변경
 OnComboBreak()                 — 콤보 끊김
 OnHuxleyChargeChanged(float%)  — 헉슬리 게이지 변경
@@ -191,8 +190,6 @@ OnWarpEnd(Target)              — 워핑 완료
 | 콤보 윈도우 | 0.8초 | 마지막 히트부터 다음 입력까지 |
 | 인풋 버퍼 | 0.15초 | 선입력 유효 시간 |
 | Dodge i-frame | 12f (0.2초) | 무적 프레임 |
-| Counter Perfect | ±3f (0.05초) | 강화 반격 |
-| Counter Normal | ±8f (0.13초) | 일반 반격 |
 | 텔레그래프 시간 | 0.3~0.5초 | 난이도별 조절 |
 | 동시 공격자 수 | 최대 2명 | AttackCoordinator |
 | 호흡 시간 | 0.5초 | 연속 공격 사이 최소 간격 |
@@ -205,7 +202,7 @@ OnWarpEnd(Target)              — 워핑 완료
 ## 구현 로드맵
 
 - **Phase 1** (기초): PlayerCombatFSM, Hitbox/Hurtbox, CombatEventBus, 기본 Strike ✅
-- **Phase 2** (프리플로우 코어): 워핑, 콤보, Dodge, Counter ✅
+- **Phase 2** (프리플로우 코어): 워핑, 콤보, Dodge ✅
 - **Phase 3** (적 AI): 적 충돌 수정, AnimatorController 매핑, AttackCoordinator ✅
 - **Phase 4** (피니셔 & 주스): Execution, Huxley, HitReaction, 히트스탑/셰이크
 - **Phase 5** (밸런싱): CombatMath 튜닝, 난이도 곡선, 피드백 이터레이션

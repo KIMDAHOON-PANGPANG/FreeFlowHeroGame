@@ -105,7 +105,6 @@ namespace FreeFlowHero.Combat.Player
             // 상태 등록 — Phase 2: 프리플로우 코어
             // WarpState 제거됨: 워핑은 StrikeState 내부 WARP 노티파이로 처리
             RegisterState(new DodgeState());
-            RegisterState(new CounterState());
             // 상태 등록 — Hard Hit 기상 흐름 (Down → GetUp)
             RegisterState(new DownState());
             RegisterState(new GetUpState());
@@ -380,7 +379,6 @@ namespace FreeFlowHero.Combat.Player
                 case "Strike":  stateColor = "<color=yellow>"; break;
                 case "Hit":     stateColor = "<color=red>"; break;
                 case "Dodge":   stateColor = "<color=#44FF44>"; break;
-                case "Counter": stateColor = "<color=#FFAA00>"; break;
                 case "Walk":    stateColor = "<color=#88CCFF>"; break;
                 default:        stateColor = "<color=lime>"; break;
             }

@@ -44,7 +44,6 @@ namespace FreeFlowHero.Combat.Core
             { "LightAtk4", "knee strike" },
             // 나머지 전투 액션 (EEJANAI)
             { "HeavyAtk",  "charge fist" },
-            { "Counter",    "spinning elbow" },
             // 회피 (Martial Art Animations Sample)
             { "Dodge",        "Dodge_B" },
             { "DodgeForward", "Dodge_F" },

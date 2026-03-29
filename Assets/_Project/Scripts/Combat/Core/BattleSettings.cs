@@ -96,20 +96,6 @@ namespace FreeFlowHero.Combat.Core
         public float dodgeSpeed = CombatConstants.DodgeSpeed;
 
         // ════════════════════════════════════════════
-        //  카운터 (Counter)
-        // ════════════════════════════════════════════
-
-        [Header("카운터 (Counter)")]
-
-        [Tooltip("퍼펙트 카운터 판정 윈도우 (±프레임). 작을수록 엄격")]
-        [Range(1, 10)]
-        public int perfectCounterWindow = CombatConstants.PerfectCounterWindow;
-
-        [Tooltip("일반 카운터 판정 윈도우 (±프레임)")]
-        [Range(1, 20)]
-        public int normalCounterWindow = CombatConstants.NormalCounterWindow;
-
-        // ════════════════════════════════════════════
         //  워핑 (Warp)
         // ════════════════════════════════════════════
 
@@ -278,8 +264,6 @@ namespace FreeFlowHero.Combat.Core
             inputBufferDuration = CombatConstants.InputBufferDuration;
             dodgeIFrames = CombatConstants.DodgeIFrames;
             dodgeSpeed = CombatConstants.DodgeSpeed;
-            perfectCounterWindow = CombatConstants.PerfectCounterWindow;
-            normalCounterWindow = CombatConstants.NormalCounterWindow;
             maxWarpDistance = CombatConstants.MaxWarpDistance;
             telegraphMinDuration = CombatConstants.TelegraphMinDuration;
             telegraphMaxDuration = CombatConstants.TelegraphMaxDuration;
@@ -340,14 +324,6 @@ namespace FreeFlowHero.Combat.Core
         /// <summary>회피 속도.</summary>
         public static float GetDodgeSpeed()
             => IsLoaded ? _instance.dodgeSpeed : CombatConstants.DodgeSpeed;
-
-        /// <summary>퍼펙트 카운터 윈도우.</summary>
-        public static int GetPerfectCounterWindow()
-            => IsLoaded ? _instance.perfectCounterWindow : CombatConstants.PerfectCounterWindow;
-
-        /// <summary>일반 카운터 윈도우.</summary>
-        public static int GetNormalCounterWindow()
-            => IsLoaded ? _instance.normalCounterWindow : CombatConstants.NormalCounterWindow;
 
         /// <summary>최대 동시 공격자 수.</summary>
         public static int GetMaxSimultaneousAttackers()

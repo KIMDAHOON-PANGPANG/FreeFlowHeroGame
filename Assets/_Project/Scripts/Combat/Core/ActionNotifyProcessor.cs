@@ -62,9 +62,6 @@ namespace FreeFlowHero.Combat.Core
         /// <summary>회피 캔슬 허용</summary>
         public bool CanDodgeCancel { get; private set; }
 
-        /// <summary>카운터 캔슬 허용</summary>
-        public bool CanCounterCancel { get; private set; }
-
         /// <summary>캔슬 윈도우의 Attack 전이 대상 (= nextAction)</summary>
         public string CancelNextAction { get; private set; } = "";
 
@@ -73,9 +70,6 @@ namespace FreeFlowHero.Combat.Core
 
         /// <summary>캔슬 윈도우의 Dodge 전이 대상</summary>
         public string CancelDodgeNext { get; private set; } = "";
-
-        /// <summary>캔슬 윈도우의 Counter 전이 대상</summary>
-        public string CancelCounterNext { get; private set; } = "";
 
         // ─── PENDING_WINDOW 상태 (스테이트 모드) ───
         /// <summary>현재 프레임에 PENDING_WINDOW 노티파이(스테이트)가 활성인지</summary>
@@ -193,11 +187,9 @@ namespace FreeFlowHero.Combat.Core
             CanSkillCancel = false;
             CanMoveCancel = false;
             CanDodgeCancel = false;
-            CanCounterCancel = false;
             CancelNextAction = "";
             CancelHeavyNext = "";
             CancelDodgeNext = "";
-            CancelCounterNext = "";
             IsStartupActive = false;
             StartupMoveSpeed = 0f;
             IsRootMotionActive = false;
@@ -267,15 +259,12 @@ namespace FreeFlowHero.Combat.Core
                     if (n.skillCancel) CanSkillCancel = true;
                     if (n.moveCancel) CanMoveCancel = true;
                     if (n.dodgeCancel) CanDodgeCancel = true;
-                    if (n.counterCancel) CanCounterCancel = true;
                     if (!string.IsNullOrEmpty(n.nextAction))
                         CancelNextAction = n.nextAction;
                     if (!string.IsNullOrEmpty(n.heavyNext))
                         CancelHeavyNext = n.heavyNext;
                     if (!string.IsNullOrEmpty(n.dodgeNext))
                         CancelDodgeNext = n.dodgeNext;
-                    if (!string.IsNullOrEmpty(n.counterNext))
-                        CancelCounterNext = n.counterNext;
                     break;
 
                 case NotifyType.PENDING_WINDOW:
@@ -324,7 +313,6 @@ namespace FreeFlowHero.Combat.Core
                 case "Attack":  return CanSkillCancel;
                 case "Heavy":   return CanSkillCancel;
                 case "Dodge":   return CanDodgeCancel;
-                case "Counter": return CanCounterCancel;
                 case "Move":    return CanMoveCancel;
                 default:        return false;
             }
@@ -351,9 +339,6 @@ namespace FreeFlowHero.Combat.Core
                 case "Dodge":
                     if (!CanDodgeCancel) return null;
                     return !string.IsNullOrEmpty(CancelDodgeNext) ? CancelDodgeNext : "Dodge";
-                case "Counter":
-                    if (!CanCounterCancel) return null;
-                    return !string.IsNullOrEmpty(CancelCounterNext) ? CancelCounterNext : "Counter";
                 case "Move":
                     return CanMoveCancel ? null : null;  // 이동 캔슬은 전이 대상 없음 (Idle 복귀)
                 default:
@@ -365,6 +350,6 @@ namespace FreeFlowHero.Combat.Core
         /// 현재 프레임에서 어떤 캔슬이든 허용되는지 (OR 합산).
         /// </summary>
         public bool AnyCancelActive =>
-            IsCancelWindowActive && (CanSkillCancel || CanMoveCancel || CanDodgeCancel || CanCounterCancel);
+            IsCancelWindowActive && (CanSkillCancel || CanMoveCancel || CanDodgeCancel);
     }
 }

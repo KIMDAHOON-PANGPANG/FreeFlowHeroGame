@@ -1,13 +1,5 @@
 namespace FreeFlowHero.Combat.Core
 {
-    /// <summary>카운터 결과 타입</summary>
-    public enum CounterType
-    {
-        Perfect,    // ±3f: 강화 반격 + 슬로우모션
-        Normal,     // ±8f: 일반 반격
-        Miss        // 실패 → 피격
-    }
-
     /// <summary>적 텔레그래프 타입 (인디케이터 색상)</summary>
     public enum TelegraphType
     {
@@ -41,7 +33,6 @@ namespace FreeFlowHero.Combat.Core
     {
         Light,
         Heavy,
-        Counter,
         HuxleyShot,
         Execution,
         DodgeAttack

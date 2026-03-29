@@ -23,10 +23,6 @@ namespace FreeFlowHero.Combat.Core
         public const float DodgeIFrameDuration = DodgeIFrames * FrameDuration; // 0.2초
         public const float DodgeSpeed = 15f;               // 유닛/초
 
-        // ─── 카운터 ───
-        public const int PerfectCounterWindow = 3;         // ±3f
-        public const int NormalCounterWindow = 8;           // ±8f
-
         // ─── 워핑 ───
         // WarpDuration, WarpArrivalOffset → WARP 노티파이 파라미터로 이전됨
         public const float MaxWarpDistance = 20f;           // 거리 비례 워핑 시간 계산 기준

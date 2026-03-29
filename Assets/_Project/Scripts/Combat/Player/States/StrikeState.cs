@@ -552,10 +552,6 @@ namespace FreeFlowHero.Combat.Player
                     fsm.TransitionTo<DodgeState>();
                     break;
 
-                case InputType.Counter:
-                    fsm.TransitionTo<CounterState>();
-                    break;
-
                 default:
                     fsm.InputBuffer.BufferInput(input);
                     break;
@@ -565,7 +561,7 @@ namespace FreeFlowHero.Combat.Player
         /// <summary>
         /// 캔슬 라우팅에서 결정된 다음 액션으로 전환.
         /// LightAtk 계열은 콤보 체인 인덱스를 갱신한 뒤 워핑 판정을 거침.
-        /// Dodge, Counter 등은 직접 상태 전환.
+        /// Dodge 등은 직접 상태 전환.
         /// </summary>
         private void ResolveCancelTarget(string targetActionId, InputData input)
         {
@@ -583,9 +579,6 @@ namespace FreeFlowHero.Combat.Player
             {
                 case "Dodge":
                     fsm.TransitionTo<DodgeState>();
-                    break;
-                case "Counter":
-                    fsm.TransitionTo<CounterState>();
                     break;
                 case "HeavyAtk":
                     // Phase 4: HeavyAttackState
@@ -615,7 +608,6 @@ namespace FreeFlowHero.Combat.Player
                 case InputType.Attack:  return "Attack";
                 case InputType.Heavy:   return "Heavy";
                 case InputType.Dodge:   return "Dodge";
-                case InputType.Counter: return "Counter";
                 case InputType.Huxley:  return "Huxley";
                 default:                return type.ToString();
             }
