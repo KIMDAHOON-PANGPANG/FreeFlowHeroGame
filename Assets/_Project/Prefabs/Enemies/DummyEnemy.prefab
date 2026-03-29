@@ -39,7 +39,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7101106746823839109}
-  - {fileID: 5742414293279094768}
+  - {fileID: 6246667489528985664}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &1993583070725131474
@@ -359,7 +359,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FreeFlowHero.Common.HurtboxController
   ownerTeam: 1
---- !u!1001 &5204927643740000283
+--- !u!1001 &5853034101697044395
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -428,8 +428,8 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 311536138b8622a4895fa913884605e9, type: 3}
---- !u!4 &5742414293279094768 stripped
+--- !u!4 &6246667489528985664 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 311536138b8622a4895fa913884605e9, type: 3}
-  m_PrefabInstance: {fileID: 5204927643740000283}
+  m_PrefabInstance: {fileID: 5853034101697044395}
   m_PrefabAsset: {fileID: 0}

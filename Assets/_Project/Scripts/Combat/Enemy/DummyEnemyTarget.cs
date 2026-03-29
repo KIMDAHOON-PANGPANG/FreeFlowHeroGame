@@ -41,12 +41,8 @@ namespace FreeFlowHero.Combat.Enemy
             // 데미지 적용 (Phase 1: 단순 감산)
             currentHP = Mathf.Max(0f, currentHP - hitData.BaseDamage);
 
-            // 시각 피드백: 머티리얼 플래시 + 스케일 펀치
-            hitFlash?.Play();
-            scalePunchTimer = scalePunchDuration;
-            transform.localScale = originalScale * 1.15f;
-
-            // ★ 피격 리액션: HitReactionHandler로 Flinch/Knockdown 분기
+            // ★ 피격 리액션: HitReactionHandler로 Flinch/Knockdown 분기 (facing 변경 포함)
+            //   스케일 펀치보다 먼저 실행하여 facing이 올바르게 적용되도록 함.
             if (reactionHandler != null)
             {
                 reactionHandler.ApplyReaction(hitData.Reaction, hitData);
@@ -64,6 +60,17 @@ namespace FreeFlowHero.Combat.Enemy
                     rb.position = knockPos;
                 }
             }
+
+            // ★ ApplyReaction이 facing(localScale.x)을 변경했을 수 있으므로 originalScale 갱신
+            originalScale = new Vector3(
+                Mathf.Abs(originalScale.x) * Mathf.Sign(transform.localScale.x),
+                originalScale.y,
+                originalScale.z);
+
+            // 시각 피드백: 머티리얼 플래시 + 스케일 펀치
+            hitFlash?.Play();
+            scalePunchTimer = scalePunchDuration;
+            transform.localScale = originalScale * 1.15f;
 
             // 사망 처리
             if (currentHP <= 0f && !isDying)

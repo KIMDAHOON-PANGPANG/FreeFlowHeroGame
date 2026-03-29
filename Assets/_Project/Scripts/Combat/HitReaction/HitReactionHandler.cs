@@ -85,12 +85,12 @@ namespace FreeFlowHero.Combat.HitReaction
         /// </summary>
         private void OnAnimatorMove()
         {
-            // 넉다운 중: 루트모션을 rb에 적용
+            // 넉다운 중: X 루트모션만 rb에 적용 (Y는 적용하지 않음 — 시각적 체공은 포즈가 담당)
             if (knockdownActive && animator != null && rb != null)
             {
                 Vector3 delta = animator.deltaPosition;
                 float xMove = Mathf.Abs(delta.x) * knockdownDir;
-                rb.position += new Vector2(xMove, delta.y);
+                rb.position += new Vector2(xMove, 0f);
                 return;
             }
             // 그 외: 루트모션 차단
@@ -160,11 +160,19 @@ namespace FreeFlowHero.Combat.HitReaction
 
             if (Mathf.Approximately(facingDir, 0f)) return;
 
+            float prevScaleX = transform.localScale.x;
+
             // forceFlip=true면 무조건, false면 이미 맞는 방향이면 스킵
             if (reaction.forceFlip || !IsAlreadyFacing(facingDir))
             {
                 FlipToFace(facingDir);
             }
+
+            Debug.Log($"[HitReaction][Facing][{gameObject.name}] " +
+                $"mode={reaction.facing} facingDir={facingDir:F1} " +
+                $"prevScaleX={prevScaleX:F2} → newScaleX={transform.localScale.x:F2} " +
+                $"forceFlip={reaction.forceFlip} knockDir={knockDir:F1} " +
+                $"attackerX={hitData.AttackerPosition.x:F2} myX={rb.position.x:F2}");
         }
 
         private bool IsAlreadyFacing(float dir)
