@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FreeFlowHeroGame - Sprint Roadmap</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232733;
+    --border: #2e3345;
+    --text: #e4e7ef;
+    --text2: #9ba3b8;
+    --accent: #7c3aed;
+    --accent2: #a78bfa;
+    --green: #22c55e;
+    --green-bg: #22c55e18;
+    --yellow: #eab308;
+    --yellow-bg: #eab30818;
+    --orange: #f97316;
+    --orange-bg: #f9731618;
+    --red: #ef4444;
+    --red-bg: #ef444418;
+    --blue: #3b82f6;
+    --blue-bg: #3b82f618;
+    --purple: #7c3aed;
+    --purple-bg: #7c3aed18;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header-sub {
+    font-size: 14px;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+  .header-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+  }
+  .btn:hover { background: var(--surface2); border-color: var(--accent); }
+  .btn-accent {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  .btn-accent:hover { background: #6d28d9; }
+
+  /* Category Tabs (프로그래밍/아트) */
+  .category-tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 32px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 16px;
+  }
+  .category-tab {
+    padding: 12px 24px;
+    border-radius: 8px 8px 0 0;
+    background: transparent;
+    border: none;
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .category-tab:hover { color: var(--text); }
+  .category-tab.active {
+    color: var(--accent);
+    background: var(--surface);
+  }
+  .category-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -18px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent);
+  }
+
+  /* Content sections for categories */
+  .category-content {
+    display: none;
+  }
+  .category-content.active {
+    display: block;
+  }
+
+  /* Summary Cards */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+  .summary-card .num {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .summary-card .label { font-size: 12px; color: var(--text2); }
+
+  /* Phase Tabs */
+  .phase-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .phase-tab {
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .phase-tab:hover { border-color: var(--accent); color: var(--text); }
+  .phase-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  /* Timeline */
+  .timeline { position: relative; }
+
+  .sprint-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .sprint-block:hover { border-color: var(--accent); }
+  .sprint-block.completed { border-left: 3px solid var(--green); }
+  .sprint-block.in-progress { border-left: 3px solid var(--yellow); }
+  .sprint-block.planned { border-left: 3px solid var(--blue); }
+  .sprint-block.vision { border-left: 3px solid var(--purple); }
+
+  .sprint-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .sprint-header:hover { background: var(--surface2); }
+
+  .sprint-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .sprint-week {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent2);
+    min-width: 80px;
+  }
+  .sprint-title {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .sprint-phase {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  .phase-4 { background: var(--orange-bg); color: var(--orange); }
+  .phase-5 { background: var(--blue-bg); color: var(--blue); }
+  .phase-6 { background: var(--purple-bg); color: var(--purple); }
+  .phase-done { background: var(--green-bg); color: var(--green); }
+  .phase-art-a { background: var(--orange-bg); color: var(--orange); }
+  .phase-art-b { background: var(--blue-bg); color: var(--blue); }
+  .phase-art-c { background: var(--purple-bg); color: var(--purple); }
+  .phase-gd-a { background: var(--orange-bg); color: var(--orange); }
+  .phase-gd-b { background: var(--blue-bg); color: var(--blue); }
+  .phase-gd-c { background: var(--purple-bg); color: var(--purple); }
+
+  .sprint-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .sprint-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .progress-bar {
+    width: 100px;
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+  .chevron {
+    transition: transform 0.2s;
+    color: var(--text2);
+  }
+  .sprint-block.open .chevron { transform: rotate(180deg); }
+
+  /* Tasks */
+  .sprint-body {
+    display: none;
+    padding: 0 20px 16px;
+  }
+  .sprint-block.open .sprint-body { display: block; }
+
+  .task-list { list-style: none; }
+  .task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    transition: background 0.15s;
+  }
+  .task-item:hover { background: var(--surface2); }
+
+  .task-check {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .task-check:hover { border-color: var(--accent); }
+  .task-check.checked {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .task-check.checked::after {
+    content: '\2713';
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .task-content { flex: 1; }
+  .task-name {
+    font-size: 14px;
+    font-weight: 500;
+    outline: none;
+  }
+  .task-name[contenteditable]:focus {
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .task-item.done .task-name {
+    text-decoration: line-through;
+    color: var(--text2);
+  }
+  .task-desc {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 2px;
+    outline: none;
+  }
+  .task-desc[contenteditable]:focus {
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* Add task */
+  .add-task-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 13px;
+    width: 100%;
+    margin-top: 8px;
+    transition: all 0.15s;
+  }
+  .add-task-btn:hover { border-color: var(--accent); color: var(--accent2); }
+
+  /* Dependencies / Notes */
+  .sprint-notes {
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--bg);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .sprint-notes-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .sprint-notes-content {
+    font-size: 13px;
+    color: var(--text2);
+    outline: none;
+    min-height: 20px;
+  }
+  .sprint-notes-content[contenteditable]:focus {
+    color: var(--text);
+  }
+
+  /* Add Sprint */
+  .add-sprint-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    border-radius: 16px;
+    border: 2px dashed var(--border);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 14px;
+    width: 100%;
+    margin-top: 16px;
+    transition: all 0.15s;
+  }
+  .add-sprint-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent2);
+  }
+
+  /* Modals */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal.active { display: flex; }
+  .modal-content {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+  .form-group {
+    margin-bottom: 16px;
+  }
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+  }
+  .form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+  .form-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+  .btn-secondary {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover {
+    background: var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>FreeFlowHeroGame</h1>
+    <p class="header-sub">프로그래밍 & 아트 & 기획 통합 로드맵</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn" id="exportBtn">JSON 내보내기</button>
+    <button class="btn" id="importBtn">JSON 불러오기</button>
+  </div>
+</div>
+
+<!-- Category Tabs (프로그래밍 / 아트) -->
+<div class="category-tabs">
+  <button class="category-tab active" data-category="programming">프로그래밍</button>
+  <button class="category-tab" data-category="art">아트</button>
+  <button class="category-tab" data-category="design">기획</button>
+</div>
+
+<!-- PROGRAMMING CATEGORY -->
+<div class="category-content active" data-category="programming">
+  <div class="summary-row" id="programmingSummary">
+    <div class="summary-card">
+      <div class="num" id="prog-total">0</div>
+      <div class="label">전체 스프린트</div>
+    </div>
+    <div class="summary-card">
+      <div class="num" id="prog-completed">0</div>
+      <div class="label">완료</div>
+    </div>
+    <div class="summary-card">
+      <div class="num" id="prog-tasks">0</div>
+      <div class="label">전체 작업</div>
+    </div>
+    <div class="summary-card">
+      <div class="num" id="prog-progress">0%</div>
+      <div class="label">진행률</div>
+    </div>
+  </div>
+
+  <div class="phase-tabs" id="progPhaseTabs">
+    <button class="phase-tab active" data-phase="all">모두</button>
+    <button class="phase-tab" data-phase="done">완료</button>
+    <button class="phase-tab" data-phase="4">Phase 4</button>
+    <button class="phase-tab" data-phase="5">Phase 5</button>
+    <button class="phase-tab" data-phase="6">Phase 6</button>
+  </div>
+
+  <div class="timeline" id="programmingTimeline"></div>
+  <button class="add-sprint-btn" data-category="programming">+ 새 스프린트 추가</button>
+</div>
+
+<!-- ART CATEGORY -->
+<div class="category-content" data-category="art">
+  <div class="summary-row" id="artSummary">
+    <div class="summary-card">
+      <div class="num" id="art-total">0</div>
+      <div class="label">전체 스프린트</div>
+    </div>
+    <div class="summary-card">
+      <div class="num" id="art-completed">0</div>
+      <div class="label">완료</div>
+    </div>
+    <div class="summary-card">
+      <div class="num" id="art-tasks">0</div>
+      <div class="label">전체 작업</div>
+    </div>
+    <div class="summary-card">
+      <div class="num" id="art-progress">0%</div>
+      <div class="label">진행률</div>
+    </div>
+  </div>
+
+  <div class="phase-tabs" id="artPhaseTabs">
+    <button class="phase-tab active" data-phase="all">모두</button>
+    <button class="phase-tab" data-phase="done">완료</button>
+    <button class="phase-tab" data-phase="art-a">Phase A</button>
+    <button class="phase-tab" data-phase="art-b">Phase B</button>
+    <button class="phase-tab" data-phase="art-c">Phase C</button>
+  </div>
+
+  <div class="timeline" id="artTimeline"></div>
+  <button class="add-sprint-btn" data-category="art">+ 새 스프린트 추가</button>
+</div>
+
+<!-- DESIGN CATEGORY -->
+<div class="category-content" data-category="design">
+  <div class="summary-row" id="designSummary">
+    <div class="summary-card">
+      <div class="num" id="design-total">0</div>
+      <div class="label">전체 스프린트</div>
+    </div>
+    <div class="summary-card">
+      <div class="num" id="design-completed">0</div>
+      <div class="label">완료</div>
+    </div>
+    <div class="summary-card">
+      <div class="num" id="design-tasks">0</div>
+      <div class="label">전체 작업</div>
+    </div>
+    <div class="summary-card">
+      <div class="num" id="design-progress">0%</div>
+      <div class="label">진행률</div>
+    </div>
+  </div>
+
+  <div class="phase-tabs" id="designPhaseTabs">
+    <button class="phase-tab active" data-phase="all">모두</button>
+    <button class="phase-tab" data-phase="done">완료</button>
+    <button class="phase-tab" data-phase="gd-a">Phase 4기</button>
+    <button class="phase-tab" data-phase="gd-b">Phase 5기</button>
+    <button class="phase-tab" data-phase="gd-c">Phase 6기</button>
+  </div>
+
+  <div class="timeline" id="designTimeline"></div>
+  <button class="add-sprint-btn" data-category="design">+ 새 스프린트 추가</button>
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal" id="addTaskModal">
+  <div class="modal-content">
+    <div class="modal-title">작업 추가</div>
+    <div class="form-group">
+      <label>작업 이름</label>
+      <input type="text" id="taskNameInput" placeholder="작업 이름을 입력하세요">
+    </div>
+    <div class="form-group">
+      <label>설명 (선택)</label>
+      <textarea id="taskDescInput" placeholder="작업 설명"></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeAddTaskModal()">취소</button>
+      <button class="btn btn-accent" onclick="saveNewTask()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Sprint Modal -->
+<div class="modal" id="addSprintModal">
+  <div class="modal-content">
+    <div class="modal-title">스프린트 추가</div>
+    <div class="form-group">
+      <label>주차 (예: W10)</label>
+      <input type="text" id="sprintWeekInput" placeholder="W10">
+    </div>
+    <div class="form-group">
+      <label>제목</label>
+      <input type="text" id="sprintTitleInput" placeholder="스프린트 제목">
+    </div>
+    <div class="form-group">
+      <label>페이즈</label>
+      <select id="sprintPhaseSelect">
+        <option value="4">Phase 4</option>
+        <option value="5">Phase 5</option>
+        <option value="6">Phase 6</option>
+        <option value="art-a">Art Phase A</option>
+        <option value="art-b">Art Phase B</option>
+        <option value="art-c">Art Phase C</option>
+        <option value="gd-a">기획 Phase 4기</option>
+        <option value="gd-b">기획 Phase 5기</option>
+        <option value="gd-c">기획 Phase 6기</option>
+        <option value="done">완료</option>
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeAddSprintModal()">취소</button>
+      <button class="btn btn-accent" onclick="saveNewSprint()">추가</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="importFileInput" style="display: none;" accept=".json">
+
+<script>
+  const STORAGE_KEY = 'freeflow-hero-roadmap';
+  let currentAddingSprintCategory = null;
+  let currentAddingTaskSprintId = null;
+
+  const initialData = {
+    programming: [
+      { id: 'prog-p1-w1', week: 'W1-3', title: '플레이어 FSM + Hitbox/Hurtbox', phase: 'done', tasks: [{ id: '1', name: '플레이어 FSM 기초 구현', desc: 'Idle, Strike, Dodge, Guard 상태', done: true }, { id: '2', name: 'Hitbox/Hurtbox 시스템', desc: '원형/박스형 콜라이더, 배치 최적화', done: true }, { id: '3', name: 'CombatEventBus 구현', desc: '이벤트 기반 모듈 통신', done: true }], notes: '기초 전투 시스템 완료' },
+      { id: 'prog-p1-w4', week: 'W4-6', title: '콤보 시스템 + 회피(Dodge)', phase: 'done', tasks: [{ id: '1', name: '콤보 윈도우 + 캔슬', desc: '0.8초 콤보 타이밍, 캔슬 윈도우 로직', done: true }, { id: '2', name: '회피 I-frame + 무적프레임', desc: '12프레임 무적, 대시 이동', done: true }, { id: '3', name: '인풋 버퍼 시스템', desc: '0.15초 선입력 유효', done: true }], notes: '프리플로우 코어 메카닉 구현 완료' },
+      { id: 'prog-p2-w7', week: 'W7-9', title: '적 AI + 텔레그래프', phase: 'done', tasks: [{ id: '1', name: '적 Behavior Tree', desc: '공격 패턴, 회피 로직', done: true }, { id: '2', name: '텔레그래프 인디케이터', desc: '빨간 신호 공격 예고', done: true }, { id: '3', name: 'AttackCoordinator', desc: '최대 2명 동시 공격 관리', done: true }], notes: '적 AI 시스템 완료' },
+      { id: 'prog-p3-w10', week: 'W10-11', title: '워핑 + 근접 콤보', phase: '4', tasks: [{ id: '1', name: 'Warp 로직 (자동 추적)', desc: '0.04~0.12초, WARP 노티파이', done: false }, { id: '2', name: '콤보 체인 (Grunt)', desc: '3~5타 자동 워핑 콤보', done: false }, { id: '3', name: 'AnimatorController 매핑', desc: 'EEJANAI 애니메이션 18종 매핑', done: false }], notes: '유려한 근접 연타 프리플로우' },
+      { id: 'prog-p3-w12', week: 'W12', title: '처형(Execution) + 헉슬리 건', phase: '4', tasks: [{ id: '1', name: '처형 시네마틱 (3가지)', desc: 'HP 20% 이하에서 발동', done: false }, { id: '2', name: '헉슬리 게이지 (콤보 충전)', desc: '콤보당 5% 충전, 100% 피니셔', done: false }, { id: '3', name: '피니셔 연출', desc: '슬로모션, 화면 플래시', done: false }], notes: 'Phase 4 피니셔 시스템' },
+      { id: 'prog-p3-w13', week: 'W13', title: '히트 리액션 + 타격감', phase: '4', tasks: [{ id: '1', name: '히트스탑 (Hitstop)', desc: '0.1~0.2초 화면 정지', done: false }, { id: '2', name: '넉백 + 넉다운', desc: '피격 후 밀려남, 다운 로직', done: false }, { id: '3', name: '카메라 셰이크', desc: '영향도 기반 카메라 진동', done: false }], notes: '타격감 극대화' },
+      { id: 'prog-p4-w14', week: 'W14-15', title: '가드(Guard) 시스템', phase: '5', tasks: [{ id: '1', name: '가드 포즈 + 피격 판정', desc: '우클릭으로 방어 자세', done: false }, { id: '2', name: '가드 반격 (카운터)', desc: '방어 중 자동 반격', done: false }, { id: '3', name: 'Guard Break', desc: '강공격으로 가드 파괴', done: false }], notes: 'Phase 5 방어 메카닉' },
+      { id: 'prog-p4-w16', week: 'W16-17', title: '아머 시스템', phase: '5', tasks: [{ id: '1', name: '아머 실드 표시', desc: '적/플레이어 아머 게이지', done: false }, { id: '2', name: 'Heavy Attack 아머 파괴', desc: '강공격만 아머 제거 가능', done: false }, { id: '3', name: '아머 회복 로직', desc: '일정 시간 후 점진적 회복', done: false }], notes: '아머 방어 메카닉' },
+      { id: 'prog-p5-w18', week: 'W18-19', title: '밸런싱 + 난이도 곡선', phase: '6', tasks: [{ id: '1', name: '데미지 공식 튜닝', desc: '콤보 스케일링, DPS 계산', done: false }, { id: '2', name: '난이도별 AI 조절', desc: '텔레그래프 타이밍, 공격 패턴', done: false }, { id: '3', name: 'QA + 플레이테스트', desc: '버그 수정, 밸런스 피드백', done: false }], notes: 'Phase 5 최종 밸런싱' },
+      { id: 'prog-p5-w20', week: 'W20+', title: '고급 기능 & 최적화', phase: '6', tasks: [{ id: '1', name: '보스 페이즈 전환', desc: '보스 패턴 변경, 체력 임계치', done: false }, { id: '2', name: 'UI/HUD 통합', desc: 'HP바, 콤보 카운터, 게이지', done: false }, { id: '3', name: '성능 최적화', desc: '메모리, CPU 프로파일링', done: false }], notes: 'Phase 6 추가 기능' }
+    ],
+    art: [
+      { id: 'art-proto-w1', week: 'W1-9', title: '프로토타입 에셋 현황', phase: 'done', tasks: [{ id: '1', name: 'EEJANAI 18종 애니메이션 보유', desc: '격투 애니메이션 팩 완비', done: true }, { id: '2', name: 'EEJANAIbot 모델 보유', desc: '로봇 캐릭터 기초 모델', done: true }, { id: '3', name: 'UnityToon 셰이더 사용중', desc: '토온 스타일 렌더링', done: true }], notes: '프로토타입 에셋 기준' },
+      { id: 'art-p4-w10', week: 'W10-11', title: '히트 이펙트 + 텔레그래프 VFX', phase: 'art-a', tasks: [{ id: '1', name: '히트 임팩트 VFX 3단계', desc: 'Light/Medium/Heavy 타격 이펙트', done: false }, { id: '2', name: '카메라셰이크 프리셋', desc: '영향도별 카메라 진동', done: false }, { id: '3', name: '텔레그래프 인디케이터 리디자인', desc: '빨간 신호 공격 예고 이펙트', done: false }, { id: '4', name: 'Dodge 트레일 이펙트', desc: '회피 시 움직임 흔적', done: false }], notes: 'Phase A 타격감 VFX' },
+      { id: 'art-p4-w12', week: 'W12', title: '처형 + 헉슬리 연출 VFX', phase: 'art-a', tasks: [{ id: '1', name: '처형 슬로모션 이펙트', desc: '시네마틱 처형 시간 왜곡', done: false }, { id: '2', name: '헉슬리 발사 섬광+탄환 궤적', desc: '총 발사 파이로 및 탄도', done: false }, { id: '3', name: '피니셔 화면 플래시', desc: '강력한 마무리 타격 플래시', done: false }, { id: '4', name: '피 스플래시 VFX', desc: '충격 혈액 이펙트', done: false }], notes: 'Phase A 피니셔 연출' },
+      { id: 'art-p4-w13', week: 'W13', title: 'UI/HUD 기초', phase: 'art-a', tasks: [{ id: '1', name: '플레이어 HP바', desc: '파란색 체력 게이지', done: false }, { id: '2', name: '적 HP바+아머표시', desc: '적 상단 체력/아머 게이지', done: false }, { id: '3', name: '콤보 카운터', desc: '현재 콤보 수 표시', done: false }, { id: '4', name: '헉슬리 게이지바', desc: '주황색 충전 게이지', done: false }, { id: '5', name: '처형 아이콘', desc: '처형 가능 상태 표시', done: false }], notes: 'Phase A UI 기초' },
+      { id: 'art-p5-w14', week: 'W14-15', title: '캐릭터 컨셉 + 모델링', phase: 'art-b', tasks: [{ id: '1', name: '히어로 캐릭터 컨셉디자인', desc: 'REPLACED 스타일 히어로 비주얼', done: false }, { id: '2', name: '히어로 3D 모델링 (Blender)', desc: '풀 바디 캐릭터 모델링', done: false }, { id: '3', name: '히어로 리깅+EEJANAI 리타겟', desc: '애니메이션 본 리깅', done: false }, { id: '4', name: '픽셀셰이더 적용+테스트', desc: '토온/픽셀 하이브리드', done: false }, { id: '5', name: 'Grunt(잡몹) 컨셉+모델링', desc: '일반 졸병 캐릭터', done: false }], notes: 'Phase B 캐릭터 제작' },
+      { id: 'art-p6-w16', week: 'W16-17', title: '배경 프로토타입', phase: 'art-c', tasks: [{ id: '1', name: '배경 방식 결정', desc: '3D+픽셀 vs 도트 선택', done: false }, { id: '2', name: '도시 골목(낮) 배경 프로토', desc: '낮 환경 배경 제작', done: false }, { id: '3', name: '복층 건물 내부 배경 프로토', desc: '건물 내부 배경', done: false }, { id: '4', name: 'Tilemap/Parallax 레이어 세팅', desc: '배경 레이어 구성', done: false }], notes: 'Phase C 배경 제작' },
+      { id: 'art-p6-w18', week: 'W18', title: '환경 소품 제작', phase: 'art-c', tasks: [{ id: '1', name: '의자 모델+파편', desc: '파괴 가능 가구', done: false }, { id: '2', name: '배럴/상자 모델+구르기 애니', desc: '환경 오브젝트', done: false }, { id: '3', name: '창문 깨짐 이펙트', desc: '파괴 이펙트', done: false }, { id: '4', name: '난간 구부러짐 애니', desc: '환경 상호작용 애니메이션', done: false }], notes: 'Phase C 소품' },
+      { id: 'art-p6-w19', week: 'W19', title: '벽 액션 애니메이션', phase: 'art-c', tasks: [{ id: '1', name: 'WallClimb 모션', desc: '벽 타고 올라가기', done: false }, { id: '2', name: 'WallCling(Hold) 루프', desc: '벽에 붙어있기', done: false }, { id: '3', name: 'WallKick 발차기 모션', desc: '벽에서 발차기', done: false }, { id: '4', name: 'WallBounce 점프 모션', desc: '벽을 타고 점프', done: false }, { id: '5', name: 'DiveKick 하강킥 모션', desc: '공중에서 내려차기', done: false }], notes: 'Phase C 벽 액션' },
+      { id: 'art-p6-w20', week: 'W20', title: '사운드 + 최종 VFX', phase: 'art-c', tasks: [{ id: '1', name: '타격 SFX 3단계', desc: 'Light/Medium/Heavy 타격음', done: false }, { id: '2', name: '처형/헉슬리 SFX', desc: '피니셔 사운드', done: false }, { id: '3', name: '환경 파괴음', desc: '소품 파괴 음향', done: false }, { id: '4', name: '이동/회피/착지 폴리 SFX', desc: '이동음', done: false }, { id: '5', name: '전투 BGM 1곡', desc: '전투 배경음악', done: false }, { id: '6', name: '환경 파괴 VFX 패키지', desc: '최종 VFX 세트', done: false }], notes: 'Phase C 최종 사운드 & VFX' }
+    ],
+    design: [
+      { id: 'gd-done-w1', week: 'W1-9', title: '기초 전투 기획 완료', phase: 'done', tasks: [
+        { id: '1', name: '프리플로우 코어 메카닉 정의', desc: '워핑, 콤보 윈도우, 인풋 버퍼, 펜딩 윈도우 수치 확정', done: true },
+        { id: '2', name: '적 텔레그래프 색상 체계', desc: '빨간(Dodge) / 노란(Counter) 이원 체계 확정', done: true },
+        { id: '3', name: 'AttackCoordinator 규칙', desc: '동시 공격 최대 2명 + 호흡시간 0.5s 규칙 수립', done: true },
+        { id: '4', name: '액션 테이블 JSON 구조 설계', desc: 'Startup/Active/Recovery + 노티파이 시스템 설계 완료', done: true },
+        { id: '5', name: 'EEJANAI 18종 전투 액션 매핑', desc: '애니메이션→전투 액션 1:1 매핑표 작성', done: true }
+      ], notes: '전투 시스템 기획서 v1~v2 기반 완료' },
+      { id: 'gd-a-w10', week: 'W10', title: '처형 메카닉 심화 검토', phase: 'gd-a', tasks: [
+        { id: '1', name: '처형 트리거 엣지케이스 분석', desc: 'HP 20% 임계치 판정 시점: 히트 확인 즉시 vs 다음 프레임? 동시 다수 적 임계치 도달 시 우선순위?', done: false },
+        { id: '2', name: '처형 중 무적/가상정지 범위 설계', desc: '처형 시네마틱 중 다른 적 공격 처리 — 완전 무적? 가상정지(TimeScale)? 다른 적 AI 대기?', done: false },
+        { id: '3', name: '콤보→처형 전환 자연스러움', desc: '콤보 4타 도중 적 HP가 임계치 이하 → 즉시 처형? 아니면 콤보 완료 후? 캔슬 윈도우 연동', done: false },
+        { id: '4', name: '처형 모션 3종 선택 기준', desc: 'crescent/axe/spinning axe 중 어떤 기준으로 선택? 콤보 카운트? 랜덤? 적 유형?', done: false }
+      ], notes: '기획서 Phase 4 처형 시스템 섹션 보완' },
+      { id: 'gd-a-w11', week: 'W11', title: '헉슬리 건 밸런스 설계', phase: 'gd-a', tasks: [
+        { id: '1', name: '게이지 충전율 시뮬레이션', desc: '히트당 5% × comboMultiplier — 20콤보 시 100% 도달? 너무 빠르면 남발, 느리면 무의미', done: false },
+        { id: '2', name: 'Single/Double/Finisher 차별성', desc: '3단계 사격의 데미지/범위/연출 차이 명확화. 게이지 소모량 기준 설정', done: false },
+        { id: '3', name: '처형 vs 헉슬리 피니셔 우선순위', desc: '둘 다 조건 충족 시 어떤 것이 우선? 별도 입력? 자동 판단? ContextAction과의 관계', done: false },
+        { id: '4', name: '원거리↔근거리 전환 플로우', desc: '헉슬리 사격 후 바로 콤보 복귀 가능? 사격 Recovery 중 캔슬 가능 범위', done: false }
+      ], notes: '기획서 헉슬리 섹션 보완 + 수치 시뮬레이션 의뢰' },
+      { id: 'gd-a-w12', week: 'W12', title: '히트리액션 + 타격감 스펙 검증', phase: 'gd-a', tasks: [
+        { id: '1', name: 'Flinch 3단계 체감 차이 검증', desc: 'Light(30cm/0.08s) vs Medium(60cm/0.12s) vs Heavy(100cm/0.18s) — 수치 차이가 플레이어에게 느껴지는가?', done: false },
+        { id: '2', name: 'HitStop duration vs 게임 템포', desc: 'HitStop이 콤보 템포를 깨뜨리지 않는 최대 허용 시간 검토. 60fps 기준 1.5f~4.0f 범위', done: false },
+        { id: '3', name: '카메라셰이크 과다 사용 방지', desc: '연타 콤보 중 매 타격마다 셰이크 → 멀미 유발? 누적 셰이크 감쇠 규칙 필요', done: false },
+        { id: '4', name: 'Knockdown 궤적 곡선 설계', desc: '현재 AnimationCurve peak=0.35 설정 검증. 높이/거리/체공시간 조합별 시각적 만족감 비교', done: false }
+      ], notes: 'CombatConstants 프리셋 데이터 기반 검증' },
+      { id: 'gd-a-w13', week: 'W13', title: '아머 시스템 + Phase 4 통합 리뷰', phase: 'gd-a', tasks: [
+        { id: '1', name: '아머 적 등장 타이밍/빈도', desc: 'Heavy 적만? 아머 수치별 Heavy Attack 필요 횟수? 1회? 2회? 파괴 후 경직 시간?', done: false },
+        { id: '2', name: 'Heavy Attack 발동 조건 재검토', desc: '현재 charge fist 매핑인데, 차징 시간? 아니면 방향키+공격? 콤보 중 Heavy 끼워넣기 가능?', done: false },
+        { id: '3', name: 'Phase 4 전체 전투 루프 시뮬', desc: '일반전투→처형→헉슬리→아머적→Heavy Attack 전체 흐름을 시나리오로 검증', done: false },
+        { id: '4', name: '적 유형별 텔레그래프 매트릭스', desc: 'Grunt/Heavy/Ranged/Elite별 텔레그래프 색상, 시간, 대응법 매트릭스 완성', done: false }
+      ], notes: 'Phase 4 마무리 기획 리뷰 — 프로그래밍 W13과 동기화' },
+      { id: 'gd-b-w14', week: 'W14', title: '데미지 공식 설계 + 시뮬레이션', phase: 'gd-b', tasks: [
+        { id: '1', name: '기본 데미지 공식 설계', desc: 'ATK × 배율 - DEF 방식? 퍼센트 감소? 플랫+퍼센트 혼합? 레퍼런스 게임 분석', done: false },
+        { id: '2', name: '콤보 스케일링 감쇠 커브', desc: '1타 100%→2타 95%→...→10타 50%? 감쇠 시작점, 최소 배율, 곡선 형태 결정', done: false },
+        { id: '3', name: 'DPS 시뮬레이션 스프레드시트', desc: '콤보 루트별(일반연타/Heavy삽입/처형마무리/헉슬리) 이론 DPS 비교', done: false },
+        { id: '4', name: '밸런스 브레이크포인트 탐색', desc: '적 HP가 N이고 플레이어 ATK가 M일 때 — 콤보 몇 타에 사망? 느낌상 적절한 구간 설정', done: false }
+      ], notes: 'CombatMathSolver 구현 전 기획 설계 필수' },
+      { id: 'gd-b-w15', week: 'W15', title: '난이도 곡선 + 적 패턴 다양성', phase: 'gd-b', tasks: [
+        { id: '1', name: '텔레그래프 시간 밸런스', desc: 'Easy:0.5s / Normal:0.4s / Hard:0.3s — 난이도별 0.1s 차이가 충분한가?', done: false },
+        { id: '2', name: '동시 공격자 수 vs 난이도', desc: 'Easy:1명 / Normal:2명 / Hard:3명? 3명 동시 공격 시 플레이어 대응 가능성 분석', done: false },
+        { id: '3', name: '웨이브 구성 시나리오', desc: '스테이지별 적 조합 설계: Grunt×3→Grunt×2+Heavy×1→Elite×1+Grunt×4 등', done: false },
+        { id: '4', name: '플레이 타임 목표 설정', desc: '스테이지 하나당 목표 클리어 타임(2~3분?), 전체 데모 길이, 보스전 목표 시간', done: false }
+      ], notes: '밸런싱 기획 — 프로그래밍 W14-15와 동기화' },
+      { id: 'gd-c-w16', week: 'W16', title: '벽 트라버설 기획 검증', phase: 'gd-c', tasks: [
+        { id: '1', name: 'WallClimb→Cling→Kick 전환 흐름', desc: '상태 전환 다이어그램 재검증. 빠져나올 수 없는 루프나 데드락은 없는가?', done: false },
+        { id: '2', name: '하이브리드 조작 모델 C 엣지케이스', desc: '벽 옆에서 평타 → 의도치 않게 벽 붙기 발생? 자동 판단 해제 조건(거리/각도 임계치)', done: false },
+        { id: '3', name: '벽 액션 중 적 공격 대응', desc: 'WallCling 중 적이 공격하면? 텔레그래프 확인 가능? 회피(벽에서 떨어지기)? 가드 불가?', done: false },
+        { id: '4', name: 'WallKick vs 일반 공격 데미지 비교', desc: '벽 발차기가 일반 콤보보다 강해야 하나? 위치 이점 보너스? 리스크/리턴 밸런스', done: false }
+      ], notes: 'Phase 6 벽 시스템 기획 검증 — 프로토타입 전 확인 필수' },
+      { id: 'gd-c-w17', week: 'W17', title: '컨텍스트 액션 우선순위 튜닝', phase: 'gd-c', tasks: [
+        { id: '1', name: '6단계 우선순위 충돌 시나리오', desc: 'WallKick > DiveKick > PropAction > Execution > WarpStrike > 기본 — 동시 조건 충족 시 테스트 케이스', done: false },
+        { id: '2', name: '자동 판단 vs 플레이어 의도 갈등', desc: '플레이어는 처형하고 싶은데 시스템은 WallKick 선택? 오버라이드 메커니즘 설계', done: false },
+        { id: '3', name: 'ContextAction 시각 피드백', desc: '자동 선택된 액션을 플레이어에게 사전 안내? 아이콘? 캐릭터 포즈 변화? 없이 자연스럽게?', done: false },
+        { id: '4', name: '프리플로우 "흐름" 체감 설계', desc: '연속 컨텍스트 액션 시 "탈 것을 타는 듯한" 몰입감 — 전환 사이 끊김 없는 플로우 기준', done: false }
+      ], notes: 'ContextActionResolver 구현 전 기획 확정 필요' },
+      { id: 'gd-c-w18', week: 'W18', title: '환경 물리 상호작용 설계', phase: 'gd-c', tasks: [
+        { id: '1', name: '소품 충돌 체인 리액션', desc: '적→의자→배럴→폭발 연쇄 — 체인 리액션 최대 단계? 데미지 누적? 시각적 연출 범위?', done: false },
+        { id: '2', name: '낙하 데미지 공식 검증', desc: 'baseFallDmg × (height/refHeight)^1.5 — refHeight 기준값? 1층 높이=? 즉사 높이=?', done: false },
+        { id: '3', name: '파괴 가능/불가 오브젝트 기준', desc: '모든 소품이 파괴 가능? 벽/기둥은 불가? 파괴 가능 여부를 플레이어가 직관적으로 알 수 있나?', done: false },
+        { id: '4', name: '소품 리스폰 규칙', desc: '파괴된 소품이 다음 웨이브에 복구? 복구 안 되면 후반 전투가 밋밋해지는 문제', done: false }
+      ], notes: 'CombatProp 구현 전 기획 확정' },
+      { id: 'gd-c-w19', week: 'W19', title: '적 AI 복층 + 전투 시나리오', phase: 'gd-c', tasks: [
+        { id: '1', name: '적 벽 순회 AI 행동 규칙', desc: '적이 벽을 타는 조건: 플레이어가 2층에 있을 때만? 일정 확률? Elite만? 벽 타는 중 공격 가능?', done: false },
+        { id: '2', name: '2층 전투 밸런스', desc: '좁은 2층 공간에서 동시공격자 수 제한 변경? 추락 리스크로 난이도 자연 상승?', done: false },
+        { id: '3', name: '수직 전투 시나리오 설계', desc: '1층 적 vs 2층 플레이어 — 원거리 적의 위협, 플레이어 다이브킥 활용 시나리오', done: false },
+        { id: '4', name: '추락사 연출 + 밸런스', desc: '적을 난간 밖으로 날려 즉사 가능? 보스도? 너무 쉬운 전략이 되지 않도록 제한 조건', done: false }
+      ], notes: '적 AI 확장 기획 — 프로그래밍 W20과 동기화' },
+      { id: 'gd-c-w20', week: 'W20', title: 'Phase 6 통합 기획 리뷰', phase: 'gd-c', tasks: [
+        { id: '1', name: '전체 전투 루프 최종 검증', desc: '지면전투→벽타기→2층전투→다이브킥→소품활용→처형 — 끊김 없는 풀 시나리오 플로우', done: false },
+        { id: '2', name: '새 이벤트 7개 연쇄 시나리오', desc: 'OnWallAction→OnPlatformChanged→OnPropDestroyed 등 새 이벤트의 실제 발화 순서 검증', done: false },
+        { id: '3', name: 'WallGrabKick 프로토 판정', desc: '1층 벽 발차기 실현 가능성 최종 판단 — 프로토타입 결과 기반 Go/No-Go', done: false },
+        { id: '4', name: '차세대 프리플로우 비전 재정리', desc: '프로토 결과 반영하여 기획서 11~12장 업데이트. 실현 가능성 등급 재평가', done: false }
+      ], notes: 'Phase 6 마무리 — 기획서 최종 업데이트' }
+    ]
+  };
+
+  function init() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
+    } else {
+      // 기존 저장 데이터에 design 카테고리가 없으면 추가
+      const data = JSON.parse(saved);
+      if (!data.design) {
+        data.design = initialData.design;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      }
+    }
+    render();
+    attachEventListeners();
+  }
+
+  function render() {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || initialData;
+    if (!data.design) data.design = initialData.design;
+    renderCategory('programming', data.programming);
+    renderCategory('art', data.art);
+    renderCategory('design', data.design);
+    updateSummary('programming', data.programming);
+    updateSummary('art', data.art);
+    updateSummary('design', data.design);
+  }
+
+  function renderCategory(category, sprints) {
+    const tlMap = { programming: 'programmingTimeline', art: 'artTimeline', design: 'designTimeline' };
+    const ptMap = { programming: 'progPhaseTabs', art: 'artPhaseTabs', design: 'designPhaseTabs' };
+    const timelineEl = document.getElementById(tlMap[category]);
+    timelineEl.innerHTML = '';
+    const activePhase = document.querySelector(`#${ptMap[category]} .phase-tab.active`).dataset.phase;
+
+    sprints.forEach(sprint => {
+      if (activePhase !== 'all' && sprint.phase !== activePhase) return;
+      const phaseClass = `phase-${sprint.phase}`;
+      const sprintEl = document.createElement('div');
+      sprintEl.className = `sprint-block completed ${sprint.phase === 'done' ? 'open' : ''}`;
+      sprintEl.id = sprint.id;
+      sprintEl.dataset.phase = sprint.phase;
+      sprintEl.dataset.category = category;
+
+      const completed = sprint.tasks.filter(t => t.done).length;
+      const total = sprint.tasks.length;
+      const progress = total > 0 ? Math.round(completed / total * 100) : 0;
+
+      sprintEl.innerHTML = `
+        <div class="sprint-header">
+          <div class="sprint-left">
+            <span class="sprint-week">${sprint.week}</span>
+            <span class="sprint-title">${sprint.title}</span>
+            <span class="sprint-phase ${phaseClass}">${getPhaseLabel(sprint.phase)}</span>
+          </div>
+          <div class="sprint-right">
+            <div class="sprint-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: ${progress}%; background: ${getProgressColor(progress)}"></div>
+              </div>
+              <span>${completed}/${total}</span>
+            </div>
+            <span class="chevron">▼</span>
+          </div>
+        </div>
+        <div class="sprint-body">
+          <ul class="task-list">
+            ${sprint.tasks.map(task => `
+              <li class="task-item ${task.done ? 'done' : ''}">
+                <div class="task-check ${task.done ? 'checked' : ''}" data-task-id="${task.id}" data-sprint-id="${sprint.id}" data-category="${category}"></div>
+                <div class="task-content">
+                  <div class="task-name" contenteditable="true" data-task-id="${task.id}" data-sprint-id="${sprint.id}" data-category="${category}">${task.name}</div>
+                  ${task.desc ? `<div class="task-desc" contenteditable="true" data-task-id="${task.id}" data-sprint-id="${sprint.id}" data-category="${category}">${task.desc}</div>` : ''}
+                </div>
+              </li>
+            `).join('')}
+          </ul>
+          <button class="add-task-btn" data-sprint-id="${sprint.id}" data-category="${category}">+ 작업 추가</button>
+          <div class="sprint-notes">
+            <div class="sprint-notes-title">노트</div>
+            <div class="sprint-notes-content" contenteditable="true" data-sprint-id="${sprint.id}" data-category="${category}">${sprint.notes}</div>
+          </div>
+        </div>
+      `;
+      timelineEl.appendChild(sprintEl);
+    });
+  }
+
+  function updateSummary(category, sprints) {
+    const totalSprints = sprints.length;
+    const completedSprints = sprints.filter(s => s.phase === 'done').length;
+    const totalTasks = sprints.reduce((sum, s) => sum + s.tasks.length, 0);
+    const completedTasks = sprints.reduce((sum, s) => sum + s.tasks.filter(t => t.done).length, 0);
+    const progress = totalTasks > 0 ? Math.round(completedTasks / totalTasks * 100) : 0;
+    const prefixMap = { programming: 'prog', art: 'art', design: 'design' };
+    const prefix = prefixMap[category] || category;
+    document.getElementById(`${prefix}-total`).textContent = totalSprints;
+    document.getElementById(`${prefix}-completed`).textContent = completedSprints;
+    document.getElementById(`${prefix}-tasks`).textContent = totalTasks;
+    document.getElementById(`${prefix}-progress`).textContent = progress + '%';
+  }
+
+  function getPhaseLabel(phase) {
+    const labels = {'done': '완료', '4': 'Phase 4', '5': 'Phase 5', '6': 'Phase 6', 'art-a': 'Phase A', 'art-b': 'Phase B', 'art-c': 'Phase C', 'gd-a': 'Phase 4기', 'gd-b': 'Phase 5기', 'gd-c': 'Phase 6기'};
+    return labels[phase] || phase;
+  }
+
+  function getProgressColor(progress) {
+    if (progress < 33) return '#ef4444';
+    if (progress < 66) return '#eab308';
+    return '#22c55e';
+  }
+
+  function attachEventListeners() {
+    document.querySelectorAll('.category-tab').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.category-content').forEach(c => c.classList.remove('active'));
+        e.target.classList.add('active');
+        const category = e.target.dataset.category;
+        document.querySelector(`[data-category="${category}"].category-content`).classList.add('active');
+      });
+    });
+
+    document.querySelectorAll('.phase-tab').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        const tabs = e.target.parentElement.querySelectorAll('.phase-tab');
+        tabs.forEach(t => t.classList.remove('active'));
+        e.target.classList.add('active');
+        render();
+      });
+    });
+
+    document.querySelectorAll('.sprint-header').forEach(header => {
+      header.addEventListener('click', () => {
+        header.parentElement.classList.toggle('open');
+      });
+    });
+
+    document.querySelectorAll('.task-check').forEach(check => {
+      check.addEventListener('click', () => {
+        const sprintId = check.dataset.sprintId;
+        const taskId = check.dataset.taskId;
+        const category = check.dataset.category;
+        toggleTask(category, sprintId, taskId);
+      });
+    });
+
+    document.querySelectorAll('.task-name, .task-desc').forEach(field => {
+      field.addEventListener('blur', () => {
+        const sprintId = field.dataset.sprintId;
+        const taskId = field.dataset.taskId;
+        const category = field.dataset.category;
+        const newContent = field.textContent;
+        updateTaskContent(category, sprintId, taskId, field.classList.contains('task-name') ? newContent : null, field.classList.contains('task-desc') ? newContent : null);
+      });
+    });
+
+    document.querySelectorAll('.sprint-notes-content').forEach(notes => {
+      notes.addEventListener('blur', () => {
+        const sprintId = notes.dataset.sprintId;
+        const category = notes.dataset.category;
+        updateSprintNotes(category, sprintId, notes.textContent);
+      });
+    });
+
+    document.querySelectorAll('.add-task-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentAddingTaskSprintId = btn.dataset.sprintId;
+        currentAddingSprintCategory = btn.dataset.category;
+        document.getElementById('addTaskModal').classList.add('active');
+      });
+    });
+
+    document.querySelectorAll('.add-sprint-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentAddingSprintCategory = btn.dataset.category;
+        document.getElementById('addSprintModal').classList.add('active');
+      });
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const data = localStorage.getItem(STORAGE_KEY);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'freeflow-roadmap.json';
+      a.click();
+    });
+
+    document.getElementById('importBtn').addEventListener('click', () => {
+      document.getElementById('importFileInput').click();
+    });
+
+    document.getElementById('importFileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const data = JSON.parse(event.target.result);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            render();
+          } catch (err) {
+            alert('JSON 파일 형식이 올바르지 않습니다.');
+          }
+        };
+        reader.readAsText(file);
+      }
+    });
+  }
+
+  function toggleTask(category, sprintId, taskId) {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || initialData;
+    const sprints = data[category];
+    const sprint = sprints.find(s => s.id === sprintId);
+    const task = sprint.tasks.find(t => t.id === taskId);
+    task.done = !task.done;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    render();
+  }
+
+  function updateTaskContent(category, sprintId, taskId, newName, newDesc) {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || initialData;
+    const sprints = data[category];
+    const sprint = sprints.find(s => s.id === sprintId);
+    const task = sprint.tasks.find(t => t.id === taskId);
+    if (newName !== null) task.name = newName;
+    if (newDesc !== null) task.desc = newDesc;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function updateSprintNotes(category, sprintId, notes) {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || initialData;
+    const sprints = data[category];
+    const sprint = sprints.find(s => s.id === sprintId);
+    sprint.notes = notes;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function closeAddTaskModal() {
+    document.getElementById('addTaskModal').classList.remove('active');
+    document.getElementById('taskNameInput').value = '';
+    document.getElementById('taskDescInput').value = '';
+  }
+
+  function saveNewTask() {
+    const name = document.getElementById('taskNameInput').value;
+    if (!name.trim()) {
+      alert('작업 이름을 입력하세요.');
+      return;
+    }
+    const desc = document.getElementById('taskDescInput').value;
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || initialData;
+    const sprints = data[currentAddingSprintCategory];
+    const sprint = sprints.find(s => s.id === currentAddingTaskSprintId);
+    const newTask = {id: Date.now().toString(), name: name, desc: desc, done: false};
+    sprint.tasks.push(newTask);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    render();
+    closeAddTaskModal();
+  }
+
+  function closeAddSprintModal() {
+    document.getElementById('addSprintModal').classList.remove('active');
+    document.getElementById('sprintWeekInput').value = '';
+    document.getElementById('sprintTitleInput').value = '';
+    document.getElementById('sprintPhaseSelect').value = '4';
+  }
+
+  function saveNewSprint() {
+    const week = document.getElementById('sprintWeekInput').value;
+    const title = document.getElementById('sprintTitleInput').value;
+    const phase = document.getElementById('sprintPhaseSelect').value;
+    if (!week.trim() || !title.trim()) {
+      alert('주차와 제목을 입력하세요.');
+      return;
+    }
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || initialData;
+    const sprints = data[currentAddingSprintCategory];
+    const newSprint = {id: `${currentAddingSprintCategory}-${Date.now()}`, week: week, title: title, phase: phase, tasks: [], notes: ''};
+    sprints.push(newSprint);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    render();
+    closeAddSprintModal();
+  }
+
+  document.getElementById('addTaskModal').addEventListener('click', (e) => {
+    if (e.target.id === 'addTaskModal') closeAddTaskModal();
+  });
+
+  document.getElementById('addSprintModal').addEventListener('click', (e) => {
+    if (e.target.id === 'addSprintModal') closeAddSprintModal();
+  });
+
+  init();
+</script>
+
+</body>
+</html>
