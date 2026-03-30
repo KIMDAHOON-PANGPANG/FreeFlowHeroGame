@@ -10,102 +10,57 @@ namespace FreeFlowHero.Editor
     /// </summary>
     public static class FBXImportSetup
     {
-        private const string ModelFBX = "Assets/EEJANAI_Team/Commons/Model/EEJANAIbot.fbx";
-        private const string AnimFBXFolder = "Assets/EEJANAI_Team/FreeFighterAnimations/FBX";
+        private const string ModelFBX = "Assets/Resouces/EEJANAI_Team/Commons/Model/EEJANAIbot.fbx";
+        private const string AnimFBXFolder = "Assets/Resouces/EEJANAI_Team/FreeFighterAnimations/FBX";
         private const string LocomotionFolder =
-            "Assets/ExplosiveLLC/Fighter Pack Bundle FREE/Fighters/" +
+            "Assets/Resouces/ExplosiveLLC/Fighter Pack Bundle FREE/Fighters/" +
             "Female Fighter Mecanim Animation Pack FREE/Animations";
         private const string MartialArtFolder =
-            "Assets/Martial Art Animations Sample/Animations";
+            "Assets/Resouces/Martial Art Animations Sample/Animations";
 
-        [MenuItem("REPLACED/Setup/6. Setup FBX Import (Humanoid)", priority = 6)]
+        // 강제 재임포트 플래그
+        private static bool forceReimport;
+
+        [MenuItem("REPLACED/Advanced/6. Setup FBX Import (Humanoid)", priority = 6)]
         public static void Execute()
         {
+            forceReimport = false;
+            ExecuteInternal();
+        }
+
+        /// <summary>모든 FBX를 강제 재임포트한다. 폴더 이동 후 임포트 에러 해결용.</summary>
+        [MenuItem("REPLACED/Advanced/6x. Force Reimport All FBX", priority = 22)]
+        public static void ForceReimportAll()
+        {
+            forceReimport = true;
+            Debug.Log("[REPLACED] ===== FBX 강제 재임포트 시작 =====");
+            ExecuteInternal();
+            Debug.Log("[REPLACED] ===== FBX 강제 재임포트 완료 =====");
+        }
+
+        private static void ExecuteInternal()
+        {
+            AssetDatabase.Refresh();
+
             int count = 0;
 
-            // ── 1단계: EEJANAIbot 모델을 Humanoid로 설정 ──
-            Debug.Log("[REPLACED] 1단계: EEJANAIbot 모델 Humanoid 설정...");
-            if (SetHumanoid(ModelFBX, isModel: true))
-                count++;
+            // ★ EEJANAI FBX는 건드리지 않음!
+            // EEJANAIbot 모델과 애니메이션 FBX는 에셋 스토어 원본 .meta에
+            // 수동 Humanoid 본 매핑이 저장되어 있음. 코드로 강제 재설정하면
+            // 자동 매핑이 실패하여 "No human bone found" 에러 발생.
+            // → EEJANAI 에셋은 에셋 스토어에서 Import한 상태 그대로 보존.
+            Debug.Log("[REPLACED] ★ EEJANAI FBX는 원본 보존 (스킵)");
 
-            // 모델의 Avatar 가져오기
-            Avatar sourceAvatar = GetAvatar(ModelFBX);
-            if (sourceAvatar == null)
-            {
-                Debug.LogError("[REPLACED] EEJANAIbot Avatar를 찾을 수 없습니다. " +
-                    "모델 FBX의 Rig 설정을 확인하세요.");
-                // Avatar 없이도 각 FBX 자체 Avatar로 시도
-            }
-            else
-            {
-                Debug.Log($"[REPLACED] 소스 Avatar: {sourceAvatar.name} (isHuman={sourceAvatar.isHuman})");
-            }
+            // ── ExplosiveLLC Locomotion FBX → Humanoid 설정 ──
+            Debug.Log("[REPLACED] 1단계: ExplosiveLLC Locomotion FBX Humanoid 설정...");
+            count += SetHumanoidAllFBXInFolder(LocomotionFolder, null);
 
-            // ── 2단계: 애니메이션 FBX를 Humanoid로 설정 + Avatar 소스 지정 ──
-            Debug.Log("[REPLACED] 2단계: 애니메이션 FBX Humanoid 설정...");
-            string[] guids = AssetDatabase.FindAssets("t:Model", new[] { AnimFBXFolder });
-
-            foreach (string guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                if (!path.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                if (SetHumanoid(path, isModel: false, sourceAvatar: sourceAvatar))
-                    count++;
-            }
-
-            // ── 3단계: ExplosiveLLC Locomotion FBX도 Humanoid로 설정 ──
-            // 중요: ExplosiveLLC는 EEJANAIbot과 다른 스켈레톤이므로 sourceAvatar를 지정하지 않음
-            // Humanoid 리타겟팅은 런타임에 자동으로 처리됨
-            Debug.Log("[REPLACED] 3단계: ExplosiveLLC Locomotion FBX Humanoid 설정 (자체 Avatar 사용)...");
-            if (AssetDatabase.IsValidFolder(LocomotionFolder))
-            {
-                string[] locoGuids = AssetDatabase.FindAssets("t:Model", new[] { LocomotionFolder });
-                foreach (string guid in locoGuids)
-                {
-                    string path = AssetDatabase.GUIDToAssetPath(guid);
-                    if (!path.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase) &&
-                        !path.EndsWith(".FBX", System.StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    // sourceAvatar: null → ExplosiveLLC 자체 Avatar 사용
-                    if (SetHumanoid(path, isModel: false, sourceAvatar: null))
-                        count++;
-                }
-            }
-            else
-            {
-                Debug.LogWarning("[REPLACED] ExplosiveLLC Locomotion 폴더를 찾을 수 없습니다: " +
-                    LocomotionFolder);
-            }
-
-            // ── 4단계: Martial Art Animations Sample FBX를 Humanoid로 설정 ──
-            // Fight_Idle 등 Idle 대체 애니메이션용 — 자체 Avatar 사용
-            Debug.Log("[REPLACED] 4단계: Martial Art Animations Sample FBX Humanoid 설정 (자체 Avatar 사용)...");
-            if (AssetDatabase.IsValidFolder(MartialArtFolder))
-            {
-                string[] maGuids = AssetDatabase.FindAssets("t:Model", new[] { MartialArtFolder });
-                foreach (string guid in maGuids)
-                {
-                    string path = AssetDatabase.GUIDToAssetPath(guid);
-                    if (!path.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase) &&
-                        !path.EndsWith(".FBX", System.StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    // sourceAvatar: null → 자체 Avatar 사용
-                    if (SetHumanoid(path, isModel: false, sourceAvatar: null))
-                        count++;
-                }
-            }
-            else
-            {
-                Debug.LogWarning("[REPLACED] Martial Art Animations 폴더를 찾을 수 없습니다: " +
-                    MartialArtFolder);
-            }
+            // ── Martial Art Animations Sample FBX → Humanoid + Bake Into Pose 설정 ──
+            Debug.Log("[REPLACED] 2단계: Martial Art Animations Sample FBX Humanoid 설정...");
+            count += SetHumanoidAllFBXInFolder(MartialArtFolder, null);
 
             // Martial Art 모델도 Humanoid로 설정 (리타겟팅 소스)
-            string martialArtModel = "Assets/Martial Art Animations Sample/Models/Armature/Armature.fbx";
+            string martialArtModel = "Assets/Resouces/Martial Art Animations Sample/Models/Armature/Armature.fbx";
             if (System.IO.File.Exists(martialArtModel))
             {
                 if (SetHumanoid(martialArtModel, isModel: true))
@@ -130,10 +85,11 @@ namespace FreeFlowHero.Editor
                 return false;
             }
 
-            bool needsReimport = false;
+            // 강제 재임포트 시 무조건 재설정
+            bool needsReimport = forceReimport;
 
             // Rig → Humanoid
-            if (importer.animationType != ModelImporterAnimationType.Human)
+            if (importer.animationType != ModelImporterAnimationType.Human || forceReimport)
             {
                 importer.animationType = ModelImporterAnimationType.Human;
                 needsReimport = true;
@@ -162,7 +118,7 @@ namespace FreeFlowHero.Editor
                 if (sourceAvatar != null)
                 {
                     // EEJANAI 애니메이션: EEJANAIbot Avatar 공유
-                    if (importer.sourceAvatar != sourceAvatar)
+                    if (importer.sourceAvatar != sourceAvatar || forceReimport)
                     {
                         importer.sourceAvatar = sourceAvatar;
                         needsReimport = true;
@@ -171,7 +127,7 @@ namespace FreeFlowHero.Editor
                 else
                 {
                     // ExplosiveLLC 등 외부 팩: 자체 Avatar 사용 (sourceAvatar 클리어)
-                    if (importer.sourceAvatar != null)
+                    if (importer.sourceAvatar != null || forceReimport)
                     {
                         importer.sourceAvatar = null;
                         needsReimport = true;
@@ -235,11 +191,15 @@ namespace FreeFlowHero.Editor
             //   + Translation DOF 활성화로 Hips 이동 데이터도 보존
             bool isGetUpClip = fileName.StartsWith("GetUp_");
 
-            // 이동 + 회피 + 넉다운: Bake XZ OFF → 루트모션 delta 보존
+            // 이동 + 회피 + 넉다운 + 전투모션: Bake XZ OFF → 루트모션 delta 보존
             //   Knock_: 넉다운 넉백 이동을 루트모션 또는 코드에서 제어하므로 Bake OFF 필요
+            //   Atk_/spinning/cressent/axe/back: 가드카운터/처형 모션의 루트모션 이동 보존
             bool isLocomotionClip = fileName.StartsWith("Walk_") || fileName.StartsWith("Run_")
                 || fileName.StartsWith("Sprint_") || fileName.StartsWith("Jog_")
-                || fileName.StartsWith("Dodge_") || fileName.StartsWith("Knock_");
+                || fileName.StartsWith("Dodge_") || fileName.StartsWith("Knock_")
+                || fileName.StartsWith("Atk_")
+                || fileName.StartsWith("spinning") || fileName.StartsWith("cressent")
+                || fileName.StartsWith("axe") || fileName.StartsWith("back");
 
             for (int i = 0; i < clips.Length; i++)
             {
@@ -285,6 +245,46 @@ namespace FreeFlowHero.Editor
             string xzBake = isLocomotionClip ? "OFF(이동)" : "ON(제자리)";
             Debug.Log($"  [BakeRoot] ✓ {clips.Length}개 클립 Bake Into Pose 적용 (Y={yBasis}, XZ={xzBake}): {fileName}");
             return true;
+        }
+
+        /// <summary>
+        /// 폴더 내 모든 FBX를 Humanoid로 설정한다.
+        /// AssetDatabase.FindAssets 대신 System.IO로 직접 탐색 — GUID 변경에도 안전.
+        /// </summary>
+        private static int SetHumanoidAllFBXInFolder(string folder, Avatar sourceAvatar)
+        {
+            // Unity 에셋 경로 → 실제 파일 시스템 경로
+            string fullPath = System.IO.Path.GetFullPath(folder);
+            if (!System.IO.Directory.Exists(fullPath))
+            {
+                Debug.LogWarning($"  [스킵] 폴더를 찾을 수 없습니다: {folder}");
+                return 0;
+            }
+
+            int count = 0;
+            string[] fbxFiles = System.IO.Directory.GetFiles(fullPath, "*.fbx",
+                System.IO.SearchOption.AllDirectories);
+            // .FBX 확장자도 포함
+            string[] fbxFilesUpper = System.IO.Directory.GetFiles(fullPath, "*.FBX",
+                System.IO.SearchOption.AllDirectories);
+
+            var allFiles = new System.Collections.Generic.HashSet<string>();
+            foreach (var f in fbxFiles) allFiles.Add(f);
+            foreach (var f in fbxFilesUpper) allFiles.Add(f);
+
+            Debug.Log($"  [탐색] {folder} — {allFiles.Count}개 FBX 발견");
+
+            foreach (string filePath in allFiles)
+            {
+                // 실제 경로 → Unity 에셋 경로로 변환
+                string assetPath = "Assets" + filePath
+                    .Replace("\\", "/")
+                    .Replace(Application.dataPath.Replace("\\", "/"), "");
+
+                if (SetHumanoid(assetPath, isModel: false, sourceAvatar: sourceAvatar))
+                    count++;
+            }
+            return count;
         }
 
         /// <summary>FBX에서 Avatar를 추출한다.</summary>

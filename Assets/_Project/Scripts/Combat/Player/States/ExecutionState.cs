@@ -1,6 +1,5 @@
 using UnityEngine;
 using FreeFlowHero.Combat.Core;
-
 namespace FreeFlowHero.Combat.Player
 {
     /// <summary>
@@ -38,6 +37,7 @@ namespace FreeFlowHero.Combat.Player
         // ─── 데미지 적용 플래그 ───
         private bool damageApplied;
         private bool aoeApplied;
+
 
         // ─── 시각 피드백 ───
         private SpriteRenderer spriteRenderer;
@@ -84,8 +84,15 @@ namespace FreeFlowHero.Combat.Player
             // 이벤트
             CombatEventBus.Publish(new OnExecutionStart { Target = executionTarget });
 
-            // 모션 선택
-            motionIndex = ExecutionSystem.GetMotionIndex(context.comboCount);
+            // 모션 선택 (가중치 랜덤)
+            string selectedActionId = ExecutionSystem.GetRandomMotionActionId();
+            // ActionId에서 인덱스 추출: "Execution1" → 0, "Execution2" → 1, "Execution3" → 2
+            motionIndex = 0;
+            if (selectedActionId != null && selectedActionId.Length > 9)
+            {
+                int.TryParse(selectedActionId.Substring(9), out int tier);
+                motionIndex = Mathf.Max(0, tier - 1);
+            }
 
             // 애니메이터
             SafeSetInt(ExecutionIndexHash, motionIndex);
@@ -170,6 +177,9 @@ namespace FreeFlowHero.Combat.Player
             if (spriteRenderer != null)
                 spriteRenderer.color = originalColor;
 
+            // ★ Idle 애니메이션으로 복귀 (처형 모션 루프 방지)
+            SafeSetTrigger("Idle");
+
             // 이벤트
             CombatEventBus.Publish(new OnExecutionEnd());
         }
@@ -236,6 +246,10 @@ namespace FreeFlowHero.Combat.Player
                 context.isWarping = false;
                 // timeScale 복원 (공격 모션은 정상 속도로)
                 Time.timeScale = 1.0f;
+
+                // ★ FBX 루트모션은 사용하지 않음 (EEJANAI 클립은 Bake Into Pose 미설정)
+                //   대신 ROOT_MOTION 노티파이로 코드 제어 이동 사용.
+
                 EnterPhase(Phase.Attack);
             }
         }

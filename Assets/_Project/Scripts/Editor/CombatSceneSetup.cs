@@ -15,7 +15,7 @@ namespace FreeFlowHero.Editor
         private const string PlayerPrefab = "Assets/_Project/Prefabs/Player/Player.prefab";
         private const string EnemyPrefab = "Assets/_Project/Prefabs/Enemies/DummyEnemy.prefab";
 
-        [MenuItem("REPLACED/Setup/4. Build Test Scene", priority = 4)]
+        [MenuItem("REPLACED/Advanced/4. Build Test Scene", priority = 4)]
         public static void Execute()
         {
             if (Application.isPlaying)
@@ -85,7 +85,7 @@ namespace FreeFlowHero.Editor
             if (playerPrefab != null)
             {
                 GameObject player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab);
-                player.transform.position = new Vector3(0, 0.5f, 0);
+                player.transform.position = new Vector3(0, 1.0f, 0);
                 player.name = "Player";
 
                 // 레이어 강제 할당 (프리팹이 레이어 등록 전에 만들어졌을 경우 대비)
@@ -137,7 +137,7 @@ namespace FreeFlowHero.Editor
                 for (int i = 0; i < xPositions.Length; i++)
                 {
                     GameObject enemy = (GameObject)PrefabUtility.InstantiatePrefab(enemyPrefab);
-                    enemy.transform.position = new Vector3(xPositions[i], 0.5f, 0);
+                    enemy.transform.position = new Vector3(xPositions[i], 1.0f, 0);
                     enemy.name = $"DummyEnemy_{i + 1}";
 
                     var sr = enemy.GetComponent<SpriteRenderer>();
@@ -181,7 +181,7 @@ namespace FreeFlowHero.Editor
         }
 
         /// <summary>원클릭 전체 셋업: 레이어 → 프리팹 → FBX → 애니메이터 → 3D모델 → 씬</summary>
-        [MenuItem("REPLACED/Setup/0. Full Setup (All Steps)", priority = 0)]
+        [MenuItem("REPLACED/Full Setup", priority = 0)]
         public static void FullSetup()
         {
             if (Application.isPlaying)
@@ -190,18 +190,42 @@ namespace FreeFlowHero.Editor
                 return;
             }
 
-            Debug.Log("[REPLACED] ===== 전체 자동 셋업 시작 =====");
+            Debug.Log("[REPLACED] ===== Full Setup 시작 =====");
 
             LayerAndTagSetup.Execute();         // 1. 레이어/태그/충돌 매트릭스
             PrefabFactory.CreateAllPrefabs();   // 2. 프리팹 생성
-            FBXImportSetup.Execute();           // 6. FBX Humanoid 설정
+            FBXImportSetup.ForceReimportAll();  // 6. FBX Humanoid 강제 재임포트
             AnimatorControllerBuilder.Execute(); // 3a. Player AnimatorController
             EnemyAnimatorBuilder.Execute();      // 3b. Enemy AnimatorController
             ModelSetup.Execute();               // 5. 3D 모델 부착
             Execute();                          // 4. 테스트 씬
 
-            Debug.Log("[REPLACED] ===== 전체 자동 셋업 완료 =====" +
-                "\n  Unity 메뉴: REPLACED > Setup 에서 개별 실행도 가능" +
+            Debug.Log("[REPLACED] ===== Full Setup 완료 =====" +
+                "\n  Play 버튼을 눌러 테스트하세요!");
+        }
+
+        /// <summary>
+        /// Quick Rebuild: FBX 재임포트 없이 빠르게 재빌드.
+        /// 코드/액션테이블 수정 후 빠른 반영용.
+        /// AnimatorController 재빌드 → 3D 모델 재부착 → 테스트 씬 재생성.
+        /// </summary>
+        [MenuItem("REPLACED/Quick Rebuild", priority = 1)]
+        public static void QuickRebuild()
+        {
+            if (Application.isPlaying)
+            {
+                Debug.LogError("[REPLACED] Play 모드에서는 실행할 수 없습니다.");
+                return;
+            }
+
+            Debug.Log("[REPLACED] ===== Quick Rebuild 시작 =====");
+
+            AnimatorControllerBuilder.Execute(); // Player AnimatorController
+            EnemyAnimatorBuilder.Execute();      // Enemy AnimatorController
+            ModelSetup.Execute();               // 3D 모델 재부착 (컨트롤러 재연결)
+            Execute();                          // 테스트 씬 재생성
+
+            Debug.Log("[REPLACED] ===== Quick Rebuild 완료 =====" +
                 "\n  Play 버튼을 눌러 테스트하세요!");
         }
 

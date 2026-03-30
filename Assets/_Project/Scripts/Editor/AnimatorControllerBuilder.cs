@@ -11,21 +11,21 @@ namespace FreeFlowHero.Editor
     public static class AnimatorControllerBuilder
     {
         private const string AnimatorPath = "Assets/_Project/Animations/Player/PlayerCombatAnimator.controller";
-        private const string EEJANAIRoot = "Assets/EEJANAI_Team/FreeFighterAnimations";
+        private const string EEJANAIRoot = "Assets/Resouces/EEJANAI_Team/FreeFighterAnimations";
         private const string FBXFolder = EEJANAIRoot + "/FBX";
         private const string AnimFolder = EEJANAIRoot + "/Animations";
 
         // ─── Locomotion FBX ───
         private const string LocomotionRoot =
-            "Assets/ExplosiveLLC/Fighter Pack Bundle FREE/Fighters/" +
+            "Assets/Resouces/ExplosiveLLC/Fighter Pack Bundle FREE/Fighters/" +
             "Female Fighter Mecanim Animation Pack FREE/Animations";
         // Idle: Martial Art Animations Sample의 Fight_Idle (리타겟팅으로 자연스러운 전투 대기)
-        private const string IdleFBX = "Assets/Martial Art Animations Sample/Animations/Fight_Idle.fbx";
+        private const string IdleFBX = "Assets/Resouces/Martial Art Animations Sample/Animations/Fight_Idle.fbx";
         private const string WalkFBX = LocomotionRoot + "/Female@WalkForward.FBX";
         // Run은 WalkForward를 속도 1.5배로 사용 (임시)
 
         // ─── Martial Art Animations Sample (1~3타 콤보) ───
-        private const string MartialArtRoot = "Assets/Martial Art Animations Sample/Animations";
+        private const string MartialArtRoot = "Assets/Resouces/Martial Art Animations Sample/Animations";
         private const string Atk1FBX = MartialArtRoot + "/Atk_P_1.fbx";
         private const string Atk2FBX = MartialArtRoot + "/Atk_P_2.fbx";
         private const string Atk3FBX = MartialArtRoot + "/Atk_K_1.fbx";
@@ -60,7 +60,7 @@ namespace FreeFlowHero.Editor
             ("super blast",        "HuxleyShot",         "HuxleyShot"),
         };
 
-        [MenuItem("REPLACED/Setup/3. Build Animator Controller", priority = 3)]
+        [MenuItem("REPLACED/Advanced/3. Build Animator Controller", priority = 3)]
         public static void Execute()
         {
             EnsureFolder("Assets/_Project/Animations");
@@ -85,6 +85,7 @@ namespace FreeFlowHero.Editor
             controller.AddParameter("DodgeForward", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Guard", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("GuardCounter", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("GuardCounterIndex", AnimatorControllerParameterType.Int);
             controller.AddParameter("Execution", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("ExecutionIndex", AnimatorControllerParameterType.Int);
             controller.AddParameter("Launch", AnimatorControllerParameterType.Trigger);
@@ -344,11 +345,11 @@ namespace FreeFlowHero.Editor
                 trGuard.canTransitionToSelf = false;
             }
 
-            // ─── GuardCounter 상태 (가드 반격) ───
+            // ─── GuardCounter 상태들 (가드 반격 바리에이션) ───
             {
+                // GuardCounter (index 0): spinning elbow
                 var guardCounterState = rootStateMachine.AddState("GuardCounter", GetStatePosition(stateCount + 1));
                 stateCount++;
-                // spinning elbow 재사용 (반격 모션)
                 AnimationClip counterClip = FindClipByFBXName("spinning elbow");
                 if (counterClip != null)
                 {
@@ -356,12 +357,37 @@ namespace FreeFlowHero.Editor
                     clipFoundCount++;
                     Debug.Log($"[AnimBuilder] ✓ GuardCounter 클립: {counterClip.name}");
                 }
-
                 var trGC = rootStateMachine.AddAnyStateTransition(guardCounterState);
                 trGC.AddCondition(AnimatorConditionMode.If, 0, "GuardCounter");
+                trGC.AddCondition(AnimatorConditionMode.Equals, 0, "GuardCounterIndex");
                 trGC.hasExitTime = false;
                 trGC.duration = 0.05f;
                 trGC.canTransitionToSelf = false;
+
+                // GuardCounter2 (index 1): Atk_P_2
+                var guardCounter2State = rootStateMachine.AddState("GuardCounter2", GetStatePosition(stateCount + 1));
+                stateCount++;
+                // Atk_P_2 클립 로드 (Martial Art Animations Sample)
+                string gc2FbxPath = "Assets/Resouces/Martial Art Animations Sample/Animations/Atk_P_2.fbx";
+                AnimationClip counter2Clip = LoadClipFromFBX(gc2FbxPath);
+                if (counter2Clip != null)
+                {
+                    guardCounter2State.motion = counter2Clip;
+                    clipFoundCount++;
+                    Debug.Log($"[AnimBuilder] ✓ GuardCounter2 클립: {counter2Clip.name}");
+                }
+                else
+                {
+                    // 폴백: spinning elbow 재사용
+                    if (counterClip != null) guardCounter2State.motion = counterClip;
+                    Debug.LogWarning("[AnimBuilder] GuardCounter2용 Atk_P_2.fbx 없음 → spinning elbow 폴백");
+                }
+                var trGC2 = rootStateMachine.AddAnyStateTransition(guardCounter2State);
+                trGC2.AddCondition(AnimatorConditionMode.If, 0, "GuardCounter");
+                trGC2.AddCondition(AnimatorConditionMode.Equals, 1, "GuardCounterIndex");
+                trGC2.hasExitTime = false;
+                trGC2.duration = 0.05f;
+                trGC2.canTransitionToSelf = false;
             }
 
             // ─── 모든 전투 상태 → Locomotion 복귀 (Exit Time) ───
@@ -374,7 +400,7 @@ namespace FreeFlowHero.Editor
                     && sn != "Down"
                     && sn != "GetUp"
                     && sn != "Guard"
-                    && sn != "GuardCounter"
+                    && !sn.StartsWith("GuardCounter")
                     && !sn.StartsWith("Execution_"))
                 {
                     var toLocomotion = childState.state.AddTransition(locomotionState);
@@ -385,8 +411,38 @@ namespace FreeFlowHero.Editor
             }
 
             AssetDatabase.SaveAssets();
+
+            // ★ 프리팹의 Animator 참조 자동 재연결
+            //   컨트롤러 삭제+재생성으로 GUID가 변경되므로, 프리팹 내 모델 Animator에 재할당
+            RelinkControllerToPrefab(controller);
+
             Debug.Log($"[REPLACED] AnimatorController 생성 완료: {AnimatorPath}" +
                 $"\n  Locomotion (Idle/Walk/Run 블렌드) + 전투 상태 {stateCount}개, 클립 {clipFoundCount}개 매핑됨");
+        }
+
+        /// <summary>재빌드된 컨트롤러를 Player 프리팹의 모델 Animator에 재할당한다.</summary>
+        private static void RelinkControllerToPrefab(AnimatorController controller)
+        {
+            const string playerPrefabPath = "Assets/_Project/Prefabs/Player/Player.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(playerPrefabPath);
+            if (prefab == null) return;
+
+            using (var scope = new PrefabUtility.EditPrefabContentsScope(playerPrefabPath))
+            {
+                var root = scope.prefabContentsRoot;
+                // 모델 자식의 Animator를 찾아 컨트롤러 재할당
+                foreach (var animator in root.GetComponentsInChildren<Animator>(true))
+                {
+                    // 루트 Animator는 비활성화된 더미 — 자식(모델)의 활성 Animator에 할당
+                    if (animator.gameObject != root)
+                    {
+                        animator.runtimeAnimatorController = controller;
+                        Debug.Log($"  [Relink] Player 프리팹 Animator 재연결 완료: {animator.gameObject.name}");
+                        break;
+                    }
+                }
+            }
+            AssetDatabase.SaveAssets();
         }
 
         /// <summary>Strike 트리거 + ComboIndex로 4종 분기 (1~4타)</summary>
@@ -495,7 +551,7 @@ namespace FreeFlowHero.Editor
         /// <summary>에디터 전용: 액션 테이블 JSON 로드 (playbackRate 등 참조용)</summary>
         private static FreeFlowHero.Combat.Core.ActorActionTable LoadActionTableForEditor(string actorId)
         {
-            string path = $"Assets/_Project/Resources/ActionTables/{actorId}.json";
+            string path = $"Assets/_Project/Tool/ActionTables/{actorId}.json";
             var textAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(path);
             if (textAsset == null) return null;
             var table = JsonUtility.FromJson<FreeFlowHero.Combat.Core.ActorActionTable>(textAsset.text);

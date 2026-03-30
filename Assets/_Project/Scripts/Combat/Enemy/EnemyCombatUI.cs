@@ -5,7 +5,7 @@ using FreeFlowHero.Combat.Player;
 namespace FreeFlowHero.Combat.Enemy
 {
     /// <summary>
-    /// 적 전투 UI — HP 바 + 타겟 인디케이터 + 히트 넘버.
+    /// 적 전투 UI — HP 바 + 타겟 인디케이터 + 히트 넘버 + 텔레그래프/처형 인디케이터.
     /// Awake()에서 자식 오브젝트를 코드로 생성하므로 에디터 GUI 작업 불필요.
     /// DummyEnemyTarget이 있는 적 오브젝트에 부착한다.
     /// </summary>
@@ -53,11 +53,18 @@ namespace FreeFlowHero.Combat.Enemy
         // ─── 히트 번호 스타일 ───
         private static GUIStyle hitNumberStyle;
 
+        // ─── 텔레그래프/처형/그로기 인디케이터 ───
+        private EnemyAIController aiController;
+        private static GUIStyle telegraphStyle;
+        private static GUIStyle executionStyle;
+        private static GUIStyle groggyStyle;
+
         private void Awake()
         {
             enemyTarget = GetComponent<DummyEnemyTarget>();
             lastHP = enemyTarget.CurrentHP;
 
+            aiController = GetComponent<EnemyAIController>();
             CreateHPBar();
             CreateTargetArrow();
         }
@@ -259,10 +266,18 @@ namespace FreeFlowHero.Combat.Enemy
 
         private void OnGUI()
         {
-            if (floatingTextTimer <= 0f || string.IsNullOrEmpty(floatingText)) return;
             if (Camera.main == null) return;
 
-            // 스타일 초기화
+            DrawFloatingDamage();
+            DrawTelegraphIndicator();
+            DrawExecutionIndicator();
+            DrawGroggyEffect();
+        }
+
+        private void DrawFloatingDamage()
+        {
+            if (floatingTextTimer <= 0f || string.IsNullOrEmpty(floatingText)) return;
+
             if (hitNumberStyle == null)
             {
                 hitNumberStyle = new GUIStyle(GUI.skin.label);
@@ -272,24 +287,141 @@ namespace FreeFlowHero.Combat.Enemy
                 hitNumberStyle.richText = true;
             }
 
-            // 월드→스크린 변환
             Vector3 screenPos = Camera.main.WorldToScreenPoint(floatingTextWorldPos);
-            if (screenPos.z < 0) return; // 카메라 뒤
-
-            // Unity OnGUI Y축 반전
+            if (screenPos.z < 0) return;
             float guiY = Screen.height - screenPos.y;
 
-            // 페이드아웃
             float alpha = Mathf.Clamp01(floatingTextTimer / 0.4f);
             hitNumberStyle.normal.textColor = new Color(
                 floatingTextColor.r, floatingTextColor.g, floatingTextColor.b, alpha);
 
-            // 크기 애니메이션 (처음에 크게 → 줄어듦)
             float sizeT = Mathf.Clamp01(1f - (floatingTextTimer / 0.8f));
             hitNumberStyle.fontSize = (int)Mathf.Lerp(32, 20, sizeT);
 
             GUI.Label(new Rect(screenPos.x - 50, guiY - 20, 100, 40),
                 floatingText, hitNumberStyle);
+        }
+
+        /// <summary>텔레그래프 중 "RB" 또는 "Shift" 인디케이터 표시</summary>
+        private void DrawTelegraphIndicator()
+        {
+            if (aiController == null || !aiController.IsTelegraphing) return;
+            if (!enemyTarget.IsTargetable) return;
+
+            if (telegraphStyle == null)
+            {
+                telegraphStyle = new GUIStyle(GUI.skin.box);
+                telegraphStyle.fontSize = 20;
+                telegraphStyle.fontStyle = FontStyle.Bold;
+                telegraphStyle.alignment = TextAnchor.MiddleCenter;
+            }
+
+            // 카테고리에 따라 텍스트/색상 결정
+            string label;
+            Color bgColor;
+            if (aiController.CurrentAttackCategory == AttackCategory.Ranged)
+            {
+                label = "Shift";
+                bgColor = new Color(0.9f, 0.2f, 0.2f, 0.95f);
+            }
+            else
+            {
+                label = "RB";
+                bgColor = new Color(1f, 0.85f, 0.1f, 0.95f);
+            }
+
+            // 월드→스크린 (머리 위)
+            Vector3 worldPos = transform.position + new Vector3(0, barOffsetY + 1.0f, 0);
+            // 살짝 bob
+            worldPos.y += Mathf.Sin(Time.time * 5f) * 0.08f;
+            Vector3 sp = Camera.main.WorldToScreenPoint(worldPos);
+            if (sp.z < 0) return;
+            float guiY = Screen.height - sp.y;
+
+            // 배경 박스 + 텍스트
+            GUI.backgroundColor = bgColor;
+            telegraphStyle.normal.textColor = Color.black;
+            GUI.Box(new Rect(sp.x - 30, guiY - 16, 60, 32), label, telegraphStyle);
+            GUI.backgroundColor = Color.white;
+        }
+
+        /// <summary>처형 가능 시 빨간 "F" 인디케이터 표시</summary>
+        private void DrawExecutionIndicator()
+        {
+            if (enemyTarget == null || !enemyTarget.IsTargetable) return;
+            if (playerFSM == null) return;
+
+            // 처형 가능 여부 체크
+            float hpRatio = enemyTarget.HPRatio;
+            int comboCount = playerFSM.Context != null ? playerFSM.Context.comboCount : 0;
+            float threshold = comboCount >= CombatConstants.ExecutionHighComboThreshold
+                ? CombatConstants.ExecutionHPThresholdHighCombo
+                : CombatConstants.ExecutionHPThreshold;
+
+            if (hpRatio > threshold || hpRatio <= 0f) return;
+
+            // 거리 체크
+            float dist = Vector2.Distance(
+                (Vector2)transform.position,
+                (Vector2)playerFSM.transform.position);
+            if (dist > CombatConstants.ExecutionRange * 1.5f) return;
+
+            if (executionStyle == null)
+            {
+                executionStyle = new GUIStyle(GUI.skin.box);
+                executionStyle.fontSize = 22;
+                executionStyle.fontStyle = FontStyle.Bold;
+                executionStyle.alignment = TextAnchor.MiddleCenter;
+            }
+
+            // 월드→스크린 (머리 위, 텔레그래프보다 약간 아래)
+            Vector3 worldPos = transform.position + new Vector3(0, barOffsetY + 0.8f, 0);
+            worldPos.y += Mathf.Sin(Time.time * 3f) * 0.1f;
+            Vector3 sp = Camera.main.WorldToScreenPoint(worldPos);
+            if (sp.z < 0) return;
+            float guiY = Screen.height - sp.y;
+
+            // 빨간 배경 + "F" 텍스트
+            GUI.backgroundColor = new Color(0.85f, 0.1f, 0.1f, 0.95f);
+            executionStyle.normal.textColor = Color.white;
+            GUI.Box(new Rect(sp.x - 20, guiY - 16, 40, 32), "F", executionStyle);
+            GUI.backgroundColor = Color.white;
+        }
+
+        /// <summary>Hard 그로기 시 머리 위 별 이펙트 표시</summary>
+        private void DrawGroggyEffect()
+        {
+            if (aiController == null) return;
+            if (!enemyTarget.IsTargetable) return;
+
+            // Groggy 상태인지 확인 (AIState는 internal이므로 공개 프로퍼티 필요)
+            if (!aiController.IsGroggyActive) return;
+            if (aiController.CurrentGroggyType != Core.GroggyType.Hard) return;
+
+            if (groggyStyle == null)
+            {
+                groggyStyle = new GUIStyle(GUI.skin.label);
+                groggyStyle.fontSize = 24;
+                groggyStyle.fontStyle = FontStyle.Bold;
+                groggyStyle.alignment = TextAnchor.MiddleCenter;
+            }
+
+            // 별 3개가 원형으로 회전
+            Vector3 worldPos = transform.position + new Vector3(0, barOffsetY + 1.2f, 0);
+            Vector3 sp = Camera.main.WorldToScreenPoint(worldPos);
+            if (sp.z < 0) return;
+            float guiY = Screen.height - sp.y;
+
+            float time = Time.time * 3f; // 회전 속도
+            groggyStyle.normal.textColor = new Color(1f, 1f, 0.2f); // 노란 별
+
+            for (int i = 0; i < 3; i++)
+            {
+                float angle = time + i * (Mathf.PI * 2f / 3f);
+                float ox = Mathf.Cos(angle) * 25f;
+                float oy = Mathf.Sin(angle) * 10f;
+                GUI.Label(new Rect(sp.x + ox - 10, guiY + oy - 12, 20, 24), "★", groggyStyle);
+            }
         }
 
         // ============================================================

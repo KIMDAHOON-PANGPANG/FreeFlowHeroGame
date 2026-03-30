@@ -14,6 +14,20 @@ namespace FreeFlowHero.Combat.Core
     }
 
     /// <summary>
+    /// 그로기 타입. 가드 카운터 등으로 유발되는 혼란 상태.
+    /// COLLISION 노티파이의 groggyType 필드에서 설정.
+    /// </summary>
+    public enum GroggyType
+    {
+        /// <summary>그로기 없음 (기본)</summary>
+        None = 0,
+        /// <summary>약한 그로기 — 짧은 고개 흔들기, 잠시 공격 불가</summary>
+        Soft = 1,
+        /// <summary>강한 그로기 — 별 이펙트 + 긴 경직, 오래 공격 불가</summary>
+        Hard = 2
+    }
+
+    /// <summary>
     /// 리액션 강도 프리셋. BattleSettings에 정의된 기본값을 참조.
     /// 노티파이에서 프리셋 선택 후 Offset으로 미세 조정.
     /// </summary>

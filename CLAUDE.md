@@ -43,7 +43,7 @@ Assets/
 │   │   ├── HitReaction/   ← HitReactionManager, 히트스탑, 넉백, 카메라셰이크
 │   │   └── Math/          ← CombatMathSolver, 데미지 계산, 콤보 스케일링
 │   ├── Data/CombatConfig/ ← ScriptableObject 에셋들
-│   ├── Resources/ActionTables/ ← 액터별 액션 JSON 테이블 (PC_Hero, Enemy_Grunt 등)
+│   ├── Tool/ActionTables/  ← 액터별 액션 JSON 테이블 (PC_Hero, Enemy_Grunt 등)
 │   ├── Animations/        ← 커스텀 AnimatorController (EEJANAI 클립 리타겟)
 │   ├── Prefabs/           ← 프리팹
 │   └── Documentation/     ← 아키텍처 설계서
@@ -88,7 +88,10 @@ AnimatorController 구성 시 이 매핑을 기준으로 할 것.
 | `kungfu samba` | kungfu samba.fbx | **Idle / 도발** | 전투 대기 또는 승리 포즈 |
 
 ### 에셋 사용 시 주의사항
-1. **원본 파일 수정 금지**: `Assets/EEJANAI_Team/` 하위 파일은 직접 수정하지 않는다
+1. **원본 파일 및 .meta 수정 금지**: `Assets/Resouces/EEJANAI_Team/` 하위 FBX 파일과 .meta는 절대 코드로 건드리지 않는다.
+   EEJANAIbot의 Humanoid 본 매핑은 에셋 스토어 원본 .meta에 수동 저장되어 있으며,
+   코드로 `animationType = Human`을 강제하면 자동 매핑이 실패하여 모든 클립이 깨진다.
+   FBXImportSetup은 EEJANAI를 **스킵**하도록 설계되어 있으며, 문제 시 에셋 스토어에서 재다운로드한다
 2. **리타겟팅**: EEJANAI 클립을 프로젝트 캐릭터에 리타겟할 경우 `Assets/_Project/Animations/`에 별도 AnimatorController 생성
 3. **프레임 데이터 분석 필요**: 각 FBX 애니메이션의 실제 프레임 수를 확인하여 Startup/Active/Recovery 구간을 설정해야 함
 4. **UnityToon 셰이더**: 프로젝트에 필수 아님, 시각 확인용으로만 포함됨
@@ -247,6 +250,18 @@ Assets/_Project/Scripts/Editor/
 └── WarpNotifyMigrator.cs      ← 기존 액션에 WARP 노티파이 자동 추가
 ```
 
+### 메뉴 구조
+
+| 메뉴 | 용도 |
+|------|------|
+| **REPLACED > Full Setup** | 최초 셋업 / 폴더 이동 후 / 완전 초기화. FBX 재임포트 포함 (느림) |
+| **REPLACED > Quick Rebuild** | 코드/액션테이블 수정 후 빠른 반영. 컨트롤러+모델+씬 재빌드 (빠름) |
+| **REPLACED > Action Table Editor** | 액션 테이블 JSON 시각 편집 툴 |
+| **REPLACED > Battle Settings** | BattleSettings SO 에디터 |
+| REPLACED > Advanced/... | 개별 셋업 단계 (디버깅용, 일반적으로 사용 불필요) |
+
+**★ 사용자에게는 항상 Full Setup 또는 Quick Rebuild만 안내한다.** 개별 단계 실행은 의존성 문제로 권장하지 않음.
+
 ### 원칙
 - `[MenuItem("REPLACED/...")]`로 메뉴 등록하여 원클릭 실행
 - 멱등성 보장: 여러 번 실행해도 중복 생성 없음
@@ -281,7 +296,15 @@ Assets/_Project/Scripts/Editor/
 5. **타격감 조절 시** hit-reaction 스킬의 히트스탑/셰이크 레시피를 기준으로 할 것
 6. **모듈 간 의존성 발생 시** Combat Director 에이전트 문서를 참고하여 인터페이스로 해결할 것
 7. **씬/프리팹/컴포넌트 작업 시** 반드시 에디터 스크립트로 자동화, GUI 수동 작업 금지
-8. **구현 완료 후** 채팅으로 기획자가 이해할 수 있는 업데이트 내역을 보고할 것
+8. **기능 수정/추가 시 툴체인 동기화 필수** — 런타임 코드를 변경하면 반드시 아래 관련 항목도 함께 갱신할 것:
+   - **에디터 메뉴 스크립트** (REPLACED > Setup): `FBXImportSetup`, `AnimatorControllerBuilder`, `EnemyAnimatorBuilder`, `PrefabFactory`, `ModelSetup`, `CombatSceneSetup` 등에 새 컴포넌트/파라미터/경로 반영
+   - **액션 테이블 에디터** (`ActionTableEditorWindow.cs`): 새 NotifyType, 새 파라미터 필드, 새 검색 경로 등 반영
+   - **액션 테이블 JSON** (`PC_Hero.json`, `Enemy_Grunt.json`): 새 액션/노티파이/필드 추가
+   - **AnimatorController 빌더**: 새 애니메이션 상태/트리거/파라미터 등록
+   - **프리팹 팩토리**: 새 컴포넌트 자동 부착
+   - **Full Setup** (`0. Full Setup`): 전체 파이프라인이 신규 시스템 포함하여 정상 작동하는지 확인
+   - 요약: **작업 요청 → 런타임 코드 수정 → 툴/에디터/빌더 코드 동기화** 를 하나의 작업 단위로 취급
+9. **구현 완료 후** 채팅으로 기획자가 이해할 수 있는 업데이트 내역을 보고할 것
    - 기술 용어를 최소화하고, "플레이어가 체감하는 변화"와 "게임 동작의 변화" 중심으로 기술
    - 무엇이 바뀌었는지, 왜 바뀌었는지, 플레이 시 어떤 차이가 느껴지는지 포함
    - 새로 추가된 파일 목록과 수정된 파일 목록을 간략히 첨부

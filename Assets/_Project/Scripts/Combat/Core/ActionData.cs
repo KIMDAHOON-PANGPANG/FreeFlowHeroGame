@@ -58,6 +58,12 @@ namespace FreeFlowHero.Combat.Core
         // ─── 태그 ───
         public string[] tags;          // 분류 태그 (light, heavy, combo, dodge, counter 등)
 
+        // ─── 공격 카테고리 ───
+        public int attackCategory;     // 0=Melee(근접), 1=Ranged(원거리). JSON 누락 시 0(Melee) 폴백.
+
+        /// <summary>공격 카테고리 enum 변환</summary>
+        public AttackCategory GetAttackCategory() => (AttackCategory)attackCategory;
+
         // ─── 노티파이 타임라인 ───
         public ActionNotify[] notifies;  // 타임라인 노티파이 배열 (STARTUP, COLLISION, CANCEL_WINDOW 등)
 

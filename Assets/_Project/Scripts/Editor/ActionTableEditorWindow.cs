@@ -22,7 +22,7 @@ namespace FreeFlowHero.Editor
         [MenuItem("REPLACED/Action Table Editor")]
         public static void ShowWindow()
         {
-            var window = GetWindow<ActionTableEditorWindow>("Action Table Editor");
+            var window = GetWindow<ActionTableEditorWindow>(false, "Action Table Editor");
             window.minSize = new Vector2(1100, 600);
         }
 
@@ -147,8 +147,8 @@ namespace FreeFlowHero.Editor
         // 라벨 지연 렌더용 (선 위에 라벨이 오도록)
         private struct PendingLabel { public Vector2 pos; public string text; public Color color; }
         private List<PendingLabel> stateViewPendingLabels = new List<PendingLabel>();
-        private const float NodeSpacingX = 200f;
-        private const float NodeSpacingY = 70f;
+        private const float NodeSpacingX = 300f;   // 계층 배치 X 간격 (선 경로 여유)
+        private const float NodeSpacingY = 100f;   // 계층 배치 Y 간격 (노드+라벨 여유)
         private bool isInspectorCollapsed = false;   // 우측 인스펙터 최소화
         private const float CollapsedPanelWidth = 24f;
 
@@ -181,7 +181,7 @@ namespace FreeFlowHero.Editor
 
         // ─── 경로 ───
         private static string TableFolderPath =>
-            Path.Combine(Application.dataPath, "_Project", "Resources", "ActionTables");
+            Path.Combine(Application.dataPath, "_Project", "Tool", "ActionTables");
 
         // ═══════════════════════════════════════════════════════
         //  라이프사이클
@@ -862,13 +862,16 @@ namespace FreeFlowHero.Editor
         private void DrawActionList()
         {
             float panelW = isActionListCollapsed ? CollapsedPanelWidth : leftPanelWidth;
-            EditorGUILayout.BeginVertical(GUILayout.Width(panelW));
+            EditorGUILayout.BeginVertical(GUILayout.Width(panelW), GUILayout.MaxWidth(panelW));
 
             // ── 최소화 토글 버튼 ──
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
             string collapseLabel = isActionListCollapsed ? "▶" : "◀";
             if (GUILayout.Button(collapseLabel, EditorStyles.toolbarButton, GUILayout.Width(20)))
+            {
                 isActionListCollapsed = !isActionListCollapsed;
+                Repaint();
+            }
 
             if (!isActionListCollapsed)
             {
@@ -1096,13 +1099,16 @@ namespace FreeFlowHero.Editor
         private void DrawInspectorPanel()
         {
             float panelW = isInspectorCollapsed ? CollapsedPanelWidth : rightPanelWidth;
-            EditorGUILayout.BeginVertical(GUILayout.Width(panelW));
+            EditorGUILayout.BeginVertical(GUILayout.Width(panelW), GUILayout.MaxWidth(panelW));
 
             // ── 최소화 토글 버튼 ──
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
             string collapseLabel = isInspectorCollapsed ? "◀" : "▶";
             if (GUILayout.Button(collapseLabel, EditorStyles.toolbarButton, GUILayout.Width(20)))
+            {
                 isInspectorCollapsed = !isInspectorCollapsed;
+                Repaint();
+            }
             if (!isInspectorCollapsed)
                 EditorGUILayout.LabelField("인스펙터", EditorStyles.boldLabel);
             EditorGUILayout.EndHorizontal();
@@ -1231,6 +1237,11 @@ namespace FreeFlowHero.Editor
 
             EditorGUILayout.Space(8);
 
+            // ── 루트모션 동기화 ──
+            DrawRootMotionSync(action);
+
+            EditorGUILayout.Space(8);
+
             // ── 선택된 노티파이 상세 편집 ──
             DrawNotifyInspector(action);
 
@@ -1246,6 +1257,81 @@ namespace FreeFlowHero.Editor
 
         // ═══════════════════════════════════════════════════════
         //  노티파이 인스펙터 (우측 패널 하단)
+        // ═══════════════════════════════════════════════════════
+        //  루트모션 동기화 섹션
+        // ═══════════════════════════════════════════════════════
+
+        /// <summary>
+        /// 루트모션 동기화 버튼: 0프레임 ~ END프레임까지 ROOT_MOTION 노티파이를 자동 생성.
+        /// 기존 ROOT_MOTION이 있으면 제거 후 재생성. 가장 아래 트랙에 배치.
+        /// </summary>
+        private void DrawRootMotionSync(ActionEntry action)
+        {
+            EditorGUILayout.LabelField("루트모션 동기화", headerStyle);
+
+            // 기존 ROOT_MOTION 노티파이 존재 여부 체크
+            bool hasRootMotion = false;
+            if (action.notifies != null)
+            {
+                foreach (var n in action.notifies)
+                {
+                    if (n.TypeEnum == NotifyType.ROOT_MOTION)
+                    { hasRootMotion = true; break; }
+                }
+            }
+
+            if (hasRootMotion)
+            {
+                EditorGUILayout.HelpBox("ROOT_MOTION 노티파이가 이미 존재합니다.\n버튼을 누르면 기존 ROOT_MOTION을 제거하고 재생성합니다.", MessageType.Info);
+            }
+
+            if (GUILayout.Button("루트모션 동기화", GUILayout.Height(28)))
+            {
+                PushUndoSnapshot();
+
+                // 1. 기존 ROOT_MOTION 노티파이 전부 제거
+                if (action.notifies != null)
+                {
+                    var filtered = new System.Collections.Generic.List<ActionNotify>();
+                    foreach (var n in action.notifies)
+                    {
+                        if (n.TypeEnum != NotifyType.ROOT_MOTION)
+                            filtered.Add(n);
+                    }
+                    action.notifies = filtered.ToArray();
+                }
+
+                // 2. END 프레임 산출
+                int endFrame = GetEffectiveTotalFrames(action);
+                if (endFrame <= 0) endFrame = 30; // 안전 폴백
+
+                // 3. 가장 아래 트랙 결정 (기존 노티파이의 최대 트랙 + 1)
+                int bottomTrack = 0;
+                if (action.notifies != null)
+                {
+                    foreach (var n in action.notifies)
+                    {
+                        if (n.track >= bottomTrack)
+                            bottomTrack = n.track + 1;
+                    }
+                }
+
+                // 트랙이 부족하면 자동 확장
+                if (bottomTrack >= trackCount)
+                    trackCount = Mathf.Min(bottomTrack + 1, MaxTracksLimit);
+
+                // 4. ROOT_MOTION 노티파이 생성 (0 ~ END)
+                var rootMotionNotify = ActionNotify.CreateRootMotion(0, endFrame);
+                rootMotionNotify.track = bottomTrack;
+
+                AddNotify(action, rootMotionNotify);
+                isDirty = true;
+
+                Debug.Log($"[ActionTable] 루트모션 동기화 완료 — {action.id}: 0~{endFrame}f, track {bottomTrack}");
+            }
+            Tip("0프레임부터 END프레임까지 ROOT_MOTION 노티파이를 가장 아래 트랙에 자동 생성합니다.");
+        }
+
         // ═══════════════════════════════════════════════════════
 
         private void DrawNotifyInspector(ActionEntry action)
@@ -1505,6 +1591,18 @@ namespace FreeFlowHero.Editor
                         EditorGUILayout.EndHorizontal();
                     }
 
+                    // ── 그로기 타입 ──
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField("그로기", EditorStyles.boldLabel);
+                    notify.groggyType = EditorGUILayout.IntPopup(
+                        "Groggy Type", notify.groggyType,
+                        new[] { "None (없음)", "Soft (약한 그로기)", "Hard (강한 그로기)" },
+                        new[] { 0, 1, 2 });
+                    Tip("이 공격에 맞은 적에게 유발할 그로기 타입.\n" +
+                        "None: 그로기 없음 (일반 리액션)\n" +
+                        "Soft: 짧은 경직 (1초)\n" +
+                        "Hard: 별 이펙트 + 긴 경직 (3초)");
+
                     break;
 
                 case NotifyType.CANCEL_WINDOW:
@@ -1670,6 +1768,16 @@ namespace FreeFlowHero.Editor
                         "0 = 즉시 스냅.\n" +
                         "360 = 약 0.5초 지연 후 플립.\n" +
                         "720 = 약 0.25초 지연 후 플립.");
+                    break;
+
+                case NotifyType.GUARD_SUCCESS:
+                    EditorGUILayout.LabelField("GUARD_SUCCESS 파라미터", EditorStyles.boldLabel);
+                    EditorGUILayout.HelpBox(
+                        "이 구간 내에 피격되면 퍼펙트 가드(패링) 성공.\n" +
+                        "구간 외 피격은 일반 블록 (데미지 감소만, 카운터 미발동).",
+                        MessageType.Info);
+                    Tip("가드 액션의 퍼펙트 가드 타이밍 윈도우.\n" +
+                        "startFrame~endFrame 사이에 적 공격이 맞으면 카운터 발동.");
                     break;
             }
 
@@ -2658,6 +2766,24 @@ namespace FreeFlowHero.Editor
                     ActionNotify.CreateHoming(clickedFrame, clickedFrame + 10), targetTrack)
             });
 
+            // ── GUARD_SUCCESS ──
+            items.Add(new NotifySearchPopup.PopupItem
+            {
+                Label = "GUARD_SUCCESS — 퍼펙트 가드 윈도우",
+                SearchTag = "guard 가드 success 성공 parry 패링 perfect 퍼펙트 타이밍 윈도우",
+                OnSelected = () => AddNotifyToTrack(action,
+                    ActionNotify.CreateGuardSuccess(clickedFrame, clickedFrame + 10), targetTrack)
+            });
+
+            // ── ROOT_MOTION ──
+            items.Add(new NotifySearchPopup.PopupItem
+            {
+                Label = "ROOT_MOTION — 루트모션 이동",
+                SearchTag = "root motion 루트모션 이동 전진 move forward 커브 curve delta",
+                OnSelected = () => AddNotifyToTrack(action,
+                    ActionNotify.CreateRootMotion(clickedFrame, clickedFrame + 10), targetTrack)
+            });
+
             items.Add(new NotifySearchPopup.PopupItem { IsSeparator = true });
 
             // ── 유틸리티 ──
@@ -3060,6 +3186,10 @@ namespace FreeFlowHero.Editor
             previewRender.camera.backgroundColor = new Color(0.15f, 0.15f, 0.2f);
 
             GameObject modelPrefab = FindPreviewModel();
+            if (modelPrefab == null)
+            {
+                Debug.LogWarning("[Preview] 프리뷰 모델을 찾을 수 없습니다. 프리뷰가 표시되지 않습니다.");
+            }
             if (modelPrefab != null)
             {
                 previewInstance = previewRender.InstantiatePrefabInScene(modelPrefab);
@@ -3607,18 +3737,27 @@ namespace FreeFlowHero.Editor
 
         private GameObject FindPreviewModel()
         {
+            // ★ 1순위: 직접 경로로 로드 (GUID 변경에도 안전)
+            string[] directPaths = {
+                "Assets/Resouces/EEJANAI_Team/Commons/Model/EEJANAIbot.fbx",
+                "Assets/EEJANAI_Team/Commons/Model/EEJANAIbot.fbx", // 레거시 경로 폴백
+            };
+            foreach (var path in directPaths)
+            {
+                var model = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (model != null)
+                {
+                    Debug.Log($"[Preview] 모델 로드 성공: {path}");
+                    return model;
+                }
+            }
+
+            // 2순위: 이름 검색 폴백
             string[] guids = AssetDatabase.FindAssets("EEJANAIbot t:Model");
             if (guids.Length > 0)
                 return AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guids[0]));
 
-            guids = AssetDatabase.FindAssets("t:Model", new[] { "Assets" });
-            foreach (var guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                var importer = AssetImporter.GetAtPath(path) as ModelImporter;
-                if (importer != null && importer.animationType == ModelImporterAnimationType.Human)
-                    return AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            }
+            Debug.LogWarning("[Preview] EEJANAIbot 모델을 찾을 수 없습니다.");
             return null;
         }
 
@@ -3670,7 +3809,7 @@ namespace FreeFlowHero.Editor
             }
 
             string[] allFbxGuids = AssetDatabase.FindAssets("t:Model",
-                new[] { "Assets/EEJANAI_Team", "Assets/_Project", "Assets/Martial Art Animations Sample" });
+                new[] { "Assets/Resouces/EEJANAI_Team", "Assets/_Project", "Assets/Resouces/Martial Art Animations Sample" });
             foreach (var guid in allFbxGuids)
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
@@ -4187,6 +4326,9 @@ namespace FreeFlowHero.Editor
             DrawStateViewGrid(canvasRect);
 
             // ★ 렌더 순서: 선 → 노드 → 라벨 (텍스트가 선에 가려지지 않도록)
+            // ── 0. 노드 화면좌표 캐시 (연결선 관통 회피용) ──
+            CacheNodeScreenRects(offset);
+
             // ── 1. 연결선 (화살표만, 라벨 없이) ──
             stateViewPendingLabels.Clear();
             DrawStateViewConnections(offset);
@@ -4194,8 +4336,8 @@ namespace FreeFlowHero.Editor
             // ── 2. 노드 (선 위에 렌더) ──
             DrawStateViewNodes(offset, canvasRect);
 
-            // ── 3. 연결 라벨 (최상위 렌더, 배경 박스 포함) ──
-            DrawStateViewConnectionLabels();
+            // ── 3. 연결 라벨 (최상위 렌더, 배경 박스 포함, 겹침 방지) ──
+            DrawStateViewConnectionLabels(offset);
 
             GUI.EndClip();
 
@@ -4287,6 +4429,64 @@ namespace FreeFlowHero.Editor
                     y += NodeSpacingY;
                 }
             }
+
+            // 겹침 해소
+            ResolveNodeOverlaps();
+        }
+
+        /// <summary>모든 노드 쌍의 AABB 겹침을 반복적으로 해소 (선 경로용 여백 포함)</summary>
+        private void ResolveNodeOverlaps(int maxPasses = 80)
+        {
+            // 노드 사이에 선이 지나갈 충분한 여백 확보
+            const float padX = 80f;  // 노드 간 최소 X 간격 (연결선+라벨 공간)
+            const float padY = 60f;  // 노드 간 최소 Y 간격
+            var keys = new List<string>(stateNodePositions.Keys);
+
+            for (int pass = 0; pass < maxPasses; pass++)
+            {
+                bool anyOverlap = false;
+                for (int i = 0; i < keys.Count; i++)
+                {
+                    Rect ri = new Rect(stateNodePositions[keys[i]], new Vector2(NodeWidth + padX, NodeHeight + padY));
+                    for (int j = i + 1; j < keys.Count; j++)
+                    {
+                        Rect rj = new Rect(stateNodePositions[keys[j]], new Vector2(NodeWidth + padX, NodeHeight + padY));
+                        if (!ri.Overlaps(rj)) continue;
+                        anyOverlap = true;
+
+                        Vector2 ci = ri.center, cj = rj.center;
+                        float overlapX = (ri.width + rj.width) * 0.5f - Mathf.Abs(ci.x - cj.x);
+                        float overlapY = (ri.height + rj.height) * 0.5f - Mathf.Abs(ci.y - cj.y);
+
+                        if (overlapX < overlapY)
+                        {
+                            float push = overlapX * 0.5f + 2f;
+                            float sign = (ci.x < cj.x) ? -1f : 1f;
+                            stateNodePositions[keys[i]] += new Vector2(sign * push, 0);
+                            stateNodePositions[keys[j]] -= new Vector2(sign * push, 0);
+                        }
+                        else
+                        {
+                            float push = overlapY * 0.5f + 2f;
+                            float sign = (ci.y < cj.y) ? -1f : 1f;
+                            stateNodePositions[keys[i]] += new Vector2(0, sign * push);
+                            stateNodePositions[keys[j]] -= new Vector2(0, sign * push);
+                        }
+                    }
+                }
+                if (!anyOverlap) break;
+            }
+
+            // 원점 정규화 (최소 좌표 = 40, 40)
+            float minX = float.MaxValue, minY = float.MaxValue;
+            foreach (var pos in stateNodePositions.Values)
+            {
+                if (pos.x < minX) minX = pos.x;
+                if (pos.y < minY) minY = pos.y;
+            }
+            Vector2 shift = new Vector2(40f - minX, 40f - minY);
+            foreach (var key in keys)
+                stateNodePositions[key] += shift;
         }
 
         /// <summary>Force-Directed 레이아웃: 반발력 + 인력 물리 시뮬레이션</summary>
@@ -4321,12 +4521,12 @@ namespace FreeFlowHero.Editor
                     edges.Add((action.id, action.defaultNext));
             }
 
-            // 시뮬레이션 파라미터
-            const float repulsionStrength = 8000f;
-            const float attractionStrength = 0.01f;
-            const float idealDist = 180f;
-            const float damping = 0.9f;
-            const int iterations = 150;
+            // 시뮬레이션 파라미터 — 노드를 충분히 멀리 배치
+            const float repulsionStrength = 50000f;
+            const float attractionStrength = 0.008f;
+            const float idealDist = 400f;
+            const float damping = 0.85f;
+            const int iterations = 300;
 
             var velocities = new Dictionary<string, Vector2>();
             foreach (var a in actions)
@@ -4376,17 +4576,8 @@ namespace FreeFlowHero.Editor
                 }
             }
 
-            // 원점 근처로 이동 (최소 좌표를 40,40으로)
-            float minX = float.MaxValue, minY = float.MaxValue;
-            foreach (var pos in stateNodePositions.Values)
-            {
-                if (pos.x < minX) minX = pos.x;
-                if (pos.y < minY) minY = pos.y;
-            }
-            Vector2 shift = new Vector2(40f - minX, 40f - minY);
-            var keys = new List<string>(stateNodePositions.Keys);
-            foreach (var key in keys)
-                stateNodePositions[key] += shift;
+            // 겹침 해소 + 원점 정규화
+            ResolveNodeOverlaps();
         }
 
         /// <summary>배경 그리드 (도트 패턴)</summary>
@@ -4411,6 +4602,32 @@ namespace FreeFlowHero.Editor
         {
             if (currentTable?.actions == null) return;
 
+            // ── 1. 같은 노드 쌍(A→B)의 연결 수를 세어 오프셋 분배 ──
+            // key = "fromId→toId" (방향 무관 정렬), value = 누적 인덱스
+            var pairCount = new Dictionary<string, int>();  // 쌍별 총 수
+            var pairIndex = new Dictionary<string, int>();  // 다음 할당 인덱스
+
+            // 사전 집계
+            foreach (var action in currentTable.actions)
+            {
+                if (action == null) continue;
+                if (action.cancels != null)
+                    foreach (var c in action.cancels)
+                    {
+                        if (string.IsNullOrEmpty(c.next) || !stateNodePositions.ContainsKey(c.next)) continue;
+                        string pairKey = GetPairKey(action.id, c.next);
+                        pairCount[pairKey] = pairCount.ContainsKey(pairKey) ? pairCount[pairKey] + 1 : 1;
+                    }
+                if (!string.IsNullOrEmpty(action.defaultNext) && stateNodePositions.ContainsKey(action.defaultNext))
+                {
+                    string pairKey = GetPairKey(action.id, action.defaultNext);
+                    pairCount[pairKey] = pairCount.ContainsKey(pairKey) ? pairCount[pairKey] + 1 : 1;
+                }
+            }
+
+            // ── 2. 그리기 ──
+            float lineSpacing = 12f * stateViewZoom; // 같은 쌍의 선 간격
+
             foreach (var action in currentTable.actions)
             {
                 if (action == null) continue;
@@ -4433,8 +4650,15 @@ namespace FreeFlowHero.Editor
                         Vector2 toPos = stateNodePositions[cancel.next] * stateViewZoom + offset;
                         Vector2 toCenter = toPos + new Vector2(NodeWidth * stateViewZoom * 0.5f, NodeHeight * stateViewZoom * 0.5f);
 
+                        // 오프셋 계산: 같은 쌍의 N번째 선
+                        string pairKey = GetPairKey(action.id, cancel.next);
+                        int total = pairCount.ContainsKey(pairKey) ? pairCount[pairKey] : 1;
+                        int idx = pairIndex.ContainsKey(pairKey) ? pairIndex[pairKey] : 0;
+                        pairIndex[pairKey] = idx + 1;
+                        float portOffset = (idx - (total - 1) * 0.5f) * lineSpacing;
+
                         Color lineColor = isSelected ? new Color(1f, 0.8f, 0.2f, 0.9f) : new Color(0.5f, 0.7f, 1f, 0.5f);
-                        DrawArrow(fromCenter, toCenter, lineColor, cancel.input);
+                        DrawOrthogonalArrow(fromCenter, toCenter, lineColor, cancel.input, portOffset);
                     }
                 }
 
@@ -4444,29 +4668,177 @@ namespace FreeFlowHero.Editor
                     Vector2 toPos = stateNodePositions[action.defaultNext] * stateViewZoom + offset;
                     Vector2 toCenter = toPos + new Vector2(NodeWidth * stateViewZoom * 0.5f, NodeHeight * stateViewZoom * 0.5f);
 
+                    string pairKey = GetPairKey(action.id, action.defaultNext);
+                    int total = pairCount.ContainsKey(pairKey) ? pairCount[pairKey] : 1;
+                    int idx = pairIndex.ContainsKey(pairKey) ? pairIndex[pairKey] : 0;
+                    pairIndex[pairKey] = idx + 1;
+                    float portOffset = (idx - (total - 1) * 0.5f) * lineSpacing;
+
                     Color dottedColor = isSelected ? new Color(1f, 0.5f, 0.2f, 0.7f) : new Color(0.6f, 0.6f, 0.6f, 0.4f);
-                    DrawDottedArrow(fromCenter, toCenter, dottedColor);
+                    DrawOrthogonalDottedArrow(fromCenter, toCenter, dottedColor, portOffset);
                 }
             }
         }
 
-        /// <summary>실선 화살표 + 라벨</summary>
-        private void DrawArrow(Vector2 from, Vector2 to, Color color, string label)
+        /// <summary>노드 쌍의 정규화 키 (방향 무관)</summary>
+        private static string GetPairKey(string a, string b)
         {
-            // 노드 겹침 방지: 노드 경계에서 시작/끝
-            Vector2 dir = (to - from).normalized;
-            float dist = Vector2.Distance(from, to);
+            return string.Compare(a, b, System.StringComparison.Ordinal) < 0 ? $"{a}→{b}" : $"{b}→{a}";
+        }
+
+        /// <summary>화면 좌표 기준 모든 노드 Rect 캐시 (연결선 그리기 시 사용)</summary>
+        private List<Rect> stateViewNodeScreenRects = new List<Rect>();
+
+        /// <summary>DrawStateViewConnections 전에 호출하여 화면 좌표 기준 노드 Rect 캐시 생성</summary>
+        private void CacheNodeScreenRects(Vector2 offset)
+        {
+            stateViewNodeScreenRects.Clear();
+            if (currentTable?.actions == null) return;
+            foreach (var action in currentTable.actions)
+            {
+                if (action == null || !stateNodePositions.ContainsKey(action.id)) continue;
+                Vector2 pos = stateNodePositions[action.id] * stateViewZoom + offset;
+                stateViewNodeScreenRects.Add(new Rect(pos.x, pos.y, NodeWidth * stateViewZoom, NodeHeight * stateViewZoom));
+            }
+        }
+
+        /// <summary>두 노드 중심 간 직각 경로 생성 (portOffset으로 출발/도착 분산, 노드 관통 회피)</summary>
+        private List<Vector2> BuildOrthogonalPath(Vector2 fromCenter, Vector2 toCenter, float portOffset)
+        {
+            float halfW = NodeWidth * stateViewZoom * 0.5f + 6f;
+            float halfH = NodeHeight * stateViewZoom * 0.5f + 6f;
+            float nodeMargin = 12f * stateViewZoom;
+
+            var path = new List<Vector2>();
+
+            bool goRight = toCenter.x > fromCenter.x;
+            bool goDown = toCenter.y > fromCenter.y;
+            bool useVerticalPorts = Mathf.Abs(fromCenter.x - toCenter.x) < halfW * 1.5f;
+
+            if (useVerticalPorts)
+            {
+                Vector2 start = goDown
+                    ? new Vector2(fromCenter.x + portOffset, fromCenter.y + halfH)
+                    : new Vector2(fromCenter.x + portOffset, fromCenter.y - halfH);
+                Vector2 end = goDown
+                    ? new Vector2(toCenter.x + portOffset, toCenter.y - halfH)
+                    : new Vector2(toCenter.x + portOffset, toCenter.y + halfH);
+
+                path.Add(start);
+                if (Mathf.Abs(start.x - end.x) < 4f)
+                {
+                    path.Add(end);
+                }
+                else
+                {
+                    float midY = (start.y + end.y) * 0.5f;
+                    midY = AvoidNodeCollisionY(midY, start.x, end.x, nodeMargin, fromCenter, toCenter);
+                    path.Add(new Vector2(start.x, midY));
+                    path.Add(new Vector2(end.x, midY));
+                    path.Add(end);
+                }
+            }
+            else
+            {
+                Vector2 start = goRight
+                    ? new Vector2(fromCenter.x + halfW, fromCenter.y + portOffset)
+                    : new Vector2(fromCenter.x - halfW, fromCenter.y + portOffset);
+                Vector2 end = goRight
+                    ? new Vector2(toCenter.x - halfW, toCenter.y + portOffset)
+                    : new Vector2(toCenter.x + halfW, toCenter.y + portOffset);
+
+                path.Add(start);
+                if (Mathf.Abs(start.y - end.y) < 4f)
+                {
+                    path.Add(end);
+                }
+                else
+                {
+                    float midX = (start.x + end.x) * 0.5f;
+                    midX = AvoidNodeCollisionX(midX, start.y, end.y, nodeMargin, fromCenter, toCenter);
+                    path.Add(new Vector2(midX, start.y));
+                    path.Add(new Vector2(midX, end.y));
+                    path.Add(end);
+                }
+            }
+
+            return path;
+        }
+
+        /// <summary>수직선(midX, fromY~toY)이 노드를 관통하면 안전한 X로 이동 (from/to 노드 자신은 제외)</summary>
+        private float AvoidNodeCollisionX(float midX, float fromY, float toY, float margin,
+            Vector2 fromCenter, Vector2 toCenter)
+        {
+            float minY = Mathf.Min(fromY, toY);
+            float maxY = Mathf.Max(fromY, toY);
+
+            foreach (var nodeRect in stateViewNodeScreenRects)
+            {
+                // from/to 노드 자신은 건너뜀
+                Vector2 nc = nodeRect.center;
+                if (Vector2.Distance(nc, fromCenter) < 5f || Vector2.Distance(nc, toCenter) < 5f)
+                    continue;
+
+                Rect inflated = new Rect(nodeRect.x - margin, nodeRect.y - margin,
+                    nodeRect.width + margin * 2, nodeRect.height + margin * 2);
+
+                if (midX > inflated.x && midX < inflated.xMax &&
+                    maxY > inflated.y && minY < inflated.yMax)
+                {
+                    float toLeft = inflated.x;
+                    float toRight = inflated.xMax;
+                    midX = Mathf.Abs(midX - toLeft) < Mathf.Abs(midX - toRight) ? toLeft : toRight;
+                }
+            }
+            return midX;
+        }
+
+        /// <summary>수평선(midY, fromX~toX)이 노드를 관통하면 안전한 Y로 이동</summary>
+        private float AvoidNodeCollisionY(float midY, float fromX, float toX, float margin,
+            Vector2 fromCenter, Vector2 toCenter)
+        {
+            float minX = Mathf.Min(fromX, toX);
+            float maxX = Mathf.Max(fromX, toX);
+
+            foreach (var nodeRect in stateViewNodeScreenRects)
+            {
+                Vector2 nc = nodeRect.center;
+                if (Vector2.Distance(nc, fromCenter) < 5f || Vector2.Distance(nc, toCenter) < 5f)
+                    continue;
+
+                Rect inflated = new Rect(nodeRect.x - margin, nodeRect.y - margin,
+                    nodeRect.width + margin * 2, nodeRect.height + margin * 2);
+
+                if (midY > inflated.y && midY < inflated.yMax &&
+                    maxX > inflated.x && minX < inflated.xMax)
+                {
+                    float toTop = inflated.y;
+                    float toBottom = inflated.yMax;
+                    midY = Mathf.Abs(midY - toTop) < Mathf.Abs(midY - toBottom) ? toTop : toBottom;
+                }
+            }
+            return midY;
+        }
+
+        /// <summary>직각 꺾임 실선 화살표 + 라벨</summary>
+        private void DrawOrthogonalArrow(Vector2 fromCenter, Vector2 toCenter, Color color, string label, float portOffset)
+        {
+            float dist = Vector2.Distance(fromCenter, toCenter);
             if (dist < 10f) return;
 
-            Vector2 start = from + dir * (NodeHeight * stateViewZoom * 0.5f);
-            Vector2 end = to - dir * (NodeHeight * stateViewZoom * 0.5f);
+            var path = BuildOrthogonalPath(fromCenter, toCenter, portOffset);
+            if (path.Count < 2) return;
 
-            // 선
+            // 선 그리기
             Handles.color = color;
-            Handles.DrawLine(start, end);
+            for (int i = 0; i < path.Count - 1; i++)
+                Handles.DrawLine(path[i], path[i + 1]);
 
-            // 화살표 머리
-            Vector2 arrowDir = (end - start).normalized;
+            // 화살표 머리 (마지막 세그먼트 방향)
+            Vector2 end = path[path.Count - 1];
+            Vector2 prev = path[path.Count - 2];
+            Vector2 arrowDir = (end - prev).normalized;
+            if (arrowDir.sqrMagnitude < 0.01f) return;
             Vector2 perp = new Vector2(-arrowDir.y, arrowDir.x);
             float arrowSize = 8f * stateViewZoom;
             Vector3[] arrowHead = {
@@ -4476,39 +4848,60 @@ namespace FreeFlowHero.Editor
             };
             Handles.DrawAAConvexPolygon(arrowHead);
 
-            // 라벨 → 지연 렌더 (최상위에 배경 박스와 함께 표시)
+            // 라벨 → 가장 긴 세그먼트의 중점에서 수직으로 띄워 배치
             if (!string.IsNullOrEmpty(label))
             {
-                Vector2 mid = (start + end) * 0.5f;
+                float maxLen = 0f;
+                int maxIdx = 0;
+                for (int i = 0; i < path.Count - 1; i++)
+                {
+                    float len = Vector2.Distance(path[i], path[i + 1]);
+                    if (len > maxLen) { maxLen = len; maxIdx = i; }
+                }
+                Vector2 mid = (path[maxIdx] + path[maxIdx + 1]) * 0.5f;
+
+                // 선 방향의 수직 벡터로 라벨을 띄움 (선을 가리지 않도록)
+                Vector2 segDir = (path[maxIdx + 1] - path[maxIdx]).normalized;
+                Vector2 segPerp = new Vector2(-segDir.y, segDir.x); // 수직 벡터
+                float labelOffset = 12f * stateViewZoom; // 선에서 띄우는 거리
+                mid += segPerp * labelOffset;
+
                 stateViewPendingLabels.Add(new PendingLabel { pos = mid, text = label, color = color });
             }
         }
 
-        /// <summary>점선 화살표 (defaultNext용)</summary>
-        private void DrawDottedArrow(Vector2 from, Vector2 to, Color color)
+        /// <summary>직각 꺾임 점선 화살표 (defaultNext용)</summary>
+        private void DrawOrthogonalDottedArrow(Vector2 fromCenter, Vector2 toCenter, Color color, float portOffset)
         {
-            Vector2 dir = (to - from).normalized;
-            float dist = Vector2.Distance(from, to);
+            float dist = Vector2.Distance(fromCenter, toCenter);
             if (dist < 10f) return;
 
-            Vector2 start = from + dir * (NodeHeight * stateViewZoom * 0.5f);
-            Vector2 end = to - dir * (NodeHeight * stateViewZoom * 0.5f);
+            var path = BuildOrthogonalPath(fromCenter, toCenter, portOffset);
+            if (path.Count < 2) return;
 
-            // 점선
             Handles.color = color;
             float dashLen = 6f * stateViewZoom;
-            float traveled = 0f;
-            Vector2 lineDir = (end - start).normalized;
-            float lineLen = Vector2.Distance(start, end);
-            while (traveled < lineLen)
+
+            // 각 세그먼트를 점선으로
+            for (int i = 0; i < path.Count - 1; i++)
             {
-                float segEnd = Mathf.Min(traveled + dashLen, lineLen);
-                Handles.DrawLine(start + lineDir * traveled, start + lineDir * segEnd);
-                traveled = segEnd + dashLen; // 간격
+                Vector2 segStart = path[i], segEnd = path[i + 1];
+                Vector2 segDir = (segEnd - segStart).normalized;
+                float segLen = Vector2.Distance(segStart, segEnd);
+                float traveled = 0f;
+                while (traveled < segLen)
+                {
+                    float dashEnd = Mathf.Min(traveled + dashLen, segLen);
+                    Handles.DrawLine(segStart + segDir * traveled, segStart + segDir * dashEnd);
+                    traveled = dashEnd + dashLen;
+                }
             }
 
             // 화살표 머리
-            Vector2 arrowDir = (end - start).normalized;
+            Vector2 end = path[path.Count - 1];
+            Vector2 prev = path[path.Count - 2];
+            Vector2 arrowDir = (end - prev).normalized;
+            if (arrowDir.sqrMagnitude < 0.01f) return;
             Vector2 perp = new Vector2(-arrowDir.y, arrowDir.x);
             float arrowSize = 6f * stateViewZoom;
             Vector3[] arrowHead = {
@@ -4580,27 +4973,112 @@ namespace FreeFlowHero.Editor
             }
         }
 
-        /// <summary>스테이트 뷰 이벤트: 노드 드래그, 줌, 팬</summary>
-        /// <summary>연결 라벨을 배경 박스와 함께 최상위에 렌더</summary>
-        private void DrawStateViewConnectionLabels()
+        /// <summary>연결 라벨을 배경 박스와 함께 최상위에 렌더 (겹침 방지)</summary>
+        private void DrawStateViewConnectionLabels(Vector2 offset)
         {
-            foreach (var lbl in stateViewPendingLabels)
-            {
-                int fontSize = Mathf.RoundToInt(9 * stateViewZoom);
-                var labelStyle = new GUIStyle(EditorStyles.miniLabel)
-                {
-                    normal = { textColor = lbl.color },
-                    alignment = TextAnchor.MiddleCenter,
-                    fontSize = fontSize
-                };
+            if (stateViewPendingLabels.Count == 0) return;
 
+            int fontSize = Mathf.RoundToInt(9 * stateViewZoom);
+            var labelStyle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = fontSize
+            };
+            float padX = 4f, padY = 2f;
+
+            // ── 1. 라벨 Rect 계산 ──
+            var labelRects = new List<Rect>(stateViewPendingLabels.Count);
+            for (int i = 0; i < stateViewPendingLabels.Count; i++)
+            {
+                var lbl = stateViewPendingLabels[i];
                 var content = new GUIContent(lbl.text);
                 Vector2 size = labelStyle.CalcSize(content);
-                float padX = 4f, padY = 2f;
                 Rect bgRect = new Rect(lbl.pos.x - size.x * 0.5f - padX, lbl.pos.y - size.y * 0.5f - padY,
                     size.x + padX * 2f, size.y + padY * 2f);
+                labelRects.Add(bgRect);
+            }
 
-                // 배경 박스 (반투명 어두운색)
+            // ── 2. 노드 Rect 수집 (라벨이 노드 위에 올라가지 않도록) ──
+            var nodeRects = new List<Rect>();
+            if (currentTable?.actions != null)
+            {
+                foreach (var action in currentTable.actions)
+                {
+                    if (action == null || !stateNodePositions.ContainsKey(action.id)) continue;
+                    Vector2 pos = stateNodePositions[action.id] * stateViewZoom + offset;
+                    float w = NodeWidth * stateViewZoom;
+                    float h = NodeHeight * stateViewZoom;
+                    nodeRects.Add(new Rect(pos.x - 2, pos.y - 2, w + 4, h + 4)); // 약간 패딩
+                }
+            }
+
+            // ── 3. 라벨-노드 겹침 해소 + 라벨-라벨 겹침 해소 (최대 20패스) ──
+            for (int pass = 0; pass < 20; pass++)
+            {
+                bool anyOverlap = false;
+
+                for (int i = 0; i < labelRects.Count; i++)
+                {
+                    Rect ri = labelRects[i];
+
+                    // 노드와 겹치면 밀어냄
+                    foreach (var nodeRect in nodeRects)
+                    {
+                        if (!ri.Overlaps(nodeRect)) continue;
+                        anyOverlap = true;
+
+                        // 가장 가까운 방향으로 밀어냄
+                        float pushUp = ri.yMax - nodeRect.y;
+                        float pushDown = nodeRect.yMax - ri.y;
+                        float pushLeft = ri.xMax - nodeRect.x;
+                        float pushRight = nodeRect.xMax - ri.x;
+                        float minPush = Mathf.Min(pushUp, pushDown, pushLeft, pushRight);
+
+                        if (minPush == pushUp) ri.y -= pushUp + 2f;
+                        else if (minPush == pushDown) ri.y += pushDown + 2f;
+                        else if (minPush == pushLeft) ri.x -= pushLeft + 2f;
+                        else ri.x += pushRight + 2f;
+
+                        labelRects[i] = ri;
+                    }
+
+                    // 다른 라벨과 겹치면 밀어냄
+                    for (int j = i + 1; j < labelRects.Count; j++)
+                    {
+                        Rect rj = labelRects[j];
+                        if (!ri.Overlaps(rj)) continue;
+                        anyOverlap = true;
+
+                        float overlapY = Mathf.Min(ri.yMax - rj.y, rj.yMax - ri.y);
+                        float pushHalf = overlapY * 0.5f + 2f;
+
+                        if (ri.center.y < rj.center.y)
+                        {
+                            ri.y -= pushHalf;
+                            rj.y += pushHalf;
+                        }
+                        else
+                        {
+                            ri.y += pushHalf;
+                            rj.y -= pushHalf;
+                        }
+                        labelRects[i] = ri;
+                        labelRects[j] = rj;
+                    }
+                }
+
+                if (!anyOverlap) break;
+            }
+
+            // ── 4. 렌더 ──
+            for (int i = 0; i < stateViewPendingLabels.Count; i++)
+            {
+                var lbl = stateViewPendingLabels[i];
+                Rect bgRect = labelRects[i];
+
+                labelStyle.normal.textColor = lbl.color;
+
+                // 배경 박스
                 EditorGUI.DrawRect(bgRect, new Color(0.12f, 0.12f, 0.12f, 0.85f));
                 // 테두리
                 EditorGUI.DrawRect(new Rect(bgRect.x, bgRect.y, bgRect.width, 1), lbl.color * 0.5f);

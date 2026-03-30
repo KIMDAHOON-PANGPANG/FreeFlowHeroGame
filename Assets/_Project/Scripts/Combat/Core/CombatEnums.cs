@@ -44,4 +44,11 @@ namespace FreeFlowHero.Combat.Core
         Player,
         Enemy
     }
+
+    /// <summary>공격 카테고리 (근접/원거리 분류)</summary>
+    public enum AttackCategory
+    {
+        Melee = 0,   // 근접 공격 — 가드(RB)로 방어 가능
+        Ranged = 1   // 원거리 공격 — 회피(Shift)로만 회피 가능
+    }
 }

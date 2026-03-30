@@ -80,7 +80,25 @@ namespace FreeFlowHero.Combat.Player
                 : CombatConstants.ExecutionHPThreshold;
         }
 
+        /// <summary>
+        /// BattleSettings의 가중치 테이블에서 랜덤 처형 모션 ActionId를 반환한다.
+        /// BattleSettings가 로드되지 않은 경우 "Execution1"~"Execution3" 중 랜덤 폴백.
+        /// </summary>
+        public static string GetRandomMotionActionId()
+        {
+            if (BattleSettings.Instance != null
+                && BattleSettings.Instance.executionMotions != null
+                && BattleSettings.Instance.executionMotions.Length > 0)
+            {
+                return BattleSettings.SelectWeightedRandom(BattleSettings.Instance.executionMotions);
+            }
+
+            // 폴백: BattleSettings 미로드 시 균등 랜덤
+            return "Execution" + (Random.Range(0, 3) + 1);
+        }
+
         /// <summary>콤보 수에 따른 처형 모션 인덱스 반환 (0, 1, 2)</summary>
+        [System.Obsolete("GetRandomMotionActionId()를 사용하세요. 콤보 기반 선택은 가중치 랜덤으로 대체되었습니다.")]
         public static int GetMotionIndex(int comboCount)
         {
             if (comboCount >= CombatConstants.ExecutionMotionTier3Combo) return 2;

@@ -67,6 +67,14 @@ namespace FreeFlowHero.Combat.Enemy
                 originalScale.y,
                 originalScale.z);
 
+            // ★ 그로기 처리: groggyType > 0이면 EnemyAIController에 전달
+            if (hitData.GroggyType > 0)
+            {
+                var aiController = GetComponent<EnemyAIController>();
+                if (aiController != null)
+                    aiController.ApplyGroggy((GroggyType)hitData.GroggyType);
+            }
+
             // 시각 피드백: 머티리얼 플래시 + 스케일 펀치
             hitFlash?.Play();
             scalePunchTimer = scalePunchDuration;

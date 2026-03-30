@@ -12,7 +12,7 @@ namespace FreeFlowHero.Editor
     /// </summary>
     public static class ModelSetup
     {
-        private const string ModelPath = "Assets/EEJANAI_Team/Commons/Model/EEJANAIbot.fbx";
+        private const string ModelPath = "Assets/Resouces/EEJANAI_Team/Commons/Model/EEJANAIbot.fbx";
         private const string PlayerAnimatorPath = "Assets/_Project/Animations/Player/PlayerCombatAnimator.controller";
         private const string EnemyAnimatorPath = "Assets/_Project/Animations/Enemy/EnemyCombatAnimator.controller";
         private const string PlayerPrefabPath = "Assets/_Project/Prefabs/Player/Player.prefab";
@@ -23,7 +23,7 @@ namespace FreeFlowHero.Editor
         // 모델 Y 오프셋 (발 위치를 바닥에 맞추기 위해)
         private const float ModelYOffset = 0f;
 
-        [MenuItem("REPLACED/Setup/5. Attach 3D Model", priority = 5)]
+        [MenuItem("REPLACED/Advanced/5. Attach 3D Model", priority = 5)]
         public static void Execute()
         {
             // 모델 확인

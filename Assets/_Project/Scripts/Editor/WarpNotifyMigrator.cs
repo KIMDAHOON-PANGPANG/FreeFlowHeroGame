@@ -12,10 +12,10 @@ namespace FreeFlowHero.Combat.Editor
     /// </summary>
     public static class WarpNotifyMigrator
     {
-        [MenuItem("REPLACED/마이그레이션/기존 액션에 WARP 노티파이 추가")]
+        [MenuItem("REPLACED/Advanced/마이그레이션/기존 액션에 WARP 노티파이 추가")]
         public static void MigrateAllActions()
         {
-            string folderPath = Path.Combine(Application.dataPath, "_Project/Resources/ActionTables");
+            string folderPath = Path.Combine(Application.dataPath, "_Project/Tool/ActionTables");
             if (!Directory.Exists(folderPath))
             {
                 Debug.LogError("[WarpMigrator] ActionTables 폴더를 찾을 수 없습니다: " + folderPath);

@@ -47,7 +47,13 @@ namespace FreeFlowHero.Combat.Core
             // 회피 (Martial Art Animations Sample)
             { "Dodge",        "Dodge_B" },
             { "DodgeForward", "Dodge_F" },
-            // 필요 시 추가...
+            // 가드 반격
+            { "GuardCounter",  "spinning elbow" },
+            { "GuardCounter2", "Atk_P_2" },
+            // 처형
+            { "Execution1", "cressent kick" },
+            { "Execution2", "axe kick" },
+            { "Execution3", "spinning axe kick" },
         };
 
         private void Start()

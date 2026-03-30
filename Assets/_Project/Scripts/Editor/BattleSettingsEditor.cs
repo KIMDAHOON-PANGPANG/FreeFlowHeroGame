@@ -13,7 +13,7 @@ namespace FreeFlowHero.Editor
     {
         private const string AssetPath = "Assets/_Project/Data/CombatConfig/BattleSettings.asset";
 
-        [MenuItem("REPLACED/Setup/4. Generate BattleSettings Asset", priority = 4)]
+        [MenuItem("REPLACED/Advanced/4b. Generate BattleSettings Asset", priority = 40)]
         public static void GenerateAsset()
         {
             // 폴더 보장
@@ -92,6 +92,9 @@ namespace FreeFlowHero.Editor
         private bool foldExecution = true;
         private bool foldHuxley = true;
         private bool foldComboBonus = true;
+        private bool foldGroggy = true;
+        private bool foldGuardCounterMotions = true;
+        private bool foldExecutionMotions = true;
 
         // ─── 커스텀 툴팁 (자체 호버 감지) ───
         private string pendingTooltip;
@@ -292,8 +295,48 @@ namespace FreeFlowHero.Editor
                 EditorGUILayout.EndVertical();
             }
 
+            // ═══ 그로기 ═══
+            EditorGUILayout.Space(4);
+            foldGroggy = EditorGUILayout.Foldout(foldGroggy, "★ 그로기 (Groggy)", true, headerStyle);
+            if (foldGroggy)
+            {
+                EditorGUILayout.BeginVertical(boxStyle);
+                bs.groggySoftDuration = EditorGUILayout.Slider("Soft 지속 시간 (초)", bs.groggySoftDuration, 0.3f, 3f);
+                Tip("약한 그로기: 짧은 고개 흔들기 후 공격 복귀. (기본: 1.0초)");
+                bs.groggyHardDuration = EditorGUILayout.Slider("Hard 지속 시간 (초)", bs.groggyHardDuration, 1f, 8f);
+                Tip("강한 그로기: 별 이펙트 + 긴 경직. (기본: 3.0초)");
+                EditorGUILayout.EndVertical();
+            }
+
+            // ═══ 가드 카운터 모션 ═══
+            EditorGUILayout.Space(4);
+            foldGuardCounterMotions = EditorGUILayout.Foldout(foldGuardCounterMotions, "★ 가드 카운터 모션", true, headerStyle);
+            if (foldGuardCounterMotions)
+            {
+                EditorGUILayout.BeginVertical(boxStyle);
+                var gcProp = serializedObject.FindProperty("guardCounterMotions");
+                if (gcProp != null)
+                    EditorGUILayout.PropertyField(gcProp, true);
+                Tip("퍼펙트 가드 시 발동할 카운터 모션 목록. weight로 확률 조절.");
+                EditorGUILayout.EndVertical();
+            }
+
+            // ═══ 처형 모션 ═══
+            EditorGUILayout.Space(4);
+            foldExecutionMotions = EditorGUILayout.Foldout(foldExecutionMotions, "★ 처형 모션", true, headerStyle);
+            if (foldExecutionMotions)
+            {
+                EditorGUILayout.BeginVertical(boxStyle);
+                var exProp = serializedObject.FindProperty("executionMotions");
+                if (exProp != null)
+                    EditorGUILayout.PropertyField(exProp, true);
+                Tip("처형 시 발동할 모션 목록. weight로 확률 조절.");
+                EditorGUILayout.EndVertical();
+            }
+
             if (EditorGUI.EndChangeCheck())
             {
+                serializedObject.ApplyModifiedProperties();
                 EditorUtility.SetDirty(bs);
             }
 

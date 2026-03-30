@@ -100,6 +100,10 @@ namespace FreeFlowHero.Combat.Player
             switch (input.Type)
             {
                 case InputType.Attack:
+                    ResolveAttack(input);
+                    break;
+
+                case InputType.Execute:
                 {
                     // 처형 체크: 저HP 적이 근처에 있으면 처형 발동
                     Vector2 pos = GetPos();
@@ -114,10 +118,7 @@ namespace FreeFlowHero.Combat.Player
                         context.executionTarget = execTarget;
                         fsm.TransitionTo<ExecutionState>();
                     }
-                    else
-                    {
-                        ResolveAttack(input);
-                    }
+                    // 처형 대상 없으면 무시 (공격으로 전환하지 않음)
                     break;
                 }
 

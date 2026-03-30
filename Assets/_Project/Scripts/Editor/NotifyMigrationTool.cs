@@ -9,16 +9,16 @@ namespace FreeFlowHero.Editor
 {
     /// <summary>
     /// 레거시 프레임 데이터(startup/active/recovery) → 노티파이 배열 자동 변환 도구.
-    /// Resources/ActionTables/ 하위 모든 JSON을 스캔하여
+    /// Tool/ActionTables/ 하위 모든 JSON을 스캔하여
     /// notifies[]가 비어있는 액션에 대해 STARTUP + COLLISION + CANCEL_WINDOW 노티파이를 생성한다.
     ///
     /// 메뉴: REPLACED > Migrate Legacy → Notifies
     /// </summary>
     public static class NotifyMigrationTool
     {
-        private const string ActionTablesPath = "Assets/_Project/Resources/ActionTables";
+        private const string ActionTablesPath = "Assets/_Project/Tool/ActionTables";
 
-        [MenuItem("REPLACED/Migrate Legacy → Notifies (전체 JSON)")]
+        [MenuItem("REPLACED/Advanced/마이그레이션/Migrate Legacy → Notifies (전체 JSON)")]
         public static void MigrateAll()
         {
             // JSON 파일 수집
@@ -161,7 +161,7 @@ namespace FreeFlowHero.Editor
             return notifies.ToArray();
         }
 
-        [MenuItem("REPLACED/Migrate Legacy → Notifies (선택한 JSON만)")]
+        [MenuItem("REPLACED/Advanced/마이그레이션/Migrate Legacy → Notifies (선택한 JSON만)")]
         public static void MigrateSelected()
         {
             // 프로젝트 뷰에서 선택한 TextAsset 대상

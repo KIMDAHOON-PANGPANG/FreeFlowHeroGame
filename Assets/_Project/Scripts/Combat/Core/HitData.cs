@@ -45,6 +45,9 @@ namespace FreeFlowHero.Combat.Core
         /// <summary>피격 리액션 데이터. COLLISION 노티파이의 HitType/Preset/Offset에서 조립.</summary>
         public HitReactionData Reaction;
 
+        /// <summary>그로기 타입. 0=None, 1=Soft, 2=Hard. COLLISION 노티파이에서 전달.</summary>
+        public int GroggyType;
+
         // ─── 데미지 배율 ───
 
         /// <summary>최종 데미지 배율 (노티파이 damageScale 등). 기본 1.0</summary>

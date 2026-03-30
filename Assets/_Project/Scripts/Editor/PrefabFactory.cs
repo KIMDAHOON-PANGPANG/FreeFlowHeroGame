@@ -18,7 +18,7 @@ namespace FreeFlowHero.Editor
         private const string PlayerPrefabPath = PrefabRoot + "/Player/Player.prefab";
         private const string DummyEnemyPrefabPath = PrefabRoot + "/Enemies/DummyEnemy.prefab";
 
-        [MenuItem("REPLACED/Setup/2. Create Prefabs", priority = 2)]
+        [MenuItem("REPLACED/Advanced/2. Create Prefabs", priority = 2)]
         public static void CreateAllPrefabs()
         {
             EnsureDirectories();
@@ -29,7 +29,7 @@ namespace FreeFlowHero.Editor
             Debug.Log("[REPLACED] 프리팹 생성 완료");
         }
 
-        [MenuItem("REPLACED/Setup/2a. Player Prefab Only")]
+        [MenuItem("REPLACED/Advanced/2a. Player Prefab Only")]
         public static void CreatePlayerPrefab()
         {
             if (AssetExists(PlayerPrefabPath))
@@ -107,7 +107,7 @@ namespace FreeFlowHero.Editor
             Debug.Log($"[REPLACED] Player 프리팹 생성: {PlayerPrefabPath}");
         }
 
-        [MenuItem("REPLACED/Setup/2b. Dummy Enemy Prefab Only")]
+        [MenuItem("REPLACED/Advanced/2b. Dummy Enemy Prefab Only")]
         public static void CreateDummyEnemyPrefab()
         {
             if (AssetExists(DummyEnemyPrefabPath))
@@ -147,8 +147,11 @@ namespace FreeFlowHero.Editor
             enemy.AddComponent<HitFlash>();
             enemy.AddComponent<HitReactionHandler>();
 
-            // ★ Sprite-Flash 머티리얼 할당
+            // ★ Sprite-Flash 머티리얼 할당 (3D 모델 사용 시 SpriteRenderer 비활성화됨)
             AssignFlashMaterial(sr);
+
+            // TelegraphOutline (텔레그래프 아웃라인 효과)
+            enemy.AddComponent<TelegraphOutline>();
 
             // EnemyCombatUI (HP 바 + 타겟 인디케이터 + 히트 넘버)
             enemy.AddComponent<EnemyCombatUI>();
@@ -180,7 +183,7 @@ namespace FreeFlowHero.Editor
         }
 
         /// <summary>기존 프리팹을 삭제하고 재생성 (Force Rebuild)</summary>
-        [MenuItem("REPLACED/Setup/2x. Force Rebuild Prefabs", priority = 20)]
+        [MenuItem("REPLACED/Advanced/2x. Force Rebuild Prefabs", priority = 20)]
         public static void ForceRebuildAllPrefabs()
         {
             // 기존 프리팹 삭제
@@ -201,7 +204,7 @@ namespace FreeFlowHero.Editor
         }
 
         /// <summary>기존 프리팹에 HitFlash 컴포넌트 + Sprite-Flash 머티리얼을 패치 (비파괴)</summary>
-        [MenuItem("REPLACED/Setup/2f. Patch HitFlash to Prefabs", priority = 21)]
+        [MenuItem("REPLACED/Advanced/2f. Patch HitFlash to Prefabs", priority = 21)]
         public static void PatchHitFlashToPrefabs()
         {
             int patched = 0;
@@ -281,6 +284,9 @@ namespace FreeFlowHero.Editor
         private const string FlashShaderName = "REPLACED/Sprite-Flash";
         private const string FlashMaterialPath = "Assets/_Project/Materials/Sprite-Flash.mat";
 
+        private const string OutlineShaderName = "REPLACED/Sprite-Outline";
+        private const string OutlineMaterialPath = "Assets/_Project/Materials/Sprite-Outline.mat";
+
         /// <summary>SpriteRenderer에 Sprite-Flash 셰이더 머티리얼 할당. 없으면 자동 생성.</summary>
         private static void AssignFlashMaterial(SpriteRenderer sr)
         {
@@ -301,6 +307,31 @@ namespace FreeFlowHero.Editor
                 mat.name = "Sprite-Flash";
                 AssetDatabase.CreateAsset(mat, FlashMaterialPath);
                 Debug.Log($"[REPLACED] Sprite-Flash 머티리얼 자동 생성: {FlashMaterialPath}");
+            }
+
+            sr.sharedMaterial = mat;
+        }
+
+        /// <summary>SpriteRenderer에 Sprite-Outline 셰이더 머티리얼 할당. 아웃라인+플래시 통합.</summary>
+        private static void AssignOutlineMaterial(SpriteRenderer sr)
+        {
+            if (sr == null) return;
+
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(OutlineMaterialPath);
+            if (mat == null)
+            {
+                var shader = Shader.Find(OutlineShaderName);
+                if (shader == null)
+                {
+                    Debug.LogWarning($"[REPLACED] '{OutlineShaderName}' 셰이더를 찾을 수 없습니다. Flash 셰이더로 폴백.");
+                    AssignFlashMaterial(sr);
+                    return;
+                }
+                EnsureFolder("Assets/_Project/Materials");
+                mat = new Material(shader);
+                mat.name = "Sprite-Outline";
+                AssetDatabase.CreateAsset(mat, OutlineMaterialPath);
+                Debug.Log($"[REPLACED] Sprite-Outline 머티리얼 자동 생성: {OutlineMaterialPath}");
             }
 
             sr.sharedMaterial = mat;

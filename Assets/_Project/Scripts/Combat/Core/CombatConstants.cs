@@ -41,6 +41,15 @@ namespace FreeFlowHero.Combat.Core
         public const float GuardCounterHuxleyCharge = 10f;  // 가드 반격 헉슬리 충전
         public const float GuardCounterDamage = 15f;        // 가드 반격 데미지
 
+        // ─── 가드 워프 ───
+        public const float GuardWarpOffsetX = -0.6f;           // 가드 워프 도착 오프셋 (적 기준)
+        public const float GuardWarpMaxRange = 8.0f;           // 가드 워프 최대 발동 거리
+        public const float GuardNormalBlockDamageReduction = 0.7f; // 일반 블록 데미지 감소 비율 (70%)
+
+        // ─── 그로기 ───
+        public const float GroggySoftDuration = 1.0f;           // 약한 그로기 지속 시간
+        public const float GroggyHardDuration = 3.0f;           // 강한 그로기 지속 시간
+
         // ─── 처형 ───
         public const float ExecutionHPThreshold = 0.2f;    // HP 20% 이하
         public const float ExecutionHPThresholdHighCombo = 0.3f; // 콤보 x50 시 30%
@@ -79,8 +88,8 @@ namespace FreeFlowHero.Combat.Core
         public const float HitFlashIntensity = 1.0f;     // 플래시 강도 (0~1)
 
         // ─── 피격 리액션: 모션 클립 경로 ───
-        public const string FlinchClipPath = "Assets/Martial Art Animations Sample/Animations/Hit_A.fbx";
-        public const string KnockdownClipPath = "Assets/Martial Art Animations Sample/Animations/Knock_A.fbx";
+        public const string FlinchClipPath = "Assets/Resouces/Martial Art Animations Sample/Animations/Hit_A.fbx";
+        public const string KnockdownClipPath = "Assets/Resouces/Martial Art Animations Sample/Animations/Knock_A.fbx";
 
         // ─── 피격 리액션: Flinch 프리셋 (cm / 초 / 프레임) ───
         public const float FlinchLightPush = 30f;

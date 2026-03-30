@@ -80,6 +80,7 @@ namespace FreeFlowHero.Combat.Enemy
             Attack,
             PostAttack,   // 공격 종료 후 잠시 대기 (자세 유지)
             HitStun,
+            Groggy,       // 그로기 — 혼란 상태 (Soft: 짧은 경직, Hard: 별 이펙트 + 긴 경직)
             Knockdown,
             Down,
             GetUp,
@@ -95,6 +96,7 @@ namespace FreeFlowHero.Combat.Enemy
         private Rigidbody2D rb;
         private Animator animator;
         private SpriteRenderer spriteRenderer;
+        private TelegraphOutline telegraphOutline;
         private Color originalColor;
         private Transform playerTransform;
         private PlayerCombatFSM playerFSM;
@@ -112,6 +114,8 @@ namespace FreeFlowHero.Combat.Enemy
         public TelegraphType CurrentTelegraph => currentTelegraph;
         public int TelegraphStartFrame => telegraphStartFrame;
         public bool IsTelegraphing => isTelegraphing;
+        public AttackCategory CurrentAttackCategory => currentAttackCategory;
+        private AttackCategory currentAttackCategory = AttackCategory.Melee;
 
         // ─── 시각 피드백 ───
         private static readonly Color TelegraphRedColor = new Color(1f, 0.2f, 0.2f, 1f);
@@ -132,6 +136,15 @@ namespace FreeFlowHero.Combat.Enemy
         private const float GroundCheckDist = 0.15f; // 지면 감지 레이 거리
         private const float SkinWidth = 0.06f;       // 충돌 여유 거리
         private const float MinMoveThreshold = 0.005f;
+
+        // ─── 그로기 ───
+        private GroggyType currentGroggyType;
+
+        /// <summary>그로기 상태 활성 여부 (UI 표시용)</summary>
+        public bool IsGroggyActive => currentState == AIState.Groggy;
+
+        /// <summary>현재 그로기 타입 (UI 표시용)</summary>
+        public GroggyType CurrentGroggyType => currentGroggyType;
 
         /// <summary>충돌 검사 대상: Player + Enemy 레이어</summary>
         private static int collisionMask = -1;
@@ -161,6 +174,7 @@ namespace FreeFlowHero.Combat.Enemy
             //   여기서 false로 덮어쓰면 시각 이탈이 재발하므로 건드리지 않는다.
             cachedCapsule = GetComponent<CapsuleCollider2D>();
             spriteRenderer = GetComponent<SpriteRenderer>();
+            telegraphOutline = GetComponent<TelegraphOutline>();
             reactionHandler = GetComponent<HitReaction.HitReactionHandler>();
             if (spriteRenderer != null)
                 originalColor = spriteRenderer.color;
@@ -190,6 +204,10 @@ namespace FreeFlowHero.Combat.Enemy
 
             lastHP = enemyTarget.CurrentHP;
             cooldownTimer = Random.Range(1f, attackCooldown); // 초기 랜덤 쿨다운
+
+            // 초기 바닥 스냅 (스폰 Y가 지면보다 높을 경우)
+            SnapEnemyToGround();
+
             TransitionTo(AIState.Patrol);
         }
 
@@ -286,6 +304,7 @@ namespace FreeFlowHero.Combat.Enemy
                 case AIState.Attack:     UpdateAttack();     break;
                 case AIState.PostAttack: UpdatePostAttack(); break;
                 case AIState.HitStun:    UpdateHitStun();    break;
+                case AIState.Groggy:     UpdateGroggy();     break;
                 case AIState.Knockdown: UpdateKnockdown(); break;
                 case AIState.Down:    UpdateDown();      break;
                 case AIState.GetUp:   UpdateGetUp();     break;
@@ -373,12 +392,14 @@ namespace FreeFlowHero.Combat.Enemy
                 case AIState.Telegraph:
                     isTelegraphing = false;
                     currentTelegraph = TelegraphType.None;
+                    telegraphOutline?.DisableOutline();
                     RestoreColor();
                     // 텔레그래프 중 피격 등으로 중단 시 슬롯 반환
                     if (AttackCoordinator.Instance != null)
                         AttackCoordinator.Instance.ReleaseAttackSlot(this);
                     break;
                 case AIState.HitStun:
+                case AIState.Groggy:
                 case AIState.Down:
                     RestoreColor();
                     break;
@@ -422,10 +443,28 @@ namespace FreeFlowHero.Combat.Enemy
                     telegraphStartFrame = Time.frameCount;
                     SafeSetFloat("Speed", 0f);
 
-                    // 시각: 텔레그래프 색상
-                    if (spriteRenderer != null)
+                    // 공격 카테고리 결정 (액션 테이블에서 조회)
+                    {
+                        string nextActionId = AttackActionIds[currentAttackIndex];
+                        var telegraphAction = ActionTableManager.Instance?.GetAction("Enemy_Grunt", nextActionId);
+                        currentAttackCategory = telegraphAction != null
+                            ? telegraphAction.GetAttackCategory()
+                            : AttackCategory.Melee;
+                    }
+
+                    // 시각: 아웃라인 효과 (Melee=노랑, Red=빨강)
+                    if (telegraphOutline != null)
+                    {
+                        Color outColor = telegraphType == TelegraphType.Red_Dodge
+                            ? TelegraphRedColor : TelegraphYellowColor;
+                        telegraphOutline.EnableOutline(outColor);
+                    }
+                    else if (spriteRenderer != null)
+                    {
+                        // 폴백: TelegraphOutline 없으면 기존 색상 변경
                         spriteRenderer.color = telegraphType == TelegraphType.Red_Dodge
                             ? TelegraphRedColor : TelegraphYellowColor;
+                    }
 
                     // 애니메이션
                     SafeSetTrigger("Telegraph");
@@ -444,6 +483,8 @@ namespace FreeFlowHero.Combat.Enemy
                 case AIState.Attack:
                     cooldownTimer = attackCooldown + Random.Range(-0.3f, 0.5f);
                     SafeSetFloat("Speed", 0f);
+                    // 텔레그래프 아웃라인 해제
+                    telegraphOutline?.DisableOutline();
 
                     // 애니메이션: 랜덤 공격 인덱스 선택 (Punch=0, Kick=1)
                     currentAttackIndex = Random.Range(0, 2);
@@ -491,6 +532,21 @@ namespace FreeFlowHero.Combat.Enemy
                         spriteRenderer.color = HitStunColor;
 
                     // 애니메이션: Flinch 모션 (Hit_A)
+                    SafeSetTrigger("Flinch");
+                    break;
+
+                case AIState.Groggy:
+                    stateTimer = BattleSettings.GetGroggyDuration(currentGroggyType);
+                    isTelegraphing = false;
+                    SafeSetFloat("Speed", 0f);
+                    currentTelegraph = TelegraphType.None;
+                    telegraphOutline?.DisableOutline();
+                    if (spriteRenderer != null)
+                        spriteRenderer.color = HitStunColor;
+                    // 공격 슬롯 반환 (그로기 중 공격 불가)
+                    if (AttackCoordinator.Instance != null)
+                        AttackCoordinator.Instance.ReleaseAttackSlot(this);
+                    // Flinch 모션 재활용 (그로기 포즈)
                     SafeSetTrigger("Flinch");
                     break;
 
@@ -705,6 +761,40 @@ namespace FreeFlowHero.Combat.Enemy
         }
 
         private void UpdateHitStun()
+        {
+            if (stateTimer <= 0f)
+                TransitionTo(AIState.Chase);
+        }
+
+        /// <summary>초기 바닥 스냅: 지면 위로 정확하게 위치 조정</summary>
+        private void SnapEnemyToGround()
+        {
+            if (rb == null || groundMask <= 0) return;
+
+            float bottomOffset = 0f;
+            if (cachedCapsule != null)
+                bottomOffset = cachedCapsule.offset.y - cachedCapsule.size.y * 0.5f;
+
+            Vector2 pos = rb.position;
+            Vector2 rayOrigin = pos + Vector2.up * (bottomOffset + 0.1f);
+            RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.down, 10f, groundMask);
+            if (hit.collider != null)
+            {
+                pos.y = hit.point.y - bottomOffset;
+                rb.position = pos;
+            }
+        }
+
+        /// <summary>외부에서 그로기 상태를 유발한다 (가드 카운터 피격 등).</summary>
+        public void ApplyGroggy(GroggyType type)
+        {
+            if (type == GroggyType.None) return;
+            if (currentState == AIState.Dead) return;
+            currentGroggyType = type;
+            TransitionTo(AIState.Groggy);
+        }
+
+        private void UpdateGroggy()
         {
             if (stateTimer <= 0f)
                 TransitionTo(AIState.Chase);

@@ -10,7 +10,7 @@ namespace FreeFlowHero.Combat.Player
     /// 조작 매핑:
     ///   기본 공격: Mouse LB (왼쪽 클릭)
     ///   강공격:    Mouse RB (오른쪽 클릭)
-    ///   회피:      Keyboard Space
+    ///   회피:      Keyboard Shift
     ///   카운터:    Keyboard L
     ///   헉슬리:    Keyboard U
     ///   이동:      Keyboard WASD·방향키
@@ -78,14 +78,24 @@ namespace FreeFlowHero.Combat.Player
                 fsm.OnCombatInput(new InputData(InputType.Heavy, direction));
             }
 
-            // ─── 회피: Keyboard Space ───
-            if (kb != null && kb.spaceKey.wasPressedThisFrame)
+            // ─── 회피: Keyboard Shift ───
+            if (kb != null && kb.leftShiftKey.wasPressedThisFrame)
             {
                 inputCount++;
                 lastInput = $"Dodge #{inputCount}";
                 inputIndicatorTimer = 0.5f;
 
                 fsm.OnCombatInput(new InputData(InputType.Dodge, direction));
+            }
+
+            // ─── 처형: Keyboard F ───
+            if (kb != null && kb.fKey.wasPressedThisFrame)
+            {
+                inputCount++;
+                lastInput = $"Execute #{inputCount}";
+                inputIndicatorTimer = 0.5f;
+
+                fsm.OnCombatInput(new InputData(InputType.Execute, direction));
             }
 
             // ─── 헉슬리: Keyboard U ───
@@ -112,7 +122,7 @@ namespace FreeFlowHero.Combat.Player
 
             string text = inputIndicatorTimer > 0f
                 ? $"INPUT: {lastInput}"
-                : "LClick:Attack | RClick:Heavy | Space:Dodge | U:Huxley";
+                : "LClick:Attack | RClick:Guard | Shift:Dodge | F:Execute | U:Huxley";
 
             GUI.Label(new Rect(10, Screen.height - 40, 600, 30), text, style);
 

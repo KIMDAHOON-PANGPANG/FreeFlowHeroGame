@@ -14,18 +14,18 @@ namespace FreeFlowHero.Editor
         private const string AnimatorPath = "Assets/_Project/Animations/Enemy/EnemyCombatAnimator.controller";
 
         // Martial Art Animations Sample 클립
-        private const string IdleFBX = "Assets/Martial Art Animations Sample/Animations/Fight_Idle.fbx";
-        private const string WalkForwardFBX = "Assets/Martial Art Animations Sample/Animations/Walk_F.fbx";
-        private const string WalkBackFBX = "Assets/Martial Art Animations Sample/Animations/Walk_B.fbx";
+        private const string IdleFBX = "Assets/Resouces/Martial Art Animations Sample/Animations/Fight_Idle.fbx";
+        private const string WalkForwardFBX = "Assets/Resouces/Martial Art Animations Sample/Animations/Walk_F.fbx";
+        private const string WalkBackFBX = "Assets/Resouces/Martial Art Animations Sample/Animations/Walk_B.fbx";
 
         // 히트 리액션 클립
-        private const string FlinchFBX = "Assets/Martial Art Animations Sample/Animations/Hit_A.fbx";
-        private const string KnockdownFBX = "Assets/Martial Art Animations Sample/Animations/Knock_A.fbx";
-        private const string GetUpFBX = "Assets/Martial Art Animations Sample/Animations/GetUp_A.fbx";
+        private const string FlinchFBX = "Assets/Resouces/Martial Art Animations Sample/Animations/Hit_A.fbx";
+        private const string KnockdownFBX = "Assets/Resouces/Martial Art Animations Sample/Animations/Knock_A.fbx";
+        private const string GetUpFBX = "Assets/Resouces/Martial Art Animations Sample/Animations/GetUp_A.fbx";
 
         // 적 공격 애니메이션 매핑 (Martial Art Animations Sample)
-        private const string AttackKickFBX = "Assets/Martial Art Animations Sample/Animations/Atk_K_1.fbx";
-        private const string AttackPunchFBX = "Assets/Martial Art Animations Sample/Animations/Atk_P_1.fbx";
+        private const string AttackKickFBX = "Assets/Resouces/Martial Art Animations Sample/Animations/Atk_K_1.fbx";
+        private const string AttackPunchFBX = "Assets/Resouces/Martial Art Animations Sample/Animations/Atk_P_1.fbx";
 
         private static readonly (string fbxPath, string stateName)[] EnemyAnimMap = new[]
         {
@@ -33,7 +33,7 @@ namespace FreeFlowHero.Editor
             (AttackKickFBX,   "Attack_Kick"),   // 킥
         };
 
-        [MenuItem("REPLACED/Setup/3b. Build Enemy Animator", priority = 31)]
+        [MenuItem("REPLACED/Advanced/3b. Build Enemy Animator", priority = 31)]
         public static void Execute()
         {
             EnsureFolder("Assets/_Project/Animations");
@@ -304,8 +304,35 @@ namespace FreeFlowHero.Editor
             }
 
             AssetDatabase.SaveAssets();
+
+            // ★ 프리팹의 Animator 참조 자동 재연결
+            RelinkControllerToPrefab(controller);
+
             Debug.Log($"[REPLACED] Enemy AnimatorController 생성 완료: {AnimatorPath}" +
                 $"\n  상태 {stateCount}개, 클립 {clipCount}개 매핑됨");
+        }
+
+        /// <summary>재빌드된 컨트롤러를 Enemy 프리팹의 모델 Animator에 재할당한다.</summary>
+        private static void RelinkControllerToPrefab(AnimatorController controller)
+        {
+            const string enemyPrefabPath = "Assets/_Project/Prefabs/Enemies/DummyEnemy.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(enemyPrefabPath);
+            if (prefab == null) return;
+
+            using (var scope = new PrefabUtility.EditPrefabContentsScope(enemyPrefabPath))
+            {
+                var root = scope.prefabContentsRoot;
+                foreach (var animator in root.GetComponentsInChildren<Animator>(true))
+                {
+                    if (animator.gameObject != root)
+                    {
+                        animator.runtimeAnimatorController = controller;
+                        Debug.Log($"  [Relink] DummyEnemy 프리팹 Animator 재연결 완료: {animator.gameObject.name}");
+                        break;
+                    }
+                }
+            }
+            AssetDatabase.SaveAssets();
         }
 
         // ─── 유틸리티 ───

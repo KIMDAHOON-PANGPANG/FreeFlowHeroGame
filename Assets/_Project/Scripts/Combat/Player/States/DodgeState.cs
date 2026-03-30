@@ -244,9 +244,11 @@ namespace FreeFlowHero.Combat.Player
                 animStarted = true;
             }
 
-            // ★ 캔슬 윈도우 — normalizedTime 비율 기반
+            // ★ 캔슬 윈도우 — normalizedTime 비율 기반 (레거시 폴백용 의도적 사용)
+            #pragma warning disable 0618
             if (!context.canCancel && animStarted
                 && stateInfo.normalizedTime >= context.dodgeCancelDelay)
+            #pragma warning restore 0618
             {
                 context.canCancel = true;
                 context.isInvulnerable = false;

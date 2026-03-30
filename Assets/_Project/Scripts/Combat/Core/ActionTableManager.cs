@@ -6,7 +6,7 @@ namespace FreeFlowHero.Combat.Core
 {
     /// <summary>
     /// 액션 테이블 매니저 (싱글톤).
-    /// Resources/ActionTables/ 폴더의 모든 JSON을 로드하여 캐싱한다.
+    /// Tool/ActionTables/ 폴더의 모든 JSON을 디스크에서 직접 로드하여 캐싱한다.
     ///
     /// ★ 핫 리로드: 플레이 중 에디터에서 JSON을 저장하면 FileSystemWatcher가
     ///   파일 변경을 감지하고 자동으로 리로드한다. 다음 공격부터 새 데이터 적용.
@@ -43,8 +43,7 @@ namespace FreeFlowHero.Combat.Core
         public event System.Action OnReloaded;
 
         // ─── 경로 ───
-        private const string ResourceFolder = "ActionTables";
-        private const string DiskSubPath = "_Project/Resources/ActionTables";
+        private const string DiskSubPath = "_Project/Tool/ActionTables";
 
         // ─── 핫 리로드 ───
         private FileSystemWatcher fileWatcher;
@@ -93,19 +92,10 @@ namespace FreeFlowHero.Combat.Core
         //  로드
         // ═══════════════════════════════════════════════════════
 
-        /// <summary>Resources/ActionTables/ 하위 모든 JSON 로드 (초기 로드용)</summary>
+        /// <summary>Tool/ActionTables/ 하위 모든 JSON 로드 (초기 로드용)</summary>
         public void LoadAll()
         {
-            tables.Clear();
-
-            var textAssets = Resources.LoadAll<TextAsset>(ResourceFolder);
-            foreach (var asset in textAssets)
-            {
-                ParseAndAddTable(asset.text, asset.name);
-            }
-
-            isLoaded = true;
-            OnReloaded?.Invoke();
+            LoadAllFromDisk();
         }
 
         /// <summary>디스크에서 직접 JSON 파일 로드 (핫 리로드용, Resources 캐시 우회)</summary>

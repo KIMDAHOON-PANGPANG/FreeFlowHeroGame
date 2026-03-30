@@ -42,7 +42,7 @@ namespace FreeFlowHero.Editor
             "UI",
         };
 
-        [MenuItem("REPLACED/Setup/1. Layers & Tags", priority = 1)]
+        [MenuItem("REPLACED/Advanced/1. Layers & Tags", priority = 1)]
         public static void Execute()
         {
             int layerCount = 0, tagCount = 0, sortCount = 0;

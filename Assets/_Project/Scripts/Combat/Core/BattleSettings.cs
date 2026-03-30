@@ -1,7 +1,17 @@
+using System;
 using UnityEngine;
 
 namespace FreeFlowHero.Combat.Core
 {
+    /// <summary>가중 랜덤 모션 엔트리 (가드 카운터/처형 등)</summary>
+    [Serializable]
+    public class WeightedMotionEntry
+    {
+        public string actionId;
+        [Range(0.1f, 10f)]
+        public float weight = 1.0f;
+    }
+
     /// <summary>
     /// 전투 시스템 공용 설정 데이터 에셋.
     /// UE5의 DA_BATTLESETTINGS처럼 전투 규칙/수치를 한곳에서 관리한다.
@@ -452,5 +462,74 @@ namespace FreeFlowHero.Combat.Core
         /// <summary>Knockdown 피격 모션 클립 경로.</summary>
         public static string GetKnockdownClipPath()
             => IsLoaded ? _instance.knockdownClipPath : CombatConstants.KnockdownClipPath;
+
+        // ════════════════════════════════════════════
+        //  ★ 그로기 프리셋
+        // ════════════════════════════════════════════
+
+        [Header("★ 그로기")]
+        [Tooltip("약한 그로기 지속 시간 (초)")]
+        [Range(0.3f, 3f)]
+        public float groggySoftDuration = CombatConstants.GroggySoftDuration;
+
+        [Tooltip("강한 그로기 지속 시간 (초)")]
+        [Range(1f, 8f)]
+        public float groggyHardDuration = CombatConstants.GroggyHardDuration;
+
+        /// <summary>그로기 지속 시간 (타입별)</summary>
+        public static float GetGroggyDuration(GroggyType type)
+        {
+            if (!IsLoaded)
+                return type == GroggyType.Hard ? CombatConstants.GroggyHardDuration : CombatConstants.GroggySoftDuration;
+            return type == GroggyType.Hard ? _instance.groggyHardDuration : _instance.groggySoftDuration;
+        }
+
+        // ════════════════════════════════════════════
+        //  ★ 가드 카운터 모션 (가중 랜덤)
+        // ════════════════════════════════════════════
+
+        [Header("★ 가드 카운터 모션")]
+        [Tooltip("가드 성공(퍼펙트 가드) 시 발동할 카운터 액션 목록. weight로 확률 조절.")]
+        public WeightedMotionEntry[] guardCounterMotions = new[]
+        {
+            new WeightedMotionEntry { actionId = "GuardCounter", weight = 1f }
+        };
+
+        // ════════════════════════════════════════════
+        //  ★ 처형 모션 (가중 랜덤)
+        // ════════════════════════════════════════════
+
+        [Header("★ 처형 모션")]
+        [Tooltip("처형 시 발동할 모션 목록. weight로 확률 조절.")]
+        public WeightedMotionEntry[] executionMotions = new[]
+        {
+            new WeightedMotionEntry { actionId = "Execution1", weight = 1f },
+            new WeightedMotionEntry { actionId = "Execution2", weight = 1f },
+            new WeightedMotionEntry { actionId = "Execution3", weight = 1f }
+        };
+
+        // ════════════════════════════════════════════
+        //  가중 랜덤 선택 헬퍼
+        // ════════════════════════════════════════════
+
+        /// <summary>가중 랜덤으로 actionId 선택. 빈 배열이면 null 반환.</summary>
+        public static string SelectWeightedRandom(WeightedMotionEntry[] entries)
+        {
+            if (entries == null || entries.Length == 0) return null;
+            if (entries.Length == 1) return entries[0].actionId;
+
+            float totalWeight = 0f;
+            foreach (var e in entries)
+                totalWeight += e.weight;
+
+            float roll = UnityEngine.Random.Range(0f, totalWeight);
+            float cumulative = 0f;
+            foreach (var e in entries)
+            {
+                cumulative += e.weight;
+                if (roll <= cumulative) return e.actionId;
+            }
+            return entries[entries.Length - 1].actionId;
+        }
     }
 }

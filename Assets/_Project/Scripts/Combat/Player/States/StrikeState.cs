@@ -544,6 +544,13 @@ namespace FreeFlowHero.Combat.Player
             {
                 case InputType.Attack:
                 {
+                    context.comboChainIndex = (context.comboChainIndex + 1) % MaxComboChain;
+                    ResolveNextComboAttack(input);
+                    break;
+                }
+
+                case InputType.Execute:
+                {
                     // 처형 체크: 저HP 적이 근처에 있으면 처형 발동
                     Vector2 pos = GetPos();
                     float dir = context.playerTransform.localScale.x >= 0 ? 1f : -1f;
@@ -554,11 +561,7 @@ namespace FreeFlowHero.Combat.Player
                         context.executionTarget = execTarget;
                         fsm.TransitionTo<ExecutionState>();
                     }
-                    else
-                    {
-                        context.comboChainIndex = (context.comboChainIndex + 1) % MaxComboChain;
-                        ResolveNextComboAttack(input);
-                    }
+                    // 처형 대상 없으면 무시
                     break;
                 }
 
@@ -629,6 +632,7 @@ namespace FreeFlowHero.Combat.Player
                 case InputType.Heavy:   return "Heavy";
                 case InputType.Dodge:   return "Dodge";
                 case InputType.Huxley:  return "Huxley";
+                case InputType.Execute: return "Execute";
                 default:                return type.ToString();
             }
         }
@@ -889,6 +893,9 @@ namespace FreeFlowHero.Combat.Player
                         float defenderFacing = Mathf.Sign(target.GetTransform().localScale.x);
                         hitData.KnockbackDirection = new Vector2(defenderFacing, 0f);
                     }
+
+                    // ★ 그로기 타입 전달
+                    hitData.GroggyType = cn.groggyType;
 
                     if (hitType == HitType.Knockdown)
                     {

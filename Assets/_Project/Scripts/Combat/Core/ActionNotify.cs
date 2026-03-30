@@ -53,6 +53,12 @@ namespace FreeFlowHero.Combat.Core
         /// homingTurnRate: 회전 속도 제한 (도/초). 0 = 즉시 스냅.
         /// </summary>
         HOMING = 6,
+
+        /// <summary>
+        /// 가드 성공 윈도우 — 이 구간 내에 피격되면 퍼펙트 가드(패링) 성공.
+        /// 구간 외 피격은 일반 블록 (데미지 감소만, 카운터 미발동).
+        /// </summary>
+        GUARD_SUCCESS = 7,
     }
 
     /// <summary>
@@ -123,6 +129,9 @@ namespace FreeFlowHero.Combat.Core
         public float knockAirTimeOffset; // 초
         public float knockDistanceOffset;// cm
         public float knockDownTimeOffset;// 초 (Down 상태 지속 시간 오프셋)
+
+        // ─── COLLISION 그로기 파라미터 ───
+        public int groggyType;          // (int)GroggyType: 0=None, 1=Soft, 2=Hard
 
         // ─── CANCEL_WINDOW 파라미터 ───
         public bool skillCancel;    // 공격 캔슬 (콤보 연계) 허용
@@ -448,6 +457,24 @@ namespace FreeFlowHero.Combat.Core
             };
         }
 
+        /// <summary>GUARD_SUCCESS 노티파이 생성 (퍼펙트 가드 타이밍 윈도우)</summary>
+        public static ActionNotify CreateGuardSuccess(int start, int end)
+        {
+            return new ActionNotify
+            {
+                type = NotifyType.GUARD_SUCCESS.ToString(),
+                startFrame = start,
+                endFrame = end,
+                track = 7,
+                disabled = false,
+                isInstance = false,
+                damageScale = 1f,
+                hitboxId = "",
+                moveSpeed = 0f,
+                nextAction = "",
+            };
+        }
+
         /// <summary>워핑 이징 커브 적용</summary>
         public static float ApplyWarpEasing(float t, int easeType)
         {
@@ -488,6 +515,7 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.PENDING_WINDOW: return new Color(0.9f, 0.5f, 0.2f, 0.8f);  // 주황
                 case NotifyType.ROOT_MOTION:    return new Color(0.7f, 0.3f, 0.9f, 0.8f);  // 보라
                 case NotifyType.HOMING:         return new Color(0.2f, 0.8f, 0.9f, 0.8f);  // 시안
+                case NotifyType.GUARD_SUCCESS:  return new Color(0.2f, 0.9f, 0.3f, 0.8f);  // 초록
                 default:                        return new Color(0.5f, 0.5f, 0.5f, 0.8f);  // 회색
             }
         }
@@ -504,6 +532,7 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.PENDING_WINDOW: return "PENDING";
                 case NotifyType.ROOT_MOTION:    return "ROOT_MOTION";
                 case NotifyType.HOMING:         return "HOMING";
+                case NotifyType.GUARD_SUCCESS:  return "GUARD_SUCCESS";
                 default:                        return type.ToString();
             }
         }
@@ -520,7 +549,8 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.PENDING_WINDOW: return 4;
                 case NotifyType.ROOT_MOTION:    return 5;
                 case NotifyType.HOMING:         return 6;
-                default:                        return 7;
+                case NotifyType.GUARD_SUCCESS:  return 7;
+                default:                        return 8;
             }
         }
 
@@ -536,6 +566,7 @@ namespace FreeFlowHero.Combat.Core
                 case NotifyType.PENDING_WINDOW: return 5;  // 팔로스루 강제 재생 구간
                 case NotifyType.ROOT_MOTION:    return 20; // 액션 전체 범위 (동기화 시 자동 설정)
                 case NotifyType.HOMING:         return 10; // 추적 허용 구간
+                case NotifyType.GUARD_SUCCESS:  return 10; // 퍼펙트 가드 윈도우
                 default:                        return 5;
             }
         }

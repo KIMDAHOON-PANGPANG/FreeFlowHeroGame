@@ -49,5 +49,8 @@ namespace FreeFlowHero.Combat.Core
 
         /// <summary>공격 예고 중인지 여부</summary>
         bool IsTelegraphing { get; }
+
+        /// <summary>현재 준비 중인 공격의 카테고리 (Melee/Ranged)</summary>
+        AttackCategory CurrentAttackCategory { get; }
     }
 }
