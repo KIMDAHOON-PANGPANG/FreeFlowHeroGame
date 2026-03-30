@@ -40,7 +40,7 @@ Transform:
   m_Children:
   - {fileID: 1415614005904930343}
   - {fileID: 8628866523525986829}
-  - {fileID: 8383863389764121217}
+  - {fileID: 5026506273720101289}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &6660583083819058584
@@ -216,7 +216,7 @@ MonoBehaviour:
   context:
     strikeCancelDelay: 0.3
     dodgeCancelDelay: 0.3
-    counterCancelDelay: 0.3
+    guardDuration: 1
     inputBufferDuration: 0.5
     comboCount: 0
     comboWindowTimer: 0
@@ -490,7 +490,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FreeFlowHero.Common.HurtboxController
   ownerTeam: 0
---- !u!1001 &8346241206295434602
+--- !u!1001 &4776918076600258114
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -550,6 +550,22 @@ PrefabInstance:
       propertyPath: m_Controller
       value: 
       objectReference: {fileID: 9100000, guid: a6b1f45bcdde21f408b0881de0c09194, type: 2}
+    - target: {fileID: 5866666021909216657, guid: 311536138b8622a4895fa913884605e9, type: 3}
+      propertyPath: m_WarningMessage
+      value: "\nBinding warning: Some generic clip(s) animate transforms that are
+        already bound by a Humanoid avatar. These transforms can only be changed
+        by Humanoid clips.\n\tTransform 'EEJANAIBot:Hips'\n\tTransform 'EEJANAIBot:LeftForeArm'\n\tTransform
+        'EEJANAIBot:Spine2'\n\tTransform 'EEJANAIBot:RightHandRing3'\n\tTransform
+        'EEJANAIBot:RightFoot'\n\tTransform 'EEJANAIBot:LeftHandIndex1'\n\tTransform
+        'EEJANAIBot:RightToeBase'\n\tTransform 'EEJANAIBot:RightLeg'\n\tTransform
+        'EEJANAIBot:RightHandPinky2'\n\tTransform 'EEJANAIBot:RightHand'\n\tand more
+        ...\n\tFrom animation clip 'combo_Baked'\n\tFrom animation clip 'low kick_Baked'\n\tFrom
+        animation clip 'charge fist_Baked'\n\tFrom animation clip 'front sweep_Baked'\n\tFrom
+        animation clip 'axe kick_Baked'\n\tFrom animation clip 'spinning axe kick_Baked'\n\tFrom
+        animation clip 'jumping uppercut_Baked'\n\tFrom animation clip 'jumping side
+        kick_Baked'\n\tFrom animation clip 'webster side kick_Baked'\n\tFrom animation
+        clip 'super blast_Baked'\n\tand more ..."
+      objectReference: {fileID: 0}
     - target: {fileID: 6148737315974723067, guid: 311536138b8622a4895fa913884605e9, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -559,8 +575,8 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 311536138b8622a4895fa913884605e9, type: 3}
---- !u!4 &8383863389764121217 stripped
+--- !u!4 &5026506273720101289 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 311536138b8622a4895fa913884605e9, type: 3}
-  m_PrefabInstance: {fileID: 8346241206295434602}
+  m_PrefabInstance: {fileID: 4776918076600258114}
   m_PrefabAsset: {fileID: 0}
