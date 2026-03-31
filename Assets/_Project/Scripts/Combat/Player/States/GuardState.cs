@@ -381,8 +381,9 @@ namespace FreeFlowHero.Combat.Player
                 //   대신 ROOT_MOTION 노티파이로 코드 제어 이동 사용.
                 //   액션 테이블에서 GuardCounter에 ROOT_MOTION 노티파이 추가 필요.
 
-                // 반격 애니메이션 트리거 (Animator는 GuardCounterIndex로 서브스테이트 분기)
-                SafeSetTrigger("GuardCounter");
+                // 반격 애니메이션: CrossFade로 직접 상태 전환 (트리거보다 안정적)
+                string counterStateName = counterIndex == 0 ? "GuardCounter" : $"GuardCounter{counterIndex + 1}";
+                context.playerAnimator.CrossFadeInFixedTime(counterStateName, 0.05f);
             }
             else
             {
