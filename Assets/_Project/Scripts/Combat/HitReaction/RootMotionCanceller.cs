@@ -21,6 +21,7 @@ namespace FreeFlowHero.Combat.HitReaction
         private Animator anim;
         private HitReactionHandler handler;
         private Rigidbody2D parentRb;
+        private Transform hipsTransform;
 
         /// <summary>
         /// true면 루트모션 delta를 Rigidbody2D에 적용한다.
@@ -34,6 +35,10 @@ namespace FreeFlowHero.Combat.HitReaction
             handler = GetComponentInParent<HitReactionHandler>();
             if (handler != null)
                 parentRb = handler.GetComponent<Rigidbody2D>();
+
+            // Humanoid Hips 본 캐싱
+            if (anim != null && anim.isHuman)
+                hipsTransform = anim.GetBoneTransform(HumanBodyBones.Hips);
         }
 
         private void OnAnimatorMove()
@@ -58,6 +63,30 @@ namespace FreeFlowHero.Combat.HitReaction
                 return;
             }
             // 그 외: 루트모션 차단 (아무것도 적용하지 않음)
+        }
+
+        /// <summary>
+        /// ★ Hips 본 XZ 역상쇄: Humanoid 아바타 매핑 이슈로 루트모션 추출이
+        /// 실패하면 Hips 뼈가 XZ로 이탈하여 메쉬가 밀린다.
+        /// Animator transform을 Hips 반대 방향으로 이동시켜 메쉬를 원위치에 고정.
+        /// ※ localRotation은 건드리지 않음 — 캐릭터 방향(facing)에 영향.
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (UseRootMotion) return;
+            if (handler != null && handler.IsKnockdownActive) return;
+
+            if (hipsTransform != null)
+            {
+                // Hips의 Animator-로컬 XZ 오프셋 계산
+                Vector3 hipsLocal = transform.InverseTransformPoint(hipsTransform.position);
+                // XZ만 역상쇄 (Y는 캐릭터 높이이므로 보존)
+                transform.localPosition = new Vector3(-hipsLocal.x, 0f, -hipsLocal.z);
+            }
+            else
+            {
+                transform.localPosition = Vector3.zero;
+            }
         }
     }
 }

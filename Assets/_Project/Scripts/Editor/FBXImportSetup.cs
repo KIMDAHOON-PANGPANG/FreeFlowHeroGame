@@ -44,12 +44,12 @@ namespace FreeFlowHero.Editor
 
             int count = 0;
 
-            // ★ EEJANAI FBX는 건드리지 않음!
-            // EEJANAIbot 모델과 애니메이션 FBX는 에셋 스토어 원본 .meta에
-            // 수동 Humanoid 본 매핑이 저장되어 있음. 코드로 강제 재설정하면
-            // 자동 매핑이 실패하여 "No human bone found" 에러 발생.
-            // → EEJANAI 에셋은 에셋 스토어에서 Import한 상태 그대로 보존.
-            Debug.Log("[REPLACED] ★ EEJANAI FBX는 원본 보존 (스킵)");
+            // ★ EEJANAI FBX: Humanoid 리그는 원본 보존, Bake Into Pose만 적용
+            // EEJANAIbot의 Humanoid 본 매핑은 에셋 스토어 원본 .meta에 수동 저장되어 있음.
+            // animationType/sourceAvatar를 코드로 건드리면 "No human bone found" 에러 발생.
+            // → 리그 설정은 절대 건드리지 않고, BakeRootMotionIntoPose만 적용.
+            Debug.Log("[REPLACED] 0단계: EEJANAI FBX Bake Into Pose 적용 (리그 보존)...");
+            count += BakeOnlyAllFBXInFolder(AnimFBXFolder);
 
             // ── ExplosiveLLC Locomotion FBX → Humanoid 설정 ──
             Debug.Log("[REPLACED] 1단계: ExplosiveLLC Locomotion FBX Humanoid 설정...");
@@ -244,6 +244,91 @@ namespace FreeFlowHero.Editor
             string yBasis = isGetUpClip ? "ON(Feet+TransDOF)" : (isKnockdownClip ? "ON(Original)" : "ON(Feet)");
             string xzBake = isLocomotionClip ? "OFF(이동)" : "ON(제자리)";
             Debug.Log($"  [BakeRoot] ✓ {clips.Length}개 클립 Bake Into Pose 적용 (Y={yBasis}, XZ={xzBake}): {fileName}");
+            return true;
+        }
+
+        /// <summary>
+        /// 폴더 내 모든 FBX에 BakeRootMotionIntoPose만 적용한다 (리그 설정 미변경).
+        /// EEJANAI처럼 Humanoid 리그를 코드로 건드릴 수 없는 에셋용.
+        /// </summary>
+        private static int BakeOnlyAllFBXInFolder(string folder)
+        {
+            string fullPath = System.IO.Path.GetFullPath(folder);
+            if (!System.IO.Directory.Exists(fullPath))
+            {
+                Debug.LogWarning($"  [스킵] 폴더를 찾을 수 없습니다: {folder}");
+                return 0;
+            }
+
+            int count = 0;
+            var allFiles = new System.Collections.Generic.HashSet<string>();
+            foreach (var f in System.IO.Directory.GetFiles(fullPath, "*.fbx", System.IO.SearchOption.AllDirectories))
+                allFiles.Add(f);
+            foreach (var f in System.IO.Directory.GetFiles(fullPath, "*.FBX", System.IO.SearchOption.AllDirectories))
+                allFiles.Add(f);
+
+            Debug.Log($"  [탐색] {folder} — {allFiles.Count}개 FBX 발견 (Bake Only)");
+
+            foreach (string filePath in allFiles)
+            {
+                string assetPath = "Assets" + filePath
+                    .Replace("\\", "/")
+                    .Replace(Application.dataPath.Replace("\\", "/"), "");
+
+                ModelImporter importer = AssetImporter.GetAtPath(assetPath) as ModelImporter;
+                if (importer == null) continue;
+
+                // ★ 리그(animationType, sourceAvatar)는 절대 건드리지 않음
+                // EEJANAI 전용 Bake: Y ON(Feet) + XZ OFF (루트모션 추출 → RootMotionCanceller가 차단)
+                if (importer.importAnimation && BakeRootMotionForEEJANAI(importer))
+                {
+                    importer.SaveAndReimport();
+                    string fileName = System.IO.Path.GetFileName(assetPath);
+                    Debug.Log($"  ✓ Bake Into Pose 적용: {fileName}");
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        /// <summary>
+        /// EEJANAI 전용 Bake Into Pose 설정.
+        /// ★ Y: Bake ON (Feet) — 지면 고정, 캐릭터 꺼짐 방지
+        /// ★ XZ: Bake OFF — XZ 이동은 루트모션 델타로 추출되어 RootMotionCanceller가 차단.
+        ///   Bake XZ ON으로 하면 이동이 뼈에 베이크되어 메쉬가 시각적으로 밀림.
+        /// </summary>
+        private static bool BakeRootMotionForEEJANAI(ModelImporter importer)
+        {
+            var clips = importer.clipAnimations;
+            if (clips == null || clips.Length == 0)
+                clips = importer.defaultClipAnimations;
+
+            if (clips == null || clips.Length == 0)
+            {
+                Debug.LogWarning($"  [BakeRoot] 클립 없음: {importer.assetPath}");
+                return false;
+            }
+
+            for (int i = 0; i < clips.Length; i++)
+            {
+                // Root Transform Rotation → Bake Into Pose (Based Upon: Original)
+                clips[i].lockRootRotation = true;
+                clips[i].keepOriginalOrientation = true;
+
+                // Root Transform Position (Y) → Bake ON (Feet 기준)
+                clips[i].lockRootHeightY = true;
+                clips[i].keepOriginalPositionY = false;
+                clips[i].heightFromFeet = true;
+
+                // Root Transform Position (XZ) → Bake OFF
+                // XZ 루트모션 델타를 추출 → RootMotionCanceller.OnAnimatorMove()가 차단
+                clips[i].lockRootPositionXZ = false;
+                clips[i].keepOriginalPositionXZ = true;
+            }
+
+            importer.clipAnimations = clips;
+            Debug.Log($"  [BakeRoot] ✓ EEJANAI Bake 적용 (Y=ON(Feet), XZ=OFF): " +
+                System.IO.Path.GetFileNameWithoutExtension(importer.assetPath));
             return true;
         }
 
