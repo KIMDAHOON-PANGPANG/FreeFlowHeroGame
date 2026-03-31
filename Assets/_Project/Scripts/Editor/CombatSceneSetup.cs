@@ -102,6 +102,10 @@ namespace FreeFlowHero.Editor
                 // ★ HitReactionHandler: 피격 리액션 (Flinch/Knockdown)
                 if (player.GetComponent<FreeFlowHero.Combat.HitReaction.HitReactionHandler>() == null)
                     player.AddComponent<FreeFlowHero.Combat.HitReaction.HitReactionHandler>();
+
+                // ★ FacingDebugOverlay: [2] 키로 방향 디버그 토글
+                if (player.GetComponent<FreeFlowHero.Combat.Core.FacingDebugOverlay>() == null)
+                    player.AddComponent<FreeFlowHero.Combat.Core.FacingDebugOverlay>();
             }
             else
             {
