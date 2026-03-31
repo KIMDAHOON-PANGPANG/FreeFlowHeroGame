@@ -3197,7 +3197,9 @@ namespace FreeFlowHero.Editor
             {
                 previewInstance = previewRender.InstantiatePrefabInScene(modelPrefab);
                 previewInstance.transform.position = Vector3.zero;
-                previewInstance.transform.rotation = Quaternion.Euler(0, 90, 0);
+                // ★ Side View: 카메라가 +X에서 보므로 모델은 Z+ 방향(Euler 0,0,0)으로 배치
+                // Euler(0,90,0)이면 모델이 카메라를 정면으로 향해 Front View가 됨
+                previewInstance.transform.rotation = Quaternion.Euler(0, 0, 0);
                 previewInstance.transform.localScale = Vector3.one;
 
                 previewAnimator = previewInstance.GetComponentInChildren<Animator>();
@@ -3979,9 +3981,9 @@ namespace FreeFlowHero.Editor
                 AnimationMode.EndSampling();
 
                 // ★ 루트모션 보정: SampleAnimationClip이 루트 위치/회전을 변경하므로
-                // 프리뷰 모델을 원점+초기 회전으로 복원하여 모델이 화면 밖으로 밀리는 것을 방지
+                // 프리뷰 모델을 원점+Side View 회전으로 복원하여 모델이 화면 밖으로 밀리는 것을 방지
                 previewInstance.transform.position = Vector3.zero;
-                previewInstance.transform.rotation = Quaternion.Euler(0, 90, 0);
+                previewInstance.transform.rotation = Quaternion.Euler(0, 0, 0);
             }
             catch (System.Exception e)
             {
