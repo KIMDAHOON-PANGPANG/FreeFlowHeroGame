@@ -3977,6 +3977,11 @@ namespace FreeFlowHero.Editor
                 AnimationMode.BeginSampling();
                 AnimationMode.SampleAnimationClip(previewInstance, clip, sampleTime);
                 AnimationMode.EndSampling();
+
+                // ★ 루트모션 보정: SampleAnimationClip이 루트 위치/회전을 변경하므로
+                // 프리뷰 모델을 원점+초기 회전으로 복원하여 모델이 화면 밖으로 밀리는 것을 방지
+                previewInstance.transform.position = Vector3.zero;
+                previewInstance.transform.rotation = Quaternion.Euler(0, 90, 0);
             }
             catch (System.Exception e)
             {

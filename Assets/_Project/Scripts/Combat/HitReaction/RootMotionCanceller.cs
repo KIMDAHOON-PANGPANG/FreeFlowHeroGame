@@ -22,6 +22,7 @@ namespace FreeFlowHero.Combat.HitReaction
         private HitReactionHandler handler;
         private Rigidbody2D parentRb;
         private Transform hipsTransform;
+        private Quaternion initialLocalRotation;
 
         /// <summary>
         /// true면 루트모션 delta를 Rigidbody2D에 적용한다.
@@ -39,6 +40,9 @@ namespace FreeFlowHero.Combat.HitReaction
 
         private void Start()
         {
+            // 초기 회전 캐싱 (ModelSetup에서 설정한 Euler(0,90,0) 등)
+            // 애니메이션 루트 회전이 본에 누출되어 방향이 틀어지는 것을 방지
+            initialLocalRotation = transform.localRotation;
             CacheHipsTransform();
         }
 
@@ -96,19 +100,23 @@ namespace FreeFlowHero.Combat.HitReaction
         }
 
         /// <summary>
-        /// ★ Hips 본 XZ 역상쇄 (월드 좌표 기반)
-        /// Humanoid 루트모션 추출이 실패하면 Hips가 XZ로 이탈하여 메쉬가 밀린다.
-        /// Animator transform을 월드 공간에서 Hips 반대 방향으로 이동시켜 고정.
+        /// ★ 루트모션 위치/회전 보정 (월드 좌표 기반)
         ///
-        /// ※ InverseTransformPoint가 아닌 월드 좌표 사용:
-        ///   모델이 Y축 90도 회전(2D 횡스크롤 뷰)되어 있으므로
-        ///   self-local과 parent-local 좌표계가 다름 → 월드 좌표로 직접 보정.
-        /// ※ localRotation은 건드리지 않음 — 캐릭터 방향(facing)에 영향.
+        /// 1) Hips XZ 역상쇄: 루트모션 추출 실패 시 Hips가 XZ로 이탈 → 메쉬 밀림 방지
+        /// 2) 루트 회전 복원: 애니메이션 루트 회전이 본에 누출 → 모델 방향 틀어짐 방지
+        ///
+        /// ※ 월드 좌표 사용 이유: 모델이 Y축 90도 회전(2D 횡스크롤 뷰)되어 있어
+        ///   self-local과 parent-local 좌표계가 다르기 때문.
+        /// ※ 캐릭터 좌우 방향(facing)은 부모의 localScale.x 플립으로 처리됨.
         /// </summary>
         private void LateUpdate()
         {
             if (UseRootMotion) return;
             if (handler != null && handler.IsKnockdownActive) return;
+
+            // ★ 루트 회전 복원: 애니메이션이 모델 방향을 틀어도 초기 회전 강제 유지
+            // (캐릭터 좌우 flip은 부모 localScale.x로 처리, 모델 자체 회전은 고정)
+            transform.localRotation = initialLocalRotation;
 
             if (hipsTransform != null)
             {
