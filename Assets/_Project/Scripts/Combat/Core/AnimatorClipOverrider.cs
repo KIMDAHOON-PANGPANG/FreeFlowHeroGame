@@ -47,9 +47,9 @@ namespace FreeFlowHero.Combat.Core
             // 회피 (Martial Art Animations Sample)
             { "Dodge",        "Dodge_B" },
             { "DodgeForward", "Dodge_F" },
-            // 가드 반격
-            { "GuardCounter",  "spinning elbow" },
-            { "GuardCounter2", "Atk_P_2" },
+            // ★ GuardCounter/GuardCounter2: 매핑 불필요
+            //   AnimatorControllerBuilder가 JSON clipPath에서 직접 로드하므로
+            //   action.clip 폴백으로 자동 매칭됨.
             // 처형
             { "Execution1", "cressent kick" },
             { "Execution2", "axe kick" },

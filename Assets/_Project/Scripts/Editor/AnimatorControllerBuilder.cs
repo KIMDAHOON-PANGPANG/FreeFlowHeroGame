@@ -345,49 +345,50 @@ namespace FreeFlowHero.Editor
                 trGuard.canTransitionToSelf = false;
             }
 
-            // ─── GuardCounter 상태들 (가드 반격 바리에이션) ───
+            // ─── GuardCounter 상태들 (ActionTable JSON의 clipPath 기반) ───
             {
-                // GuardCounter (index 0): spinning elbow
-                var guardCounterState = rootStateMachine.AddState("GuardCounter", GetStatePosition(stateCount + 1));
-                stateCount++;
-                AnimationClip counterClip = FindClipByFBXName("spinning elbow");
-                if (counterClip != null)
-                {
-                    guardCounterState.motion = counterClip;
-                    clipFoundCount++;
-                    Debug.Log($"[AnimBuilder] ✓ GuardCounter 클립: {counterClip.name}");
-                }
-                var trGC = rootStateMachine.AddAnyStateTransition(guardCounterState);
-                trGC.AddCondition(AnimatorConditionMode.If, 0, "GuardCounter");
-                trGC.AddCondition(AnimatorConditionMode.Equals, 0, "GuardCounterIndex");
-                trGC.hasExitTime = false;
-                trGC.duration = 0.05f;
-                trGC.canTransitionToSelf = false;
+                string[] gcActionIds = { "GuardCounter", "GuardCounter2" };
+                AnimationClip gcFallbackClip = FindClipByFBXName("spinning elbow");
 
-                // GuardCounter2 (index 1): Atk_P_2
-                var guardCounter2State = rootStateMachine.AddState("GuardCounter2", GetStatePosition(stateCount + 1));
-                stateCount++;
-                // Atk_P_2 클립 로드 (Martial Art Animations Sample)
-                string gc2FbxPath = "Assets/Resouces/Martial Art Animations Sample/Animations/Atk_P_2.fbx";
-                AnimationClip counter2Clip = LoadClipFromFBX(gc2FbxPath);
-                if (counter2Clip != null)
+                for (int gi = 0; gi < gcActionIds.Length; gi++)
                 {
-                    guardCounter2State.motion = counter2Clip;
-                    clipFoundCount++;
-                    Debug.Log($"[AnimBuilder] ✓ GuardCounter2 클립: {counter2Clip.name}");
+                    string actionId = gcActionIds[gi];
+                    var gcState = rootStateMachine.AddState(actionId, GetStatePosition(stateCount + 1));
+                    stateCount++;
+
+                    // ★ ActionTable JSON에서 clipPath를 읽어 직접 로드
+                    AnimationClip gcClip = null;
+                    if (actionTable != null)
+                    {
+                        var action = actionTable.GetAction(actionId);
+                        if (action != null && !string.IsNullOrEmpty(action.clipPath))
+                        {
+                            gcClip = LoadClipFromFBX(action.clipPath);
+                            if (gcClip != null)
+                                Debug.Log($"[AnimBuilder] ✓ {actionId} 클립 (JSON): {gcClip.name} ← {action.clipPath}");
+                        }
+                    }
+
+                    // 폴백: spinning elbow
+                    if (gcClip == null)
+                    {
+                        gcClip = gcFallbackClip;
+                        Debug.LogWarning($"[AnimBuilder] {actionId} JSON clipPath 없음 → spinning elbow 폴백");
+                    }
+
+                    if (gcClip != null)
+                    {
+                        gcState.motion = gcClip;
+                        clipFoundCount++;
+                    }
+
+                    var trGC = rootStateMachine.AddAnyStateTransition(gcState);
+                    trGC.AddCondition(AnimatorConditionMode.If, 0, "GuardCounter");
+                    trGC.AddCondition(AnimatorConditionMode.Equals, gi, "GuardCounterIndex");
+                    trGC.hasExitTime = false;
+                    trGC.duration = 0.05f;
+                    trGC.canTransitionToSelf = false;
                 }
-                else
-                {
-                    // 폴백: spinning elbow 재사용
-                    if (counterClip != null) guardCounter2State.motion = counterClip;
-                    Debug.LogWarning("[AnimBuilder] GuardCounter2용 Atk_P_2.fbx 없음 → spinning elbow 폴백");
-                }
-                var trGC2 = rootStateMachine.AddAnyStateTransition(guardCounter2State);
-                trGC2.AddCondition(AnimatorConditionMode.If, 0, "GuardCounter");
-                trGC2.AddCondition(AnimatorConditionMode.Equals, 1, "GuardCounterIndex");
-                trGC2.hasExitTime = false;
-                trGC2.duration = 0.05f;
-                trGC2.canTransitionToSelf = false;
             }
 
             // ─── 모든 전투 상태 → Locomotion 복귀 (Exit Time) ───
