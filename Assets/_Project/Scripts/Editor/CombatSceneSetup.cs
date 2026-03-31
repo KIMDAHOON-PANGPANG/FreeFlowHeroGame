@@ -123,6 +123,25 @@ namespace FreeFlowHero.Editor
             actionTableObj.AddComponent<FreeFlowHero.Combat.Core.ActionTableManager>();
             Debug.Log("  [씬] ActionTableManager 생성 (JSON 액션 테이블 로더)");
 
+            // ─── BattleSettings 런타임 로더 ───
+            var battleSettings = AssetDatabase.LoadAssetAtPath<FreeFlowHero.Combat.Core.BattleSettings>(
+                "Assets/_Project/Data/CombatConfig/BattleSettings.asset");
+            if (battleSettings != null)
+            {
+                // 런타임 로더 컴포넌트: Awake에서 BattleSettings.Instance를 할당
+                var loaderObj = new GameObject("[BattleSettingsLoader]");
+                var loader = loaderObj.AddComponent<FreeFlowHero.Combat.Core.BattleSettingsLoader>();
+                // SerializedField에 에셋 참조 할당
+                var so = new UnityEditor.SerializedObject(loader);
+                so.FindProperty("settings").objectReferenceValue = battleSettings;
+                so.ApplyModifiedPropertiesWithoutUndo();
+                Debug.Log("  [씬] BattleSettingsLoader 생성 (런타임 자동 로드)");
+            }
+            else
+            {
+                Debug.LogWarning("[REPLACED] BattleSettings.asset을 찾을 수 없습니다.");
+            }
+
             // ─── 더미 적 5체 배치 (좌우 분산) ───
             // Phase 2: 워핑 테스트를 위해 다양한 거리에 배치
             GameObject enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(EnemyPrefab);

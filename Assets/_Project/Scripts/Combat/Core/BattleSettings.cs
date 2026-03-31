@@ -33,13 +33,38 @@ namespace FreeFlowHero.Combat.Core
         private static BattleSettings _instance;
 
         /// <summary>
+        /// ScriptableObject 로드 시 자동 등록.
+        /// Resources.LoadAll 또는 에셋 참조로 로드될 때 OnEnable이 호출된다.
+        /// </summary>
+        private void OnEnable()
+        {
+            _instance = this;
+        }
+
+        /// <summary>
         /// 런타임/에디터에서 BattleSettings에 접근한다.
-        /// Resources 폴더가 아닌 직접 참조 방식 — CombatDirector 등에서 할당.
+        /// OnEnable에서 자동 등록되며, 없으면 Resources에서 검색한다.
         /// 할당되지 않으면 CombatConstants 기본값을 사용한다.
         /// </summary>
         public static BattleSettings Instance
         {
-            get => _instance;
+            get
+            {
+                if (_instance == null)
+                {
+                    // Resources 폴더에서 자동 검색
+                    _instance = Resources.Load<BattleSettings>("BattleSettings");
+                    if (_instance == null)
+                    {
+                        // 전체 에셋에서 검색 (에디터 전용은 아님 — SO는 빌드에 포함되면 FindObjectOfType 불가)
+                        var all = Resources.LoadAll<BattleSettings>("");
+                        if (all.Length > 0) _instance = all[0];
+                    }
+                    if (_instance != null)
+                        Debug.Log($"<color=cyan>[BattleSettings] 자동 로드 성공</color>");
+                }
+                return _instance;
+            }
             set => _instance = value;
         }
 
