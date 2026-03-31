@@ -591,8 +591,11 @@ namespace FreeFlowHero.Editor
             EditorGUI.DrawRect(new Rect(tooltipRect.x, tooltipRect.yMax - 1, tooltipRect.width, 1), new Color(0.45f, 0.45f, 0.45f, 0.8f));
             EditorGUI.DrawRect(new Rect(tooltipRect.x, tooltipRect.y, 1, tooltipRect.height), new Color(0.45f, 0.45f, 0.45f, 0.8f));
             EditorGUI.DrawRect(new Rect(tooltipRect.xMax - 1, tooltipRect.y, 1, tooltipRect.height), new Color(0.45f, 0.45f, 0.45f, 0.8f));
-            // 텍스트
+            // 텍스트 (★ contentColor 강제: 에디터 스킨에 의한 검정 텍스트 방지)
+            Color prevContent = GUI.contentColor;
+            GUI.contentColor = new Color(0.92f, 0.92f, 0.92f);
             GUI.Label(tooltipRect, pendingTooltip, tooltipStyle);
+            GUI.contentColor = prevContent;
         }
 
         /// <summary>세로 스플리터 바 렌더링 + 커서 설정</summary>
