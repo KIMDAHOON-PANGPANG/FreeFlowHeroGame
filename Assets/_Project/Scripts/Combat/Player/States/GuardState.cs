@@ -355,8 +355,11 @@ namespace FreeFlowHero.Combat.Player
                 if (BattleSettings.IsLoaded && BattleSettings.Instance.guardCounterMotions != null
                     && BattleSettings.Instance.guardCounterMotions.Length > 0)
                 {
-                    string selected = BattleSettings.SelectWeightedRandom(
-                        BattleSettings.Instance.guardCounterMotions);
+                    var motions = BattleSettings.Instance.guardCounterMotions;
+                    string motionList = string.Join(", ",
+                        System.Array.ConvertAll(motions, m => $"{m.actionId}(w:{m.weight:F1})"));
+                    string selected = BattleSettings.SelectWeightedRandom(motions);
+                    Debug.Log($"[Guard] 카운터 랜덤 — 후보:[{motionList}] → 선택:{selected}");
                     if (!string.IsNullOrEmpty(selected))
                         counterActionId = selected;
                 }
