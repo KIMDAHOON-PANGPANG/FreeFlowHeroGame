@@ -311,9 +311,11 @@ namespace FreeFlowHero.Editor
 
             for (int i = 0; i < clips.Length; i++)
             {
-                // Root Transform Rotation → Bake Into Pose (Based Upon: Original)
+                // Root Transform Rotation → Bake Into Pose (Based Upon: Body Orientation)
+                // ★ keepOriginalOrientation=false: 신체 중심 방향(Body Orientation)으로 자동 정렬.
+                //   Original(true)이면 EEJANAI 클립별 원본 방향이 달라 Hips가 돌아가는 버그 발생.
                 clips[i].lockRootRotation = true;
-                clips[i].keepOriginalOrientation = true;
+                clips[i].keepOriginalOrientation = false;
 
                 // Root Transform Position (Y) → Bake ON (Feet 기준)
                 clips[i].lockRootHeightY = true;
@@ -327,7 +329,7 @@ namespace FreeFlowHero.Editor
             }
 
             importer.clipAnimations = clips;
-            Debug.Log($"  [BakeRoot] ✓ EEJANAI Bake 적용 (Y=ON(Feet), XZ=OFF): " +
+            Debug.Log($"  [BakeRoot] ✓ EEJANAI Bake 적용 (Y=ON(Feet), XZ=OFF, Rot=Body): " +
                 System.IO.Path.GetFileNameWithoutExtension(importer.assetPath));
             return true;
         }
