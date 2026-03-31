@@ -23,6 +23,7 @@ namespace FreeFlowHero.Combat.HitReaction
         private Rigidbody2D parentRb;
         private Transform hipsTransform;
         private Quaternion initialLocalRotation;
+        private int diagLogCounter;  // 진단 로그 제한용
 
         /// <summary>
         /// true면 루트모션 delta를 Rigidbody2D에 적용한다.
@@ -116,7 +117,38 @@ namespace FreeFlowHero.Combat.HitReaction
 
             // ★ 루트 회전 복원: 애니메이션이 모델 방향을 틀어도 초기 회전 강제 유지
             // (캐릭터 좌우 flip은 부모 localScale.x로 처리, 모델 자체 회전은 고정)
+            Quaternion beforeRot = transform.localRotation;
             transform.localRotation = initialLocalRotation;
+
+            // ★ 진단 로그: 4타 반대방향 디버깅 (처음 60프레임만)
+            if (diagLogCounter < 60)
+            {
+                diagLogCounter++;
+                if (diagLogCounter % 10 == 1) // 10프레임마다 출력
+                {
+                    string clipName = "(none)";
+                    if (anim != null)
+                    {
+                        var clipInfo = anim.GetCurrentAnimatorClipInfo(0);
+                        if (clipInfo.Length > 0) clipName = clipInfo[0].clip.name;
+                    }
+
+                    Vector3 hipsEuler = hipsTransform != null
+                        ? hipsTransform.localRotation.eulerAngles : Vector3.zero;
+                    float parentScaleX = transform.parent != null
+                        ? transform.parent.localScale.x : 1f;
+
+                    Debug.Log($"<color=yellow>[RootMotionCanceller DIAG]</color>" +
+                        $" clip={clipName}" +
+                        $" | parentScale.x={parentScaleX:F1}" +
+                        $" | localRot BEFORE={beforeRot.eulerAngles}" +
+                        $" | localRot AFTER={transform.localRotation.eulerAngles}" +
+                        $" | initialRot={initialLocalRotation.eulerAngles}" +
+                        $" | hipsLocalRot={hipsEuler}" +
+                        $" | anim.rootRot={anim?.rootRotation.eulerAngles}" +
+                        $" | isHuman={anim?.isHuman}");
+                }
+            }
 
             if (hipsTransform != null)
             {
