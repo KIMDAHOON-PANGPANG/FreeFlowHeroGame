@@ -51,9 +51,8 @@ namespace FreeFlowHero.Editor
             ("low kick",           "Strike_LowKick",     "Strike"),
             ("charge fist",        "HeavyAttack",        "Heavy"),
             ("front sweep",        "DodgeAttack",        "DodgeAttack"),
-            ("cressent kick",      "Execution_1",        "Execution"),
-            ("axe kick",           "Execution_2",        "Execution"),
-            ("spinning axe kick",  "Execution_3",        "Execution"),
+            // ★ Execution_1~3: AnimMap에서 제거 — GuardCounter와 동일하게
+            //   ActionTable JSON의 clipPath에서 직접 로드 (아래 별도 섹션)
             ("jumping uppercut",   "Launch",             "Launch"),
             ("jumping side kick",  "AirFinisher",        "AirFinisher"),
             ("webster side kick",  "HuxleyFinisher",     "HuxleyFinisher"),
@@ -178,8 +177,7 @@ namespace FreeFlowHero.Editor
             // ─── Strike 콤보 분기 (ComboIndex 기반) ───
             SetupStrikeComboTransitions(rootStateMachine, controller);
 
-            // ─── Execution 모션 분기 (ExecutionIndex 기반) ───
-            SetupExecutionTransitions(rootStateMachine);
+            // ★ Execution 모션 분기: 아래 별도 섹션에서 JSON clipPath 기반으로 생성
 
             // ─── 액션 테이블에서 playbackRate 참조 (Dodge 등) ───
             var actionTable = LoadActionTableForEditor("PC_Hero");
@@ -388,6 +386,54 @@ namespace FreeFlowHero.Editor
                     trGC.hasExitTime = false;
                     trGC.duration = 0.05f;
                     trGC.canTransitionToSelf = false;
+                }
+            }
+
+            // ─── Execution 상태들 (ActionTable JSON의 clipPath 기반) ───
+            {
+                string[] execActionIds = { "Execution1", "Execution2", "Execution3" };
+                string[] execStateNames = { "Execution_1", "Execution_2", "Execution_3" };
+                AnimationClip execFallbackClip = FindClipByFBXName("cressent kick");
+
+                for (int ei = 0; ei < execActionIds.Length; ei++)
+                {
+                    string actionId = execActionIds[ei];
+                    var execState = rootStateMachine.AddState(execStateNames[ei], GetStatePosition(stateCount + 1));
+                    stateCount++;
+
+                    // ★ ActionTable JSON에서 clipPath를 읽어 직접 로드
+                    AnimationClip execClip = null;
+                    if (actionTable != null)
+                    {
+                        var action = actionTable.GetAction(actionId);
+                        if (action != null && !string.IsNullOrEmpty(action.clipPath))
+                        {
+                            execClip = LoadClipFromFBX(action.clipPath);
+                            if (execClip != null)
+                                Debug.Log($"[AnimBuilder] ✓ {execStateNames[ei]} 클립 (JSON): {execClip.name} ← {action.clipPath}");
+                        }
+                    }
+
+                    // 폴백: cressent kick
+                    if (execClip == null)
+                    {
+                        execClip = execFallbackClip;
+                        Debug.LogWarning($"[AnimBuilder] {execStateNames[ei]} JSON clipPath 없음 → cressent kick 폴백");
+                    }
+
+                    if (execClip != null)
+                    {
+                        execState.motion = execClip;
+                        clipFoundCount++;
+                    }
+
+                    // Execution 트리거 + ExecutionIndex 분기
+                    var trExec = rootStateMachine.AddAnyStateTransition(execState);
+                    trExec.AddCondition(AnimatorConditionMode.If, 0, "Execution");
+                    trExec.AddCondition(AnimatorConditionMode.Equals, ei, "ExecutionIndex");
+                    trExec.hasExitTime = false;
+                    trExec.duration = 0.05f;
+                    trExec.canTransitionToSelf = false;
                 }
             }
 

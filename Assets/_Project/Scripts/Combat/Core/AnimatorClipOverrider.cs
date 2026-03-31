@@ -50,10 +50,9 @@ namespace FreeFlowHero.Combat.Core
             // ★ GuardCounter/GuardCounter2: 매핑 불필요
             //   AnimatorControllerBuilder가 JSON clipPath에서 직접 로드하므로
             //   action.clip 폴백으로 자동 매칭됨.
-            // 처형
-            { "Execution1", "cressent kick" },
-            { "Execution2", "axe kick" },
-            { "Execution3", "spinning axe kick" },
+            // ★ Execution1~3: 매핑 불필요
+            //   AnimatorControllerBuilder가 JSON clipPath에서 직접 로드하므로
+            //   action.clip 폴백으로 자동 매칭됨.
         };
 
         private void Start()
