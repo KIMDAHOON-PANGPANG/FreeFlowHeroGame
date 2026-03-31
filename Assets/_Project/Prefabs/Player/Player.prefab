@@ -40,7 +40,7 @@ Transform:
   m_Children:
   - {fileID: 1415614005904930343}
   - {fileID: 8628866523525986829}
-  - {fileID: 812334483263201965}
+  - {fileID: 6952337336173861110}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &6660583083819058584
@@ -490,7 +490,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FreeFlowHero.Common.HurtboxController
   ownerTeam: 0
---- !u!1001 &923031859251201350
+--- !u!1001 &7489785821393420061
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -561,10 +561,9 @@ PrefabInstance:
         'EEJANAIBot:RightHandPinky2'\n\tTransform 'EEJANAIBot:RightHand'\n\tand more
         ...\n\tFrom animation clip 'combo_Baked'\n\tFrom animation clip 'low kick_Baked'\n\tFrom
         animation clip 'charge fist_Baked'\n\tFrom animation clip 'front sweep_Baked'\n\tFrom
-        animation clip 'axe kick_Baked'\n\tFrom animation clip 'spinning axe kick_Baked'\n\tFrom
         animation clip 'jumping uppercut_Baked'\n\tFrom animation clip 'jumping side
         kick_Baked'\n\tFrom animation clip 'webster side kick_Baked'\n\tFrom animation
-        clip 'super blast_Baked'\n\tand more ..."
+        clip 'super blast_Baked'"
       objectReference: {fileID: 0}
     - target: {fileID: 6148737315974723067, guid: 311536138b8622a4895fa913884605e9, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
@@ -575,8 +574,8 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 311536138b8622a4895fa913884605e9, type: 3}
---- !u!4 &812334483263201965 stripped
+--- !u!4 &6952337336173861110 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 311536138b8622a4895fa913884605e9, type: 3}
-  m_PrefabInstance: {fileID: 923031859251201350}
+  m_PrefabInstance: {fileID: 7489785821393420061}
   m_PrefabAsset: {fileID: 0}

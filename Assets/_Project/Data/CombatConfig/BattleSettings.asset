@@ -22,8 +22,6 @@ MonoBehaviour:
   inputBufferDuration: 0.5
   dodgeIFrames: 12
   dodgeSpeed: 15
-  perfectCounterWindow: 3
-  normalCounterWindow: 8
   maxWarpDistance: 20
   telegraphMinDuration: 0.3
   telegraphMaxDuration: 0.5
@@ -34,3 +32,44 @@ MonoBehaviour:
   executionRange: 2
   huxleyBaseChargePerHit: 5
   huxleyMaxCharge: 100
+  hitFlashDuration: 0.15
+  hitFlashIntensity: 1
+  enemyDeathDelay: 0.5
+  enemyDeathFadeDuration: 0.8
+  flinchLightPush: 30
+  flinchLightFreeze: 0.08
+  flinchLightHitStop: 1.5
+  flinchMediumPush: 60
+  flinchMediumFreeze: 0.12
+  flinchMediumHitStop: 2.5
+  flinchHeavyPush: 100
+  flinchHeavyFreeze: 0.18
+  flinchHeavyHitStop: 4
+  knockdownLightHeight: 80
+  knockdownLightAirTime: 0.4
+  knockdownLightDistance: 100
+  knockdownLightDownTime: 0.5
+  knockdownMediumHeight: 150
+  knockdownMediumAirTime: 0.6
+  knockdownMediumDistance: 180
+  knockdownMediumDownTime: 1
+  knockdownHeavyHeight: 250
+  knockdownHeavyAirTime: 0.85
+  knockdownHeavyDistance: 300
+  knockdownHeavyDownTime: 1.5
+  flinchClipPath: Assets/Resouces/Martial Art Animations Sample/Animations/Hit_A.fbx
+  knockdownClipPath: Assets/Resouces/Martial Art Animations Sample/Animations/Knock_A.fbx
+  groggySoftDuration: 1
+  groggyHardDuration: 3
+  guardCounterMotions:
+  - actionId: GuardCounter
+    weight: 0.5
+  - actionId: GuardCounter2
+    weight: 0.5
+  executionMotions:
+  - actionId: Execution1
+    weight: 0.3
+  - actionId: Execution2
+    weight: 0.4
+  - actionId: Execution3
+    weight: 0.3
