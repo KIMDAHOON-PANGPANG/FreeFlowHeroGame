@@ -87,6 +87,21 @@ namespace FreeFlowHero.Combat.Core
         public const float HitFlashDuration = 0.15f;     // 플래시 지속 시간
         public const float HitFlashIntensity = 1.0f;     // 플래시 강도 (0~1)
 
+        // ─── 그룹 AI: Threat Line ───
+        public const int SlotsPerSide = 5;                 // 한쪽 최대 슬롯 수
+        public const float NearLaneDistance = 2.5f;        // 근거리 레인 거리 (m)
+        public const float FarLaneDistance = 5.0f;         // 원거리 레인 거리 (m)
+        public const float SlotSpacing = 1.2f;             // 슬롯 간 간격 (m)
+
+        // ─── 그룹 AI: Attack Token ───
+        public const float PerEnemyCooldown = 3.0f;        // 개별 적 토큰 쿨다운 (초)
+        public const float TokenRefreshRate = 1.0f;        // 토큰 재발급 대기 (초)
+
+        // ─── 그룹 AI: Aggression ───
+        public const float BaseAggression = 0.2f;          // 기본 Aggression
+        public const float AggressionPerCombo = 0.02f;     // 콤보당 증가량
+        public const float ComboBreakPenalty = 0.15f;      // 콤보 끊김 시 감소량
+
         // ─── 피격 리액션: 모션 클립 경로 ───
         public const string FlinchClipPath = "Assets/Resouces/Martial Art Animations Sample/Animations/Hit_A.fbx";
         public const string KnockdownClipPath = "Assets/Resouces/Martial Art Animations Sample/Animations/Knock_A.fbx";

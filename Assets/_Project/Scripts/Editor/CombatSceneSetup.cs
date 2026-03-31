@@ -118,6 +118,16 @@ namespace FreeFlowHero.Editor
             coordinatorObj.AddComponent<FreeFlowHero.Combat.Enemy.AttackCoordinator>();
             Debug.Log("  [씬] AttackCoordinator 생성 (동시 공격 2명 제한 + 호흡 타이머)");
 
+            // ─── ThreatLineManager (좌우 포위 시스템 — Singleton) ───
+            GameObject threatLineObj = new GameObject("[ThreatLineManager]");
+            threatLineObj.AddComponent<FreeFlowHero.Combat.Enemy.ThreatLineManager>();
+            Debug.Log("  [씬] ThreatLineManager 생성 (슬롯 기반 좌우 포위)");
+
+            // ─── AggressionSystem (전투 리듬 곡선 — Singleton) ───
+            GameObject aggressionObj = new GameObject("[AggressionSystem]");
+            aggressionObj.AddComponent<FreeFlowHero.Combat.Enemy.AggressionSystem>();
+            Debug.Log("  [씬] AggressionSystem 생성 (전투 강도 동적 조절)");
+
             // ─── ActionTableManager (액션 테이블 매니저 — Singleton) ───
             GameObject actionTableObj = new GameObject("[ActionTableManager]");
             actionTableObj.AddComponent<FreeFlowHero.Combat.Core.ActionTableManager>();
