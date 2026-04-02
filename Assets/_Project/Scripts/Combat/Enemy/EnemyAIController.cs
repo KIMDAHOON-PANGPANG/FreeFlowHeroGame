@@ -193,7 +193,7 @@ namespace FreeFlowHero.Combat.Enemy
         {
             // 레이어 마스크 캐시
             if (collisionMask < 0)
-                collisionMask = LayerMask.GetMask("Player", "Enemy", "Ground", "Wall");
+                collisionMask = LayerMask.GetMask("Player", "Enemy");
             if (groundMask < 0)
                 groundMask = LayerMask.GetMask("Ground");
 
@@ -357,18 +357,9 @@ namespace FreeFlowHero.Combat.Enemy
             {
                 float targetPivotY = groundHit.point.y - capsuleOffsetY + capsuleHalfH;
 
-                // ★ 벽타기 완전 차단: 스폰 위치보다 1m 이상 높은 바닥은 무시
-                //   적은 자기가 태어난 높이 근처의 바닥만 밟을 수 있음
-                //   높은 플랫폼(절벽) 위로 절대 올라가지 못함
-                if (targetPivotY > spawnPos.y + 1f)
-                {
-                    // 높은 바닥 무시 → 자유 낙하 취급
-                    isGrounded = false;
-                    verticalVelocity += Gravity * Time.deltaTime;
-                    pos.y += verticalVelocity * Time.deltaTime;
-                    rb.position = pos;
-                }
-                else
+                // ★ 적은 Ground 레이어만 밟음 (Wall/절벽과 상호작용 불가)
+                //   groundMask = LayerMask.GetMask("Ground") 이므로
+                //   Wall 레이어 절벽은 여기 도달하지 않음
                 {
                     isGrounded = true;
                     verticalVelocity = 0f;

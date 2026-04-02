@@ -154,11 +154,14 @@ namespace FreeFlowHero.Combat.Player
             else
                 capsuleBottomOffset = 0f;
 
-            // Ground 레이어 마스크
+            // 레이어 마스크
             int groundLayer = LayerMask.NameToLayer("Ground");
-            groundLayerMask = groundLayer >= 0 ? (1 << groundLayer) : ~0;
             int wallLayer = LayerMask.NameToLayer("Wall");
+            groundLayerMask = groundLayer >= 0 ? (1 << groundLayer) : ~0;
             wallLayerMask = wallLayer >= 0 ? (1 << wallLayer) : 0;
+            // 플레이어는 Ground + Wall 둘 다 밟을 수 있음 (절벽 위에 착지 가능)
+            if (wallLayer >= 0)
+                groundLayerMask |= (1 << wallLayer);
 
             // InputBuffer 유지 시간 연동 (Inspector에서 context.inputBufferDuration 조절)
             inputBuffer.Duration = context.inputBufferDuration;

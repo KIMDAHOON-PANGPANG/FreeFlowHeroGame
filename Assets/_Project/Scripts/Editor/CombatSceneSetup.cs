@@ -340,9 +340,9 @@ namespace FreeFlowHero.Editor
         private static void CreateClimbPlatform(string name, Vector3 position, float width, float height)
         {
             GameObject platform = new GameObject(name);
-            platform.tag = "Ground";
-            int groundLayer = LayerMask.NameToLayer("Ground");
-            platform.layer = groundLayer >= 0 ? groundLayer : 0;
+            platform.tag = "Wall";
+            int wallLayer = LayerMask.NameToLayer("Wall");
+            platform.layer = wallLayer >= 0 ? wallLayer : 0;
             platform.transform.position = position;
 
             // 2D 콜라이더 (플레이어는 이 콜라이더의 측면을 감지하여 벽타기)
