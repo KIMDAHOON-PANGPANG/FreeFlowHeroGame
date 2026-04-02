@@ -226,6 +226,13 @@ namespace FreeFlowHero.Editor
                 EditorGUILayout.BeginVertical(boxStyle);
                 bs.maxWarpDistance = EditorGUILayout.FloatField("Max Warp Distance (유닛)", bs.maxWarpDistance);
                 Tip("워핑 시간 계산의 기준 최대 거리.\n이 거리 이상이면 최대 워프 시간 적용. (기본: 20)");
+
+                EditorGUILayout.Space(4);
+                bs.warpMinContactDistance = EditorGUILayout.Slider(
+                    "Min Contact Distance (m)", bs.warpMinContactDistance, 0f, 2f);
+                Tip("워핑 후 ROOT_MOTION으로 적에게 접근 가능한 최소 거리.\n이 거리 이내로는 전진이 차단됨.\n0.3 = 30cm, 0 = 제한 없음 (기본: 0.3)");
+                float cmVal = bs.warpMinContactDistance * 100f;
+                EditorGUILayout.LabelField($"= {cmVal:F0}cm", EditorStyles.miniLabel);
                 EditorGUILayout.EndVertical();
             }
 

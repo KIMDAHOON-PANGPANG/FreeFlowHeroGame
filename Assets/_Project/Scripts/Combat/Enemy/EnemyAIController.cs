@@ -22,7 +22,7 @@ namespace FreeFlowHero.Combat.Enemy
         // ─── 설정 (Inspector) ───
         [Header("감지")]
         [Tooltip("플레이어 감지 거리")]
-        [SerializeField] private float detectionRange = 8f;
+        [SerializeField] private float detectionRange = 20f;
         [Tooltip("공격 가능 거리")]
         [SerializeField] private float attackRange = 1.8f;
 
@@ -80,7 +80,6 @@ namespace FreeFlowHero.Combat.Enemy
             Attack,
             PostAttack,   // 공격 종료 후 잠시 대기 (자세 유지)
             HitStun,
-            Circling,     // 대치 — ThreatLine 슬롯 위치에서 좌우 미세 이동 + 대치 연출
             Groggy,       // 그로기 — 혼란 상태 (Soft: 짧은 경직, Hard: 별 이펙트 + 긴 경직)
             Knockdown,
             Down,
@@ -138,9 +137,6 @@ namespace FreeFlowHero.Combat.Enemy
         private const float SkinWidth = 0.06f;       // 충돌 여유 거리
         private const float MinMoveThreshold = 0.005f;
 
-        // ─── 대치 연출 ───
-        private IdleThreatBehavior idleThreatBehavior;
-
         // ─── 그로기 ───
         private GroggyType currentGroggyType;
 
@@ -180,7 +176,6 @@ namespace FreeFlowHero.Combat.Enemy
             spriteRenderer = GetComponent<SpriteRenderer>();
             telegraphOutline = GetComponent<TelegraphOutline>();
             reactionHandler = GetComponent<HitReaction.HitReactionHandler>();
-            idleThreatBehavior = GetComponent<IdleThreatBehavior>();
             if (spriteRenderer != null)
                 originalColor = spriteRenderer.color;
 
@@ -305,7 +300,6 @@ namespace FreeFlowHero.Combat.Enemy
                 case AIState.Idle:      UpdateIdle();      break;
                 case AIState.Patrol:    UpdatePatrol();    break;
                 case AIState.Chase:     UpdateChase();     break;
-                case AIState.Circling:  UpdateCircling();  break;
                 case AIState.Telegraph: UpdateTelegraph(); break;
                 case AIState.Attack:     UpdateAttack();     break;
                 case AIState.PostAttack: UpdatePostAttack(); break;
@@ -404,9 +398,6 @@ namespace FreeFlowHero.Combat.Enemy
                     if (AttackCoordinator.Instance != null)
                         AttackCoordinator.Instance.ReleaseAttackSlot(this);
                     break;
-                case AIState.Circling:
-                    // Circling 이탈 — 특별 정리 불필요 (슬롯 유지)
-                    break;
                 case AIState.HitStun:
                 case AIState.Groggy:
                 case AIState.Down:
@@ -443,14 +434,6 @@ namespace FreeFlowHero.Combat.Enemy
                     stateTimer = 5f; // 최대 추적 시간
                     // ★ Chase 진입 시 Idle 애니메이션으로 복귀 보장 (넉다운/피격 포즈 잔류 방지)
                     SafeSetTrigger("Idle");
-                    break;
-
-                case AIState.Circling:
-                    stateTimer = Random.Range(2f, 5f); // 대치 지속 시간
-                    SafeSetFloat("Speed", 0f);
-                    // ThreatLine 등록
-                    if (ThreatLineManager.Instance != null)
-                        ThreatLineManager.Instance.Register(this);
                     break;
 
                 case AIState.Telegraph:
@@ -601,10 +584,6 @@ namespace FreeFlowHero.Combat.Enemy
                     isTelegraphing = false;
                     SafeSetFloat("Speed", 0f);
 
-                    // ThreatLine 해제
-                    if (ThreatLineManager.Instance != null)
-                        ThreatLineManager.Instance.Unregister(this);
-
                     // 콜라이더 비활성화 (사망 후 히트 판정에 안 잡히도록)
                     if (cachedCapsule != null)
                         cachedCapsule.enabled = false;
@@ -678,26 +657,6 @@ namespace FreeFlowHero.Combat.Enemy
                 return;
             }
 
-            // ★ ThreatLine이 활성화된 경우: 슬롯 근처에 도달하면 Circling으로 전환
-            if (ThreatLineManager.Instance != null)
-            {
-                var slotPos = ThreatLineManager.Instance.GetSlotPosition(this);
-                if (slotPos.HasValue)
-                {
-                    float slotDist = Mathf.Abs(transform.position.x - slotPos.Value.x);
-                    if (slotDist < 0.5f) // 슬롯에 거의 도착
-                    {
-                        TransitionTo(AIState.Circling);
-                        return;
-                    }
-                }
-                else
-                {
-                    // 슬롯 미할당 → 등록 시도
-                    ThreatLineManager.Instance.Register(this);
-                }
-            }
-
             // 공격 범위 안 + 쿨다운 완료 → AttackCoordinator에 슬롯 요청 → 텔레그래프
             if (dist <= attackRange && cooldownTimer <= 0f)
             {
@@ -714,20 +673,7 @@ namespace FreeFlowHero.Combat.Enemy
             // 항상 플레이어 바라보기
             FaceDirection(dir);
 
-            // ★ ThreatLine 슬롯이 할당되어 있으면 슬롯 위치로 이동
-            if (ThreatLineManager.Instance != null)
-            {
-                var slotPos = ThreatLineManager.Instance.GetSlotPosition(this);
-                if (slotPos.HasValue)
-                {
-                    float slotDir = Mathf.Sign(slotPos.Value.x - transform.position.x);
-                    MoveHorizontal(slotDir * chaseSpeed * Time.deltaTime);
-                    SafeSetFloat("Speed", chaseSpeed);
-                    return;
-                }
-            }
-
-            // 공격 범위 밖 → 추적 이동 (ThreatLine 미사용 폴백)
+            // 공격 범위 밖 → 추적 이동
             if (dist > attackRange)
             {
                 MoveHorizontal(dir * chaseSpeed * Time.deltaTime);
@@ -735,18 +681,9 @@ namespace FreeFlowHero.Combat.Enemy
             }
             else if (cooldownTimer > 0f)
             {
-                // 쿨다운 대기 중: 너무 가까우면 PC를 바라보며 뒤로 후퇴
-                if (dist < attackRange * 0.5f)
-                {
-                    FaceDirection(dir); // PC를 바라본 채로
-                    MoveHorizontal(-dir * patrolSpeed * 0.6f * Time.deltaTime);
-                    SafeSetFloat("Speed", -patrolSpeed * 0.6f); // 음수 = WalkBack
-                }
-                else
-                {
-                    // 제자리 대기
-                    SafeSetFloat("Speed", 0f);
-                }
+                // 쿨다운 대기 중: PC를 바라보며 제자리 대기
+                FaceDirection(dir);
+                SafeSetFloat("Speed", 0f);
             }
             else
             {
@@ -809,88 +746,9 @@ namespace FreeFlowHero.Combat.Enemy
 
         private void UpdatePostAttack()
         {
-            // 공격 후 잠시 대기 → Circling 복귀 (ThreatLine 있으면) 또는 Chase
+            // 공격 후 잠시 대기 → Chase 복귀
             if (stateTimer <= 0f)
             {
-                if (ThreatLineManager.Instance != null)
-                    TransitionTo(AIState.Circling);
-                else
-                    TransitionTo(AIState.Chase);
-            }
-        }
-
-        // ─── Circling 대치 상태 ───
-        private float circlingShuffleTimer;
-        private float circlingShuffleDir;
-
-        private void UpdateCircling()
-        {
-            float dist = GetDistToPlayer();
-            float dir = Mathf.Sign(playerTransform.position.x - transform.position.x);
-
-            // 감지 범위 벗어나면 Idle
-            if (dist > detectionRange * 2f)
-            {
-                TransitionTo(AIState.Idle);
-                return;
-            }
-
-            // 항상 플레이어 바라보기
-            FaceDirection(dir);
-
-            // 공격 범위 안 + 쿨다운 완료 → 토큰 요청
-            if (dist <= attackRange && cooldownTimer <= 0f)
-            {
-                if (AttackCoordinator.Instance == null
-                    || AttackCoordinator.Instance.RequestAttackSlot(this))
-                {
-                    TransitionTo(AIState.Telegraph);
-                    return;
-                }
-            }
-
-            // ★ 대치 연출 (Feint/Taunt 등)
-            if (idleThreatBehavior != null)
-                idleThreatBehavior.UpdateThreatBehavior(Time.deltaTime);
-
-            // ★ 슬롯 위치로 부드럽게 이동 + 미세 셔플
-            if (ThreatLineManager.Instance != null)
-            {
-                var slotPos = ThreatLineManager.Instance.GetSlotPosition(this);
-                if (slotPos.HasValue)
-                {
-                    float targetX = slotPos.Value.x;
-                    float currentX = transform.position.x;
-                    float slotDiff = targetX - currentX;
-
-                    // 셔플 타이머 (슬롯 근처에서 좌우 미세 이동)
-                    circlingShuffleTimer -= Time.deltaTime;
-                    if (circlingShuffleTimer <= 0f)
-                    {
-                        circlingShuffleTimer = Random.Range(0.5f, 2.0f);
-                        circlingShuffleDir = Random.Range(-1f, 1f); // -1~1 범위
-                    }
-
-                    float moveX;
-                    if (Mathf.Abs(slotDiff) > 0.3f)
-                    {
-                        // 슬롯에서 멀면 슬롯으로 이동
-                        moveX = Mathf.Sign(slotDiff) * chaseSpeed * 0.6f * Time.deltaTime;
-                        SafeSetFloat("Speed", chaseSpeed * 0.6f);
-                    }
-                    else
-                    {
-                        // 슬롯 근처: 셔플 미세 이동
-                        moveX = circlingShuffleDir * patrolSpeed * 0.3f * Time.deltaTime;
-                        SafeSetFloat("Speed", Mathf.Abs(circlingShuffleDir) * patrolSpeed * 0.3f);
-                    }
-
-                    MoveHorizontal(moveX);
-                }
-            }
-            else
-            {
-                // ThreatLine 없으면 Chase로 폴백
                 TransitionTo(AIState.Chase);
             }
         }
@@ -899,10 +757,7 @@ namespace FreeFlowHero.Combat.Enemy
         {
             if (stateTimer <= 0f)
             {
-                if (ThreatLineManager.Instance != null)
-                    TransitionTo(AIState.Circling);
-                else
-                    TransitionTo(AIState.Chase);
+                TransitionTo(AIState.Chase);
             }
         }
 
@@ -938,10 +793,7 @@ namespace FreeFlowHero.Combat.Enemy
         {
             if (stateTimer <= 0f)
             {
-                if (ThreatLineManager.Instance != null)
-                    TransitionTo(AIState.Circling);
-                else
-                    TransitionTo(AIState.Chase);
+                TransitionTo(AIState.Chase);
             }
         }
 
@@ -963,13 +815,10 @@ namespace FreeFlowHero.Combat.Enemy
 
         private void UpdateGetUp()
         {
-            // GetUp 모션 완료 후 복귀
+            // GetUp 모션 완료 후 Chase 복귀
             if (stateTimer <= 0f)
             {
-                if (ThreatLineManager.Instance != null)
-                    TransitionTo(AIState.Circling);
-                else
-                    TransitionTo(AIState.Chase);
+                TransitionTo(AIState.Chase);
             }
         }
 

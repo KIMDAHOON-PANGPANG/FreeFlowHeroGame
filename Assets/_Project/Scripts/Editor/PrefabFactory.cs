@@ -159,9 +159,6 @@ namespace FreeFlowHero.Editor
             // EnemyAIController (기본 AI: 순찰/추적/텔레그래프/공격)
             enemy.AddComponent<EnemyAIController>();
 
-            // IdleThreatBehavior (대치 연출: Feint/Taunt/Shuffle)
-            enemy.AddComponent<IdleThreatBehavior>();
-
             // ─── Hurtbox 자식 오브젝트 ───
             GameObject hurtboxObj = new GameObject("Hurtbox");
             hurtboxObj.transform.SetParent(enemy.transform);

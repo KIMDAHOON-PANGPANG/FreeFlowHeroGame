@@ -139,6 +139,10 @@ namespace FreeFlowHero.Combat.Core
         [Tooltip("워핑 시간 계산의 기준이 되는 최대 거리 (유닛)")]
         public float maxWarpDistance = CombatConstants.MaxWarpDistance;
 
+        [Tooltip("★ 워핑 후 ROOT_MOTION으로 접근 가능한 적과의 최소 거리 (m). 이 거리 이내로는 전진 차단. 0.3 = 30cm")]
+        [Range(0f, 2f)]
+        public float warpMinContactDistance = CombatConstants.WarpMinContactDistance;
+
         // ════════════════════════════════════════════
         //  텔레그래프
         // ════════════════════════════════════════════
@@ -300,6 +304,7 @@ namespace FreeFlowHero.Combat.Core
             dodgeIFrames = CombatConstants.DodgeIFrames;
             dodgeSpeed = CombatConstants.DodgeSpeed;
             maxWarpDistance = CombatConstants.MaxWarpDistance;
+            warpMinContactDistance = CombatConstants.WarpMinContactDistance;
             telegraphMinDuration = CombatConstants.TelegraphMinDuration;
             telegraphMaxDuration = CombatConstants.TelegraphMaxDuration;
             maxSimultaneousAttackers = CombatConstants.MaxSimultaneousAttackers;
@@ -399,6 +404,10 @@ namespace FreeFlowHero.Combat.Core
         /// <summary>최대 워프 거리.</summary>
         public static float GetMaxWarpDistance()
             => IsLoaded ? _instance.maxWarpDistance : CombatConstants.MaxWarpDistance;
+
+        /// <summary>워핑 후 적과의 최소 접근 거리.</summary>
+        public static float GetWarpMinContactDistance()
+            => IsLoaded ? _instance.warpMinContactDistance : CombatConstants.WarpMinContactDistance;
 
         /// <summary>콤보 임계치 Good.</summary>
         public static int GetComboThresholdGood()

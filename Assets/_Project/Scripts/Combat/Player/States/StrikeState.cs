@@ -296,15 +296,47 @@ namespace FreeFlowHero.Combat.Player
                 if (isWarpActive) return; // 워핑 시작됨 → 이번 프레임은 여기서 종료
             }
 
-            // ── ROOT_MOTION: 커브 기반 이동 (우선순위 최상) ──
-            if (notifyProcessor.IsRootMotionActive && Mathf.Abs(notifyProcessor.RootMotionSpeed) > 0.01f)
+            // ── ROOT_MOTION / STARTUP: 이동 처리 ──
+            // ★ 워핑 후에도 전진감은 유지하되, 적과 겹치지 않도록 최소 거리 클램프
             {
-                MoveHorizontal(facing * notifyProcessor.RootMotionSpeed * deltaTime);
-            }
-            // ── STARTUP: 이동 속도 적용 (ROOT_MOTION이 없을 때 폴백) ──
-            else if (notifyProcessor.IsStartupActive && notifyProcessor.StartupMoveSpeed > 0f)
-            {
-                MoveHorizontal(facing * notifyProcessor.StartupMoveSpeed * deltaTime);
+                float moveAmount = 0f;
+                if (notifyProcessor.IsRootMotionActive && Mathf.Abs(notifyProcessor.RootMotionSpeed) > 0.01f)
+                {
+                    moveAmount = facing * notifyProcessor.RootMotionSpeed * deltaTime;
+                }
+                else if (notifyProcessor.IsStartupActive && notifyProcessor.StartupMoveSpeed > 0f)
+                {
+                    moveAmount = facing * notifyProcessor.StartupMoveSpeed * deltaTime;
+                }
+
+                if (Mathf.Abs(moveAmount) > 0.001f)
+                {
+                    // 워핑 완료 후: 타겟과의 최소 거리 이내로 들어가지 않도록 클램프
+                    if (warpExecuted && context.currentTarget != null)
+                    {
+                        float minContactDist = BattleSettings.GetWarpMinContactDistance();
+                        Vector2 myPos = GetPos();
+                        float targetX = context.currentTarget.position.x;
+                        float currentDist = Mathf.Abs(targetX - myPos.x);
+
+                        if (currentDist > minContactDist)
+                        {
+                            // 이동 후 거리가 minContactDist 이하로 줄어들면 거기서 멈춤
+                            float newX = myPos.x + moveAmount;
+                            float newDist = Mathf.Abs(targetX - newX);
+                            if (newDist < minContactDist)
+                                moveAmount = (currentDist - minContactDist) * facing;
+
+                            MoveHorizontal(moveAmount);
+                        }
+                        // else: 이미 최소 거리 이내 → 이동 차단
+                    }
+                    else
+                    {
+                        // 워핑 안 했으면 자유 이동
+                        MoveHorizontal(moveAmount);
+                    }
+                }
             }
 
             // ── COLLISION: 히트박스 활성/비활성 ──
@@ -551,9 +583,9 @@ namespace FreeFlowHero.Combat.Player
 
                 case InputType.Execute:
                 {
-                    // 처형 체크: 저HP 적이 근처에 있으면 처형 발동
+                    // 처형 체크: 저HP 적이 근처에 있으면 처형 발동 (방향 무관, 거리 우선)
                     Vector2 pos = GetPos();
-                    float dir = context.playerTransform.localScale.x >= 0 ? 1f : -1f;
+                    float dir = 0f; // 순수 거리 기준 — 뒤쪽 적도 처형 가능
                     var execTarget = ExecutionSystem.FindExecutionTarget(
                         pos, context.activeEnemies, context.comboCount, dir);
                     if (execTarget != null)
@@ -678,7 +710,8 @@ namespace FreeFlowHero.Combat.Player
         /// <summary>WARP 노티파이로 인라인 워핑 시작</summary>
         private void StartInlineWarp(ActionNotify warpNotify)
         {
-            // 자동 타겟 재선택
+            // 자동 타겟 재선택 (콤보 중에는 현재 facing 유지 → 같은 적 계속 공격)
+            // "가까운 적 우선"은 Idle→Strike 첫 진입 시만 적용 (IdleState.ResolveAttack)
             if (warpNotify.warpAutoTarget)
             {
                 Vector2 playerPos = GetPos();

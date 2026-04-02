@@ -108,8 +108,7 @@ namespace FreeFlowHero.Combat.Player
                     // 처형 체크: 저HP 적이 근처에 있으면 처형 발동
                     Vector2 pos = GetPos();
                     float inputDir = input.Direction.x;
-                    if (Mathf.Approximately(inputDir, 0f))
-                        inputDir = context.playerTransform.localScale.x >= 0 ? 1f : -1f;
+                    // 방향 입력 없으면 0 유지 → 순수 거리 기준 (뒤쪽 적도 처형 가능)
 
                     var execTarget = ExecutionSystem.FindExecutionTarget(
                         pos, context.activeEnemies, context.comboCount, inputDir);
@@ -188,9 +187,8 @@ namespace FreeFlowHero.Combat.Player
             Vector2 playerPos = GetPos();
             float inputDir = input.Direction.x;
 
-            // 방향 입력이 없으면 현재 바라보는 방향을 기본값으로 사용
-            if (Mathf.Approximately(inputDir, 0f))
-                inputDir = context.playerTransform.localScale.x >= 0 ? 1f : -1f;
+            // 방향 입력이 없으면 0 유지 → TargetSelector가 순수 거리 기준으로 선택
+            // (뒤쪽의 가까운 적도 타겟 가능, 워핑 시 자동 회전)
 
             // 타겟 선택
             var target = fsm.TargetSelector.SelectTarget(
