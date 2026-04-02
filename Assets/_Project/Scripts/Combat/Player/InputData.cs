@@ -25,8 +25,9 @@ namespace FreeFlowHero.Combat.Player
     {
         Attack,     // 기본 공격 (Light)
         Heavy,      // 강공격 / 가드
-        Dodge,      // 회피
+        Dodge,      // 회피 / 벽타기
         Huxley,     // 헉슬리 건
-        Execute     // 처형 (F키)
+        Execute,    // 처형 (F키)
+        Jump        // 점프 (Space)
     }
 }

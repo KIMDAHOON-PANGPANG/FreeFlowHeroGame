@@ -78,14 +78,24 @@ namespace FreeFlowHero.Combat.Player
                 fsm.OnCombatInput(new InputData(InputType.Heavy, direction));
             }
 
-            // ─── 회피: Keyboard Shift ───
+            // ─── 벽타기/회피: Keyboard Shift ───
             if (kb != null && kb.leftShiftKey.wasPressedThisFrame)
             {
                 inputCount++;
-                lastInput = $"Dodge #{inputCount}";
+                lastInput = $"WallClimb #{inputCount}";
                 inputIndicatorTimer = 0.5f;
 
                 fsm.OnCombatInput(new InputData(InputType.Dodge, direction));
+            }
+
+            // ─── 점프: Keyboard Space ───
+            if (kb != null && kb.spaceKey.wasPressedThisFrame)
+            {
+                inputCount++;
+                lastInput = $"Jump #{inputCount}";
+                inputIndicatorTimer = 0.5f;
+
+                fsm.OnCombatInput(new InputData(InputType.Jump, direction));
             }
 
             // ─── 처형: Keyboard F ───
@@ -122,7 +132,7 @@ namespace FreeFlowHero.Combat.Player
 
             string text = inputIndicatorTimer > 0f
                 ? $"INPUT: {lastInput}"
-                : "LClick:Attack | RClick:Guard | Shift:Dodge | F:Execute | U:Huxley";
+                : "LClick:Attack | RClick:Guard | Space:Jump | Shift:WallClimb | F:Execute";
 
             GUI.Label(new Rect(10, Screen.height - 40, 600, 30), text, style);
 

@@ -76,9 +76,13 @@ namespace FreeFlowHero.Editor
             var groundCol = ground.AddComponent<BoxCollider2D>();
             groundCol.size = new Vector2(50f, 1f);
 
-            // ─── 벽 (좌/우) ───
+            // ─── 벽 (좌/우 경계) ───
             CreateWall("Wall_Left", new Vector3(-20f, 5f, 0f));
             CreateWall("Wall_Right", new Vector3(20f, 5f, 0f));
+
+            // ─── 벽타기 테스트 벽 (2개 — 벽↔벽 점프 테스트용) ───
+            CreateClimbWall("ClimbWall_A", new Vector3(6f, 4f, 0f), 8f);
+            CreateClimbWall("ClimbWall_B", new Vector3(9f, 5f, 0f), 10f);
 
             // ─── 플레이어 배치 ───
             GameObject playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefab);
@@ -117,6 +121,11 @@ namespace FreeFlowHero.Editor
             GameObject coordinatorObj = new GameObject("AttackCoordinator");
             coordinatorObj.AddComponent<FreeFlowHero.Combat.Enemy.AttackCoordinator>();
             Debug.Log("  [씬] AttackCoordinator 생성 (동시 공격 2명 제한 + 호흡 타이머)");
+
+            // ─── 절차적 맵 생성기 ───
+            GameObject levelGenObj = new GameObject("[ProceduralLevelGenerator]");
+            levelGenObj.AddComponent<FreeFlowHero.Level.ProceduralLevelGenerator>();
+            Debug.Log("  [씬] ProceduralLevelGenerator 생성 (절차적 맵)");
 
             // ─── ActionTableManager (액션 테이블 매니저 — Singleton) ───
             GameObject actionTableObj = new GameObject("[ActionTableManager]");
@@ -302,6 +311,40 @@ namespace FreeFlowHero.Editor
 
             var col = wall.AddComponent<BoxCollider2D>();
             col.size = new Vector2(1f, 12f);
+        }
+
+        /// <summary>벽타기 테스트용 세로 벽 생성 (시각화 포함)</summary>
+        private static void CreateClimbWall(string name, Vector3 position, float height)
+        {
+            GameObject wall = new GameObject(name);
+            wall.tag = "Wall";
+            int wallLayer = LayerMask.NameToLayer("Wall");
+            wall.layer = wallLayer >= 0 ? wallLayer : 0;
+            wall.transform.position = position;
+
+            // 2D 콜라이더
+            var col = wall.AddComponent<BoxCollider2D>();
+            col.size = new Vector2(0.5f, height);
+
+            // 3D 시각화 (큐브)
+            var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            visual.name = "Visual";
+            visual.transform.SetParent(wall.transform);
+            visual.transform.localPosition = Vector3.zero;
+            visual.transform.localScale = new Vector3(0.5f, height, 2f);
+            Object.DestroyImmediate(visual.GetComponent<Collider>());
+
+            var renderer = visual.GetComponent<MeshRenderer>();
+            if (renderer != null)
+            {
+                var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (mat.shader.name == "Hidden/InternalErrorShader")
+                    mat = new Material(Shader.Find("Standard"));
+                mat.color = new Color(0.5f, 0.35f, 0.25f); // 갈색 벽
+                renderer.sharedMaterial = mat;
+            }
+
+            Debug.Log($"  [씬] {name} 생성 — 높이:{height}m 위치:({position.x},{position.y})");
         }
 
         /// <summary>런타임에서도 보이는 1x1 흰색 스프라이트 생성</summary>

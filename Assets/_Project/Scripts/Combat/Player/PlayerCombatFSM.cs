@@ -111,17 +111,29 @@ namespace FreeFlowHero.Combat.Player
             // 상태 등록 — Hard Hit 기상 흐름 (Down → GetUp)
             RegisterState(new DownState());
             RegisterState(new GetUpState());
+            // 상태 등록 — 플랫포머
+            RegisterState(new JumpState());
+            RegisterState(new WallClimbState());
         }
 
         // ─── Kinematic 중력 시뮬레이션 ───
         private const float KinematicGravity = 30f;  // 중력 가속도 (빠른 낙하)
-        private float fallSpeed;
         private bool isGrounded;
         private float capsuleBottomOffset; // 캡슐 콜라이더 하단의 로컬 Y 오프셋
         private int groundLayerMask;
+        private int wallLayerMask;
 
         /// <summary>Grounded 여부 (외부에서 참조 가능)</summary>
         public bool IsGrounded => isGrounded;
+
+        /// <summary>벽 감지: facing 방향으로 Wall 레이어 Raycast</summary>
+        public bool DetectWall(out RaycastHit2D wallHit)
+        {
+            float facing = context.playerTransform.localScale.x >= 0 ? 1f : -1f;
+            Vector2 origin = (Vector2)context.playerTransform.position + new Vector2(0f, 0.9f);
+            wallHit = Physics2D.Raycast(origin, Vector2.right * facing, 0.6f, wallLayerMask);
+            return wallHit.collider != null;
+        }
 
         private void Start()
         {
@@ -135,6 +147,8 @@ namespace FreeFlowHero.Combat.Player
             // Ground 레이어 마스크
             int groundLayer = LayerMask.NameToLayer("Ground");
             groundLayerMask = groundLayer >= 0 ? (1 << groundLayer) : ~0;
+            int wallLayer = LayerMask.NameToLayer("Wall");
+            wallLayerMask = wallLayer >= 0 ? (1 << wallLayer) : 0;
 
             // InputBuffer 유지 시간 연동 (Inspector에서 context.inputBufferDuration 조절)
             inputBuffer.Duration = context.inputBufferDuration;
@@ -173,62 +187,52 @@ namespace FreeFlowHero.Combat.Player
         }
 
         /// <summary>
-        /// Kinematic 중력: Raycast로 바닥 감지 + 중력 낙하.
-        /// CapsuleCollider2D 하단이 Ground 콜라이더 상단에 닿도록 위치를 조정한다.
+        /// Kinematic 중력: Raycast로 바닥 감지 + 중력 낙하/점프 상승.
+        /// verticalVelocity 기반: 양수=상승, 음수=하강.
         /// </summary>
         private void ApplyKinematicGravity(float dt)
         {
             if (context.playerRigidbody == null) return;
 
-            // 워핑 중이면 중력 스킵 (워프가 Y 위치를 직접 제어)
+            // 워핑 중이면 중력 스킵
             if (context.isWarping) return;
-
-            // ★ 넉다운 체공 중: HitReactionHandler가 Y 위치 직접 제어 → 중력 스킵
-            // 이 스킵 없이는 바닥 스냅 로직이 체공 포물선과 충돌하여 캐릭터가 날지 못하는 버그 발생
+            // 벽타기 중이면 중력 스킵 (WallClimbState가 직접 제어)
+            if (context.isWallClimbing) return;
+            // 넉다운 체공 중: HitReactionHandler가 Y 위치 직접 제어
             if (context.hitReactionHandler != null && context.hitReactionHandler.IsKnockdownActive) return;
 
-            Vector2 pos = context.playerRigidbody.position;
+            // 중력 적용 (항상)
+            context.verticalVelocity -= KinematicGravity * dt;
 
-            // 캡슐 하단 위치에서 아래로 Raycast
+            Vector2 pos = context.playerRigidbody.position;
+            pos.y += context.verticalVelocity * dt;
+
+            // 바닥 감지
             Vector2 rayOrigin = pos + Vector2.up * (capsuleBottomOffset + 0.05f);
-            float rayLength = isGrounded ? 0.2f : 5f; // 바닥에 있으면 짧은 레이, 공중이면 긴 레이
+            float rayLength = context.verticalVelocity <= 0f ? 0.5f : 0.1f;
 
             RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.down, rayLength, groundLayerMask);
 
             if (hit.collider != null)
             {
-                // 바닥 표면 Y: 캡슐 하단이 여기에 닿아야 함
                 float groundSurfaceY = hit.point.y;
                 float targetY = groundSurfaceY - capsuleBottomOffset;
 
-                if (pos.y > targetY + 0.01f)
+                if (pos.y <= targetY && context.verticalVelocity <= 0f)
                 {
-                    // 바닥 위에 떠 있음 → 중력 적용
-                    fallSpeed += KinematicGravity * dt;
-                    pos.y -= fallSpeed * dt;
-
-                    // 바닥을 뚫지 않도록 클램프
-                    if (pos.y <= targetY)
-                    {
-                        pos.y = targetY;
-                        fallSpeed = 0f;
-                        isGrounded = true;
-                    }
+                    // 착지
+                    pos.y = targetY;
+                    context.verticalVelocity = 0f;
+                    isGrounded = true;
                 }
                 else
                 {
-                    // 바닥에 붙어 있음
-                    pos.y = targetY;
-                    fallSpeed = 0f;
-                    isGrounded = true;
+                    isGrounded = false;
                 }
             }
             else
             {
-                // 바닥 없음 → 자유 낙하
                 isGrounded = false;
-                fallSpeed += KinematicGravity * dt;
-                pos.y -= fallSpeed * dt;
             }
 
             context.playerRigidbody.position = pos;
@@ -249,7 +253,7 @@ namespace FreeFlowHero.Combat.Player
                 pos.y = groundSurfaceY - capsuleBottomOffset;
                 context.playerRigidbody.position = pos;
                 isGrounded = true;
-                fallSpeed = 0f;
+                context.verticalVelocity = 0f;
 
             }
         }

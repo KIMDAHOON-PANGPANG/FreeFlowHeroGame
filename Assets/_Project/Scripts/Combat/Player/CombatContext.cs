@@ -56,6 +56,12 @@ namespace FreeFlowHero.Combat.Player
         public bool isWarping;
         public bool isInvulnerable;
         public bool canCancel;
+        public bool isWallClimbing;           // 벽타기 중 여부
+
+        // ─── 점프 / 벽타기 ───
+        [Header("점프 / 벽타기")]
+        [System.NonSerialized] public float verticalVelocity;  // 수직 속도 (양수=상승)
+        [System.NonSerialized] public int wallClimbSide;       // 벽타기 방향 (-1=좌, +1=우, 0=없음)
 
         // ─── 프레임 ───
         // ★ 시간 기반 프레임 카운터: 실제 FPS에 관계없이 60fps 기준 프레임을 산출

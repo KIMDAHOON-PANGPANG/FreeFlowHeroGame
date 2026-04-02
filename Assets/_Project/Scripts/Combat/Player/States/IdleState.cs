@@ -122,7 +122,16 @@ namespace FreeFlowHero.Combat.Player
                 }
 
                 case InputType.Dodge:
-                    fsm.TransitionTo<DodgeState>();
+                    // Shift: 벽 감지 시 벽타기, 아니면 회피
+                    if (fsm.DetectWall(out _))
+                        fsm.TransitionTo<WallClimbState>();
+                    else
+                        fsm.TransitionTo<DodgeState>();
+                    break;
+
+                case InputType.Jump:
+                    if (fsm.IsGrounded)
+                        fsm.TransitionTo<JumpState>();
                     break;
 
                 case InputType.Heavy:
