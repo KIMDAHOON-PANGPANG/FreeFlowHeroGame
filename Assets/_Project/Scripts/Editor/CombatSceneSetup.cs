@@ -80,8 +80,8 @@ namespace FreeFlowHero.Editor
             GameObject groundVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
             groundVisual.name = "GroundVisual";
             groundVisual.transform.SetParent(ground.transform);
-            groundVisual.transform.localPosition = new Vector3(0, 0f, 0); // 큐브 상단(Y=0) = 콜라이더 상단(Y=0)
-            groundVisual.transform.localScale = new Vector3(50f, 1f, 10f);
+            groundVisual.transform.localPosition = new Vector3(0, 0f, 3f); // ★ 캐릭터(Z=0) 뒤로 배치
+            groundVisual.transform.localScale = new Vector3(50f, 1f, 2f);
             // 3D 콜라이더 제거 (2D 콜라이더 사용)
             Object.DestroyImmediate(groundVisual.GetComponent<Collider>());
             // 밝은 회색 머티리얼
@@ -353,8 +353,8 @@ namespace FreeFlowHero.Editor
             var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
             visual.name = "Visual";
             visual.transform.SetParent(platform.transform);
-            visual.transform.localPosition = new Vector3(0f, 0f, 1f); // ★ 캐릭터(Z=0) 뒤
-            visual.transform.localScale = new Vector3(width, height, 5f);
+            visual.transform.localPosition = new Vector3(0f, 0f, 3f); // ★ 캐릭터(Z=0) 뒤 — 앞면 Z=2
+            visual.transform.localScale = new Vector3(width, height, 2f);
             Object.DestroyImmediate(visual.GetComponent<Collider>());
 
             var renderer = visual.GetComponent<MeshRenderer>();

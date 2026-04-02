@@ -193,7 +193,7 @@ namespace FreeFlowHero.Combat.Enemy
         {
             // 레이어 마스크 캐시
             if (collisionMask < 0)
-                collisionMask = LayerMask.GetMask("Player", "Enemy");
+                collisionMask = LayerMask.GetMask("Player", "Enemy", "Ground", "Wall");
             if (groundMask < 0)
                 groundMask = LayerMask.GetMask("Ground");
 

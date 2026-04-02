@@ -260,8 +260,8 @@ namespace FreeFlowHero.Level
             var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
             visual.name = "Visual";
             visual.transform.SetParent(go.transform);
-            visual.transform.localPosition = new Vector3(0f, 0f, 1f);
-            visual.transform.localScale = new Vector3(width, 1f, 10f);
+            visual.transform.localPosition = new Vector3(0f, 0f, 3f);
+            visual.transform.localScale = new Vector3(width, 1f, 2f);
             Object.DestroyImmediate(visual.GetComponent<Collider>());
 
             var renderer = visual.GetComponent<MeshRenderer>();
@@ -290,8 +290,8 @@ namespace FreeFlowHero.Level
             var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
             visual.name = "Visual";
             visual.transform.SetParent(go.transform);
-            visual.transform.localPosition = new Vector3(0f, 0f, 1f);
-            visual.transform.localScale = new Vector3(width, 0.3f, 3f);
+            visual.transform.localPosition = new Vector3(0f, 0f, 3f);
+            visual.transform.localScale = new Vector3(width, 0.3f, 2f);
             Object.DestroyImmediate(visual.GetComponent<Collider>());
 
             var renderer = visual.GetComponent<MeshRenderer>();
@@ -322,7 +322,7 @@ namespace FreeFlowHero.Level
             var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
             visual.name = "Visual";
             visual.transform.SetParent(go.transform);
-            visual.transform.localPosition = new Vector3(0f, 0f, 1f);
+            visual.transform.localPosition = new Vector3(0f, 0f, 3f);
             visual.transform.localScale = new Vector3(0.5f, height, 2f);
             Object.DestroyImmediate(visual.GetComponent<Collider>());
 
