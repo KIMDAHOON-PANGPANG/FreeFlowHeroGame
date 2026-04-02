@@ -355,20 +355,29 @@ namespace FreeFlowHero.Combat.Enemy
 
             if (groundHit.collider != null)
             {
-                isGrounded = true;
-                verticalVelocity = 0f;
-
-                // ★ 피벗 스냅 위치 = 지면 표면 Y + 캡슐 반높이 - 캡슐 오프셋
-                //   capsuleBottomY = pos.y + offsetY - halfH 이므로
-                //   pos.y = groundY - offsetY + halfH 로 역산
                 float targetPivotY = groundHit.point.y - capsuleOffsetY + capsuleHalfH;
-                if (pos.y < targetPivotY || pos.y - targetPivotY > 0.1f)
+
+                // ★ 벽타기 방지: 현재 위치보다 0.5m 이상 높은 곳으로 스냅하지 않음
+                //   적이 벽(Ground 측면) 옆에 있을 때 레이가 벽 상단을 감지하면
+                //   위로 텔레포트하는 것을 차단
+                if (targetPivotY > pos.y + 0.5f)
                 {
-                    // [DEBUG] Y 스냅 발생 시 상세 로그
-                    Debug.Log($"[Gravity][SNAP][{gameObject.name}] {pos.y:F3} → {targetPivotY:F3} " +
-                        $"(diff={pos.y - targetPivotY:F3}) groundY={groundHit.point.y:F3}");
-                    pos.y = targetPivotY;
+                    // 위로 스냅 차단 → 자유 낙하 취급
+                    isGrounded = false;
+                    verticalVelocity += Gravity * Time.deltaTime;
+                    pos.y += verticalVelocity * Time.deltaTime;
                     rb.position = pos;
+                }
+                else
+                {
+                    isGrounded = true;
+                    verticalVelocity = 0f;
+
+                    if (pos.y < targetPivotY || pos.y - targetPivotY > 0.1f)
+                    {
+                        pos.y = targetPivotY;
+                        rb.position = pos;
+                    }
                 }
             }
             else

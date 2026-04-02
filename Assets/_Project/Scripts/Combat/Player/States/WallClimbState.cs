@@ -23,15 +23,19 @@ namespace FreeFlowHero.Combat.Player
         private const float WallDetectDist = 0.8f;      // 측면 감지 레이 거리
         private const float WallTopClimbOffset = 0.3f;   // 꼭대기 올라갈 때 Y 오프셋
         private const float WallSnapOffset = 0.35f;      // 벽면에서 캐릭터 중심까지 거리
+        private const float MaxClimbDuration = 2.0f;     // ★ 벽타기 최대 시간 (초)
 
         private int wallSide;       // -1=좌측벽, +1=우측벽
         private int climbMask;      // Ground + Wall 레이어
         private int groundLayerMask;
         private Collider2D climbSurface; // 현재 붙어있는 콜라이더
+        private float climbTimer;   // 벽타기 경과 시간
 
         public override void Enter()
         {
             base.Enter();
+
+            climbTimer = 0f;
 
             // 레이어 마스크: Ground + Wall 양쪽 측면 모두 클라이밍 가능
             int gl = LayerMask.NameToLayer("Ground");
@@ -90,6 +94,16 @@ namespace FreeFlowHero.Combat.Player
         public override void Update(float deltaTime)
         {
             base.Update(deltaTime);
+
+            // ★ 벽타기 시간 제한 (2초 후 자동 낙하)
+            climbTimer += deltaTime;
+            if (climbTimer >= MaxClimbDuration)
+            {
+                context.isWallClimbing = false;
+                context.verticalVelocity = 0f;
+                fsm.TransitionTo<JumpState>();
+                return;
+            }
 
             // 측면 감지 유지 확인 (허리 높이)
             Vector2 checkOrigin = GetPos() + new Vector2(0f, 0.9f);
