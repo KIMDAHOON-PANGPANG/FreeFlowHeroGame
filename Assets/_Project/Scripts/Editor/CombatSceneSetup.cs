@@ -38,6 +38,29 @@ namespace FreeFlowHero.Editor
             camObj.transform.position = new Vector3(3, 3, -10);
             camObj.AddComponent<AudioListener>();
 
+            // ─── 백그라운드 배경 (Sorting: Background, Z=5) ───
+            GameObject bgObj = new GameObject("Background");
+            bgObj.transform.position = new Vector3(0, 3f, 5f);
+            var bgQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            bgQuad.name = "BG_Quad";
+            bgQuad.transform.SetParent(bgObj.transform);
+            bgQuad.transform.localPosition = Vector3.zero;
+            bgQuad.transform.localScale = new Vector3(80f, 25f, 1f);
+            Object.DestroyImmediate(bgQuad.GetComponent<Collider>());
+            var bgRenderer = bgQuad.GetComponent<MeshRenderer>();
+            if (bgRenderer != null)
+            {
+                var bgMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+                if (bgMat.shader.name == "Hidden/InternalErrorShader")
+                    bgMat = new Material(Shader.Find("Unlit/Color"));
+                // 하늘~사막 그라데이션 느낌의 배경색
+                bgMat.color = new Color(0.85f, 0.55f, 0.35f); // 사막 오렌지
+                bgRenderer.sharedMaterial = bgMat;
+                bgRenderer.sortingLayerName = "Background";
+                bgRenderer.sortingOrder = -10;
+            }
+            Debug.Log("  [씬] Background 배경 생성");
+
             // ─── 라이트 ───
             GameObject lightObj = new GameObject("Directional Light");
             var light = lightObj.AddComponent<Light>();
@@ -313,7 +336,7 @@ namespace FreeFlowHero.Editor
             col.size = new Vector2(1f, 12f);
         }
 
-        /// <summary>벽타기 테스트용 높은 플랫폼 생성 (Ground 레이어 — 측면이 절벽)</summary>
+        /// <summary>벽타기 테스트용 높은 플랫폼 생성 (Ground 레이어 — 측면이 절벽, Z=1 뒤 배치)</summary>
         private static void CreateClimbPlatform(string name, Vector3 position, float width, float height)
         {
             GameObject platform = new GameObject(name);
@@ -326,11 +349,11 @@ namespace FreeFlowHero.Editor
             var col = platform.AddComponent<BoxCollider2D>();
             col.size = new Vector2(width, height);
 
-            // 3D 시각화
+            // 3D 시각화 — Z=1 (캐릭터 뒤쪽 레이어)
             var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
             visual.name = "Visual";
             visual.transform.SetParent(platform.transform);
-            visual.transform.localPosition = Vector3.zero;
+            visual.transform.localPosition = new Vector3(0f, 0f, 1f); // ★ 캐릭터(Z=0) 뒤
             visual.transform.localScale = new Vector3(width, height, 5f);
             Object.DestroyImmediate(visual.GetComponent<Collider>());
 
@@ -342,6 +365,8 @@ namespace FreeFlowHero.Editor
                     mat = new Material(Shader.Find("Standard"));
                 mat.color = new Color(0.55f, 0.45f, 0.35f); // 갈색 절벽
                 renderer.sharedMaterial = mat;
+                renderer.sortingLayerName = "Environment"; // ★ 캐릭터 뒤 렌더링
+                renderer.sortingOrder = 0;
             }
 
             Debug.Log($"  [씬] {name} 생성 — {width}x{height}m 위치:({position.x},{position.y})");

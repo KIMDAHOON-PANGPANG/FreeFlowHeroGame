@@ -36,6 +36,7 @@ namespace FreeFlowHero.Editor
         private static readonly string[] RequiredSortingLayers = new[]
         {
             "Background",
+            "Environment",  // 벽/절벽/플랫폼 (배경 뒤, 캐릭터 앞)
             "Ground",
             "Characters",
             "VFX",

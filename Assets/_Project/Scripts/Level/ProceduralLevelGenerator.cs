@@ -256,11 +256,11 @@ namespace FreeFlowHero.Level
             var col = go.AddComponent<BoxCollider2D>();
             col.size = new Vector2(width, 1f);
 
-            // 시각화
+            // 시각화 — Z=1 (캐릭터 뒤)
             var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
             visual.name = "Visual";
             visual.transform.SetParent(go.transform);
-            visual.transform.localPosition = Vector3.zero;
+            visual.transform.localPosition = new Vector3(0f, 0f, 1f);
             visual.transform.localScale = new Vector3(width, 1f, 10f);
             Object.DestroyImmediate(visual.GetComponent<Collider>());
 
@@ -272,6 +272,7 @@ namespace FreeFlowHero.Level
                     mat = new Material(Shader.Find("Standard"));
                 mat.color = new Color(0.85f, 0.85f, 0.9f);
                 renderer.sharedMaterial = mat;
+                renderer.sortingLayerName = "Environment";
             }
         }
 
@@ -285,11 +286,11 @@ namespace FreeFlowHero.Level
             var col = go.AddComponent<BoxCollider2D>();
             col.size = new Vector2(width, 0.3f);
 
-            // 시각화
+            // 시각화 — Z=1 (캐릭터 뒤)
             var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
             visual.name = "Visual";
             visual.transform.SetParent(go.transform);
-            visual.transform.localPosition = Vector3.zero;
+            visual.transform.localPosition = new Vector3(0f, 0f, 1f);
             visual.transform.localScale = new Vector3(width, 0.3f, 3f);
             Object.DestroyImmediate(visual.GetComponent<Collider>());
 
@@ -299,8 +300,9 @@ namespace FreeFlowHero.Level
                 var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
                 if (mat.shader.name == "Hidden/InternalErrorShader")
                     mat = new Material(Shader.Find("Standard"));
-                mat.color = new Color(0.6f, 0.75f, 0.6f); // 녹색 플랫폼
+                mat.color = new Color(0.6f, 0.75f, 0.6f);
                 renderer.sharedMaterial = mat;
+                renderer.sortingLayerName = "Environment";
             }
         }
 
@@ -316,11 +318,11 @@ namespace FreeFlowHero.Level
             var col = go.AddComponent<BoxCollider2D>();
             col.size = new Vector2(0.5f, height);
 
-            // 시각화
+            // 시각화 — Z=1 (캐릭터 뒤)
             var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
             visual.name = "Visual";
             visual.transform.SetParent(go.transform);
-            visual.transform.localPosition = Vector3.zero;
+            visual.transform.localPosition = new Vector3(0f, 0f, 1f);
             visual.transform.localScale = new Vector3(0.5f, height, 2f);
             Object.DestroyImmediate(visual.GetComponent<Collider>());
 
@@ -330,8 +332,9 @@ namespace FreeFlowHero.Level
                 var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
                 if (mat.shader.name == "Hidden/InternalErrorShader")
                     mat = new Material(Shader.Find("Standard"));
-                mat.color = new Color(0.5f, 0.35f, 0.25f); // 갈색 벽
+                mat.color = new Color(0.5f, 0.35f, 0.25f);
                 renderer.sharedMaterial = mat;
+                renderer.sortingLayerName = "Environment";
             }
         }
 

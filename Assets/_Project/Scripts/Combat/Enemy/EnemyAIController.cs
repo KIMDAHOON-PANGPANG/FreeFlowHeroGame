@@ -673,11 +673,19 @@ namespace FreeFlowHero.Combat.Enemy
             // 항상 플레이어 바라보기
             FaceDirection(dir);
 
-            // 공격 범위 밖 → 추적 이동
+            // 공격 범위 밖 → 추적 이동 (낭떠러지 감지)
             if (dist > attackRange)
             {
-                MoveHorizontal(dir * chaseSpeed * Time.deltaTime);
-                SafeSetFloat("Speed", chaseSpeed);
+                // ★ 낭떠러지/절벽 감지: 이동 방향 앞에 바닥이 없으면 정지
+                if (!HasGroundAhead(dir))
+                {
+                    SafeSetFloat("Speed", 0f);
+                }
+                else
+                {
+                    MoveHorizontal(dir * chaseSpeed * Time.deltaTime);
+                    SafeSetFloat("Speed", chaseSpeed);
+                }
             }
             else if (cooldownTimer > 0f)
             {
@@ -1043,6 +1051,16 @@ namespace FreeFlowHero.Combat.Enemy
                 pos.x += dx;
                 MoveTo(pos);
             }
+        }
+
+        /// <summary>이동 방향 앞에 바닥이 있는지 체크 (낭떠러지/절벽 감지)</summary>
+        private bool HasGroundAhead(float dir)
+        {
+            Vector2 pos = GetPos();
+            // 이동 방향으로 0.8m 앞, 발 아래에서 아래로 레이캐스트
+            Vector2 checkPos = pos + new Vector2(dir * 0.8f, 0.1f);
+            RaycastHit2D hit = Physics2D.Raycast(checkPos, Vector2.down, 2f, groundMask);
+            return hit.collider != null;
         }
 
         private float GetDistToPlayer()
