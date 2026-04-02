@@ -357,12 +357,12 @@ namespace FreeFlowHero.Combat.Enemy
             {
                 float targetPivotY = groundHit.point.y - capsuleOffsetY + capsuleHalfH;
 
-                // ★ 벽타기 방지: 현재 위치보다 0.5m 이상 높은 곳으로 스냅하지 않음
-                //   적이 벽(Ground 측면) 옆에 있을 때 레이가 벽 상단을 감지하면
-                //   위로 텔레포트하는 것을 차단
-                if (targetPivotY > pos.y + 0.5f)
+                // ★ 벽타기 완전 차단: 스폰 위치보다 1m 이상 높은 바닥은 무시
+                //   적은 자기가 태어난 높이 근처의 바닥만 밟을 수 있음
+                //   높은 플랫폼(절벽) 위로 절대 올라가지 못함
+                if (targetPivotY > spawnPos.y + 1f)
                 {
-                    // 위로 스냅 차단 → 자유 낙하 취급
+                    // 높은 바닥 무시 → 자유 낙하 취급
                     isGrounded = false;
                     verticalVelocity += Gravity * Time.deltaTime;
                     pos.y += verticalVelocity * Time.deltaTime;
