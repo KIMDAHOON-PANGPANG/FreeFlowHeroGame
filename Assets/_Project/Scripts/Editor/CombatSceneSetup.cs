@@ -80,9 +80,9 @@ namespace FreeFlowHero.Editor
             CreateWall("Wall_Left", new Vector3(-20f, 5f, 0f));
             CreateWall("Wall_Right", new Vector3(20f, 5f, 0f));
 
-            // ─── 벽타기 테스트 벽 (2개 — 벽↔벽 점프 테스트용) ───
-            CreateClimbWall("ClimbWall_A", new Vector3(6f, 4f, 0f), 8f);
-            CreateClimbWall("ClimbWall_B", new Vector3(9f, 5f, 0f), 10f);
+            // ─── 벽타기 테스트: 높은 플랫폼 (측면 = 클라이밍 가능한 절벽) ───
+            CreateClimbPlatform("CliffPlatform_A", new Vector3(7f, 3f, 0f), 4f, 6f);  // 높이 6m
+            CreateClimbPlatform("CliffPlatform_B", new Vector3(14f, 5f, 0f), 3f, 10f); // 높이 10m
 
             // ─── 플레이어 배치 ───
             GameObject playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefab);
@@ -313,25 +313,25 @@ namespace FreeFlowHero.Editor
             col.size = new Vector2(1f, 12f);
         }
 
-        /// <summary>벽타기 테스트용 세로 벽 생성 (시각화 포함)</summary>
-        private static void CreateClimbWall(string name, Vector3 position, float height)
+        /// <summary>벽타기 테스트용 높은 플랫폼 생성 (Ground 레이어 — 측면이 절벽)</summary>
+        private static void CreateClimbPlatform(string name, Vector3 position, float width, float height)
         {
-            GameObject wall = new GameObject(name);
-            wall.tag = "Wall";
-            int wallLayer = LayerMask.NameToLayer("Wall");
-            wall.layer = wallLayer >= 0 ? wallLayer : 0;
-            wall.transform.position = position;
+            GameObject platform = new GameObject(name);
+            platform.tag = "Ground";
+            int groundLayer = LayerMask.NameToLayer("Ground");
+            platform.layer = groundLayer >= 0 ? groundLayer : 0;
+            platform.transform.position = position;
 
-            // 2D 콜라이더
-            var col = wall.AddComponent<BoxCollider2D>();
-            col.size = new Vector2(0.5f, height);
+            // 2D 콜라이더 (플레이어는 이 콜라이더의 측면을 감지하여 벽타기)
+            var col = platform.AddComponent<BoxCollider2D>();
+            col.size = new Vector2(width, height);
 
-            // 3D 시각화 (큐브)
+            // 3D 시각화
             var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
             visual.name = "Visual";
-            visual.transform.SetParent(wall.transform);
+            visual.transform.SetParent(platform.transform);
             visual.transform.localPosition = Vector3.zero;
-            visual.transform.localScale = new Vector3(0.5f, height, 2f);
+            visual.transform.localScale = new Vector3(width, height, 5f);
             Object.DestroyImmediate(visual.GetComponent<Collider>());
 
             var renderer = visual.GetComponent<MeshRenderer>();
@@ -340,11 +340,11 @@ namespace FreeFlowHero.Editor
                 var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
                 if (mat.shader.name == "Hidden/InternalErrorShader")
                     mat = new Material(Shader.Find("Standard"));
-                mat.color = new Color(0.5f, 0.35f, 0.25f); // 갈색 벽
+                mat.color = new Color(0.55f, 0.45f, 0.35f); // 갈색 절벽
                 renderer.sharedMaterial = mat;
             }
 
-            Debug.Log($"  [씬] {name} 생성 — 높이:{height}m 위치:({position.x},{position.y})");
+            Debug.Log($"  [씬] {name} 생성 — {width}x{height}m 위치:({position.x},{position.y})");
         }
 
         /// <summary>런타임에서도 보이는 1x1 흰색 스프라이트 생성</summary>

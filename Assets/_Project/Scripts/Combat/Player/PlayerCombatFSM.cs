@@ -126,13 +126,23 @@ namespace FreeFlowHero.Combat.Player
         /// <summary>Grounded 여부 (외부에서 참조 가능)</summary>
         public bool IsGrounded => isGrounded;
 
-        /// <summary>벽 감지: facing 방향으로 Wall 레이어 Raycast</summary>
+        /// <summary>벽(측면) 감지: facing 방향으로 Ground+Wall 레이어 Raycast</summary>
         public bool DetectWall(out RaycastHit2D wallHit)
         {
             float facing = context.playerTransform.localScale.x >= 0 ? 1f : -1f;
-            Vector2 origin = (Vector2)context.playerTransform.position + new Vector2(0f, 0.9f);
-            wallHit = Physics2D.Raycast(origin, Vector2.right * facing, 0.6f, wallLayerMask);
-            return wallHit.collider != null;
+            int climbMask = groundLayerMask | wallLayerMask;
+
+            // 여러 높이에서 체크 (발, 허리, 머리)
+            float[] heights = { 0.3f, 0.9f, 1.5f };
+            foreach (float h in heights)
+            {
+                Vector2 origin = (Vector2)context.playerTransform.position + new Vector2(0f, h);
+                wallHit = Physics2D.Raycast(origin, Vector2.right * facing, 0.8f, climbMask);
+                if (wallHit.collider != null) return true;
+            }
+
+            wallHit = default;
+            return false;
         }
 
         private void Start()
