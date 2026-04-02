@@ -41,6 +41,22 @@ namespace FreeFlowHero.Common
             alreadyHit.Clear();
         }
 
+        /// <summary>
+        /// COLLISION 노티파이 데이터로 히트박스 위치/크기를 갱신한다.
+        /// 액션마다 다른 히트 판정 영역을 사용할 수 있게 한다.
+        /// facingDir: 캐릭터가 바라보는 방향 (-1 또는 +1)
+        /// </summary>
+        public void ApplyNotifyData(float offsetX, float offsetY, float sizeX, float sizeY, float facingDir)
+        {
+            if (hitboxCollider is BoxCollider2D box)
+            {
+                // 부모 기준 로컬 위치로 변환 (facing에 따라 X 반전)
+                transform.localPosition = new Vector3(offsetX * facingDir, offsetY, 0f);
+                box.size = new Vector2(sizeX, sizeY);
+                box.offset = Vector2.zero; // offset은 localPosition으로 처리
+            }
+        }
+
         /// <summary>히트박스 비활성화 (Active 프레임 종료 시)</summary>
         public void Deactivate()
         {

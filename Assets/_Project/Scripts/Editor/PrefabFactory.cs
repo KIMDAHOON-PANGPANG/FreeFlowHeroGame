@@ -75,17 +75,7 @@ namespace FreeFlowHero.Editor
             // ★ Sprite-Flash 머티리얼 할당
             AssignFlashMaterial(sr);
 
-            // ─── Hitbox 자식 오브젝트 ───
-            GameObject hitboxObj = new GameObject("Hitbox");
-            hitboxObj.transform.SetParent(player.transform);
-            hitboxObj.transform.localPosition = new Vector3(0.8f, 1.0f, 0f);
-            SetLayerRecursive(hitboxObj, "Hitbox");
-
-            var hitboxCol = hitboxObj.AddComponent<BoxCollider2D>();
-            hitboxCol.size = new Vector2(1.2f, 1.0f);
-            hitboxCol.isTrigger = true;
-
-            var hitbox = hitboxObj.AddComponent<HitboxController>();
+            // ─── Hitbox 제거됨 — COLLISION 노티파이의 OverlapBox로 직접 판정 ───
 
             // ─── Hurtbox 자식 오브젝트 ───
             GameObject hurtboxObj = new GameObject("Hurtbox");

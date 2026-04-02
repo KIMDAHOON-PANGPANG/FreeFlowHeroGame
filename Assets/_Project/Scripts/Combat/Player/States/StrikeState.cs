@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using FreeFlowHero.Combat.Core;
 using FreeFlowHero.Common;
@@ -52,7 +53,11 @@ namespace FreeFlowHero.Combat.Player
         private Phase currentPhase;
 
         // ─── 공통 변수 ───
-        private HitboxController hitbox;
+        // ─── OverlapBox 히트 판정 (COLLISION 노티파이 기반) ───
+        private bool collisionActive;
+        private readonly HashSet<Collider2D> alreadyHitThisSwing = new HashSet<Collider2D>();
+        private static readonly Collider2D[] overlapBuffer = new Collider2D[16];
+        private static int hurtboxMask = -1;
         private bool hitConnected;
         private SpriteRenderer spriteRenderer;
         private Color originalColor;
@@ -75,7 +80,7 @@ namespace FreeFlowHero.Combat.Player
         private float currentPlaybackRate = 1f;  // ★ 애니메이션 재생 배율 (프레임 스케일링용)
 
         // 히트박스 활성 추적 (노티파이 모드에서 이벤트 구독 관리)
-        private bool hitboxSubscribed;
+        // (hitboxSubscribed 제거 — OverlapBox 방식으로 전환)
 
         // ★ 공격 중 플래그: true인 동안 공격 계열 입력은 버퍼에만 쌓이고 소비되지 않음.
         //   Enter() → true, CANCEL_WINDOW 진입 → false.
@@ -104,7 +109,8 @@ namespace FreeFlowHero.Combat.Player
             hitConnected = false;
             hitStopRemaining = 0f;
             stateElapsedTime = 0f;
-            hitboxSubscribed = false;
+            collisionActive = false;
+            alreadyHitThisSwing.Clear();
             isAttacking = true;             // ★ 공격 시작 → 공격 입력 잠금
             context.canCancel = false;      // ★ 이전 상태의 canCancel 잔류값 초기화
             isWarpActive = false;           // 인라인 워핑 초기화
@@ -190,7 +196,9 @@ namespace FreeFlowHero.Combat.Player
             }
 
             // 히트박스 참조
-            hitbox = context.playerTransform.GetComponentInChildren<HitboxController>();
+            // OverlapBox용 Hurtbox 레이어 마스크 캐시
+            if (hurtboxMask < 0)
+                hurtboxMask = LayerMask.GetMask("Hurtbox");
 
             // 시각 피드백 준비
             spriteRenderer = context.playerTransform.GetComponent<SpriteRenderer>();
@@ -216,8 +224,8 @@ namespace FreeFlowHero.Combat.Player
         public override void Exit()
         {
             base.Exit();
-            hitbox?.Deactivate();
-            UnsubscribeHitbox();
+            collisionActive = false;
+            alreadyHitThisSwing.Clear();
 
             // 워핑 중 Exit 시 플래그 정리
             if (isWarpActive)
@@ -339,17 +347,47 @@ namespace FreeFlowHero.Combat.Player
                 }
             }
 
-            // ── COLLISION: 히트박스 활성/비활성 ──
+            // ── COLLISION: OverlapBox 히트 판정 ──
             if (notifyProcessor.CollisionJustStarted)
             {
-                hitbox?.Activate();
-                SubscribeHitbox();
+                collisionActive = true;
+                alreadyHitThisSwing.Clear();
                 TriggerAttackFlash();
             }
             else if (notifyProcessor.CollisionJustEnded)
             {
-                hitbox?.Deactivate();
-                UnsubscribeHitbox();
+                collisionActive = false;
+            }
+
+            // ★ COLLISION 활성 구간: 매 프레임 OverlapBox로 직접 판정
+            if (collisionActive)
+            {
+                var cn = notifyProcessor.ActiveCollisionNotify;
+                if (cn != null && (cn.hitboxSizeX > 0f || cn.hitboxSizeY > 0f))
+                {
+                    Vector2 myPos = GetPos();
+                    Vector2 hitCenter = myPos + new Vector2(cn.hitboxOffsetX * facing, cn.hitboxOffsetY);
+                    Vector2 hitSize = new Vector2(cn.hitboxSizeX, cn.hitboxSizeY);
+
+                    int count = Physics2D.OverlapBoxNonAlloc(hitCenter, hitSize, 0f, overlapBuffer, hurtboxMask);
+                    for (int i = 0; i < count; i++)
+                    {
+                        var col = overlapBuffer[i];
+                        if (col == null || alreadyHitThisSwing.Contains(col)) continue;
+
+                        var hurtbox = col.GetComponent<Common.HurtboxController>();
+                        if (hurtbox == null) continue;
+                        if (hurtbox.OwnerTeam == Core.CombatTeam.Player) continue;
+
+                        var target = hurtbox.GetCombatTarget();
+                        if (target == null || !target.IsTargetable || target.IsInvulnerable) continue;
+
+                        alreadyHitThisSwing.Add(col);
+
+                        Vector2 contactPoint = col.ClosestPoint(myPos);
+                        OnHitDetected(target, contactPoint);
+                    }
+                }
             }
 
             // ── PENDING_WINDOW: 입력 수집 구간 (CANCEL_WINDOW 직전) ──
@@ -458,8 +496,8 @@ namespace FreeFlowHero.Combat.Player
             if (currentPhase == Phase.Startup && frame >= startupFrames)
             {
                 currentPhase = Phase.Active;
-                hitbox?.Activate();
-                SubscribeHitbox();
+                collisionActive = true;
+                alreadyHitThisSwing.Clear();
                 TriggerAttackFlash();
             }
 
@@ -467,8 +505,7 @@ namespace FreeFlowHero.Combat.Player
             if (currentPhase == Phase.Active && frame >= startupFrames + activeFrames)
             {
                 currentPhase = Phase.Recovery;
-                hitbox?.Deactivate();
-                UnsubscribeHitbox();
+                collisionActive = false;
             }
 
             // ★ 캔슬 타이밍: cancelDelay 이후 캔슬 가능
@@ -812,9 +849,8 @@ namespace FreeFlowHero.Combat.Player
             activeWarpEaseType = warpNotify.warpEaseType;
             warpTimer = 0f;
 
-            // 히트박스 비활성 (워핑 중 공격 판정 방지)
-            hitbox?.Deactivate();
-            UnsubscribeHitbox();
+            // 히트 판정 비활성 (워핑 중 공격 판정 방지)
+            collisionActive = false;
 
             // 시각 피드백: 시안색
             if (spriteRenderer != null)
@@ -857,24 +893,10 @@ namespace FreeFlowHero.Combat.Player
         }
 
         // ═══════════════════════════════════════════════════════
-        //  히트박스 이벤트 구독 관리
+        //  OverlapBox 히트 감지 처리
         // ═══════════════════════════════════════════════════════
 
-        private void SubscribeHitbox()
-        {
-            if (hitboxSubscribed || hitbox == null) return;
-            hitbox.OnHitDetected += OnHitDetected;
-            hitboxSubscribed = true;
-        }
-
-        private void UnsubscribeHitbox()
-        {
-            if (!hitboxSubscribed || hitbox == null) return;
-            hitbox.OnHitDetected -= OnHitDetected;
-            hitboxSubscribed = false;
-        }
-
-        /// <summary>히트 감지 콜백</summary>
+        /// <summary>히트 감지 처리 (OverlapBox에서 호출)</summary>
         private void OnHitDetected(ICombatTarget target, Vector2 contactPoint)
         {
             if (hitConnected) return;

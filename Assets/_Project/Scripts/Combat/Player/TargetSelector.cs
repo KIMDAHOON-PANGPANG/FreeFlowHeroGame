@@ -86,6 +86,41 @@ namespace FreeFlowHero.Combat.Player
                 }
             }
 
+            // ★ 관통 방지: 선택된 타겟까지의 경로에 다른 적이 있으면 그 적을 우선 선택
+            //   플레이어(0) → 적A(3m) → 적B(7m) 일 때, B가 선택되면 A를 관통해야 함.
+            //   이 경우 경로 상 가장 가까운 적A로 타겟을 교체한다.
+            if (bestTarget != null && aliveCount > 1)
+            {
+                Vector2 bestPos = bestTarget.GetTransform().position;
+                float bestDist = Mathf.Abs(bestPos.x - playerPos.x);
+                float dirToBest = Mathf.Sign(bestPos.x - playerPos.x);
+
+                ICombatTarget blocker = null;
+                float blockerDist = bestDist;
+
+                for (int i = 0; i < enemies.Count; i++)
+                {
+                    var enemy = enemies[i];
+                    if (enemy == null || !enemy.IsTargetable || enemy == bestTarget) continue;
+
+                    Transform t = enemy.GetTransform();
+                    if (t == null) continue;
+
+                    float enemyX = t.position.x;
+                    float enemyDist = Mathf.Abs(enemyX - playerPos.x);
+
+                    // 같은 방향에 있고, 선택된 타겟보다 가까운 적 = 경로 차단자
+                    if (Mathf.Sign(enemyX - playerPos.x) == dirToBest && enemyDist < blockerDist)
+                    {
+                        blocker = enemy;
+                        blockerDist = enemyDist;
+                    }
+                }
+
+                if (blocker != null)
+                    bestTarget = blocker;
+            }
+
             CurrentTarget = bestTarget;
             return bestTarget;
         }
