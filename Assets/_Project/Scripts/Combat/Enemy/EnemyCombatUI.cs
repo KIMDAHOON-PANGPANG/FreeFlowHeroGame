@@ -5,43 +5,48 @@ using FreeFlowHero.Combat.Player;
 namespace FreeFlowHero.Combat.Enemy
 {
     /// <summary>
-    /// 적 전투 UI — HP 바 + 타겟 인디케이터 + 히트 넘버 + 텔레그래프/처형 인디케이터.
-    /// Awake()에서 자식 오브젝트를 코드로 생성하므로 에디터 GUI 작업 불필요.
-    /// DummyEnemyTarget이 있는 적 오브젝트에 부착한다.
+    /// 적 전투 UI — HP바 + 토큰 마커 + 히트 게이지 + 텔레그래프/처형/그로기 + 플로팅 데미지.
+    /// 플레이 모드: OnGUI + GUI.DrawTexture (GameObject 생성 없음).
+    /// 에디터 모드: EnemyCombatUIEditor.OnSceneGUI()에서 Handles로 미리보기 + 기즈모 편집.
     /// </summary>
     [RequireComponent(typeof(DummyEnemyTarget))]
     public class EnemyCombatUI : MonoBehaviour
     {
-        // ─── 설정 ───
+        // ─── HP 바 설정 (에디터 기즈모 + 런타임 OnGUI 공유) ───
         [Header("HP 바")]
-        [SerializeField] private float barWidth = 1.2f;
-        [SerializeField] private float barHeight = 0.12f;
         [SerializeField] private float barOffsetY = 4.0f;
-        [SerializeField] private Color barBgColor = new Color(0.1f, 0.1f, 0.1f, 0.9f);
-        [SerializeField] private Color barFullColor = new Color(0.2f, 0.9f, 0.2f);
-        [SerializeField] private Color barLowColor = new Color(0.9f, 0.15f, 0.15f);
+        [SerializeField] private float barWidth = 1.5f;
+        [SerializeField] private float barHeight = 0.15f;
 
-        [Header("타겟 인디케이터")]
-        [SerializeField] private Color targetArrowColor = new Color(1f, 1f, 0f, 0.9f);
-        [SerializeField] private float arrowSize = 0.6f;
-        [SerializeField] private float arrowBobSpeed = 4f;
-        [SerializeField] private float arrowBobAmount = 0.15f;
+        [Header("토큰 마커 ◆")]
+        [SerializeField] private float tokenOffsetY = 0.3f;
+        [SerializeField] private float tokenSize = 0.25f;
 
-        [Header("히트 이펙트")]
-        [SerializeField] private float hitScalePunch = 1.3f;
-        [SerializeField] private float hitScaleDuration = 0.12f;
+        [Header("히트 게이지 바")]
+        [SerializeField] private float gaugeOffsetY = -0.25f;
+        [SerializeField] private float gaugeWidth = 1.2f;
+        [SerializeField] private float gaugeHeight = 0.1f;
+
+        // ★ 데이터 튜닝: UI 컬러 설정
+        [Header("HP 바 컬러")]
+        [SerializeField] private Color hpBarBgColor = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+        [SerializeField] private Color hpFullColor = Color.green;
+        [SerializeField] private Color hpLowColor = Color.red;
+
+        [Header("토큰 마커 컬러")]
+        [SerializeField] private Color tokenColor = new Color(1f, 0.84f, 0f); // 금색
+
+        [Header("히트 게이지 컬러")]
+        [SerializeField] private Color gaugeBgColor = new Color(0.15f, 0.15f, 0.15f, 0.9f);
+        [SerializeField] private Color gaugeLowColor = new Color(0.2f, 0.8f, 0.2f);
+        [SerializeField] private Color gaugeHighColor = Color.red;
 
         // ─── 참조 ───
         private DummyEnemyTarget enemyTarget;
-        private SpriteRenderer hpBarBg;
-        private SpriteRenderer hpBarFill;
-        private SpriteRenderer targetArrow;
-        private Transform hpBarGroup;
+        private PlayerCombatFSM playerFSM;
+        private EnemyAIController aiController;
 
         // ─── 상태 ───
-        private float displayedHP = 1f;         // 부드러운 HP 보간용
-        private float hitScaleTimer;
-        private PlayerCombatFSM playerFSM;
         private float lastHP;
 
         // ─── 플로팅 텍스트 ───
@@ -50,170 +55,227 @@ namespace FreeFlowHero.Combat.Enemy
         private Vector3 floatingTextWorldPos;
         private Color floatingTextColor;
 
-        // ─── 히트 번호 스타일 ───
+        // ─── GUI 스타일 ───
         private static GUIStyle hitNumberStyle;
-
-        // ─── 텔레그래프/처형/그로기 인디케이터 ───
-        private EnemyAIController aiController;
         private static GUIStyle telegraphStyle;
         private static GUIStyle executionStyle;
         private static GUIStyle groggyStyle;
+        private static GUIStyle tokenStyle;
+
+        // ─── 텍스처 캐시 ───
+        private static Texture2D _whiteTexture;
+        private static Texture2D WhiteTexture
+        {
+            get
+            {
+                if (_whiteTexture == null)
+                {
+                    _whiteTexture = new Texture2D(1, 1);
+                    _whiteTexture.SetPixel(0, 0, Color.white);
+                    _whiteTexture.Apply();
+                }
+                return _whiteTexture;
+            }
+        }
+
+        // ============================================================
+        //  초기화
+        // ============================================================
+
+        // ─── 진단 플래그 (1회만 출력) ───
+        private bool _diagLogged;
+        private bool _onguiLogged;
+        private int _updateCount;
 
         private void Awake()
         {
             enemyTarget = GetComponent<DummyEnemyTarget>();
-            lastHP = enemyTarget.CurrentHP;
-
             aiController = GetComponent<EnemyAIController>();
-            CreateHPBar();
-            CreateTargetArrow();
+            if (enemyTarget != null)
+                lastHP = enemyTarget.CurrentHP;
+
+            Debug.Log($"[EnemyCombatUI] Awake — {gameObject.name} | " +
+                $"enemyTarget={(enemyTarget != null ? "OK" : "NULL")} | " +
+                $"aiController={(aiController != null ? "OK" : "NULL")} | " +
+                $"enabled={enabled} | activeInHierarchy={gameObject.activeInHierarchy}");
         }
 
         private void Start()
         {
-            // 플레이어 FSM 참조 (타겟 인디케이터용) — 지연 검색 대비
+            if (!Application.isPlaying) return;
             playerFSM = FindAnyObjectByType<PlayerCombatFSM>();
-            if (playerFSM == null)
-                Debug.LogWarning($"[EnemyCombatUI] PlayerCombatFSM을 찾을 수 없습니다: {gameObject.name}");
         }
 
         private void Update()
         {
-            UpdateHPBar();
-            UpdateTargetArrow();
-            UpdateHitScale();
+            if (!Application.isPlaying) return;
+
+            // 진단: 10프레임째에 OnGUI 호출 여부 확인
+            _updateCount++;
+            if (_updateCount == 10 && !_onguiLogged)
+            {
+                Debug.LogWarning($"[EnemyCombatUI][DIAG] Update 10회 도달했지만 OnGUI 미호출! — {gameObject.name} | " +
+                    $"enabled={enabled} | activeInHierarchy={gameObject.activeInHierarchy} | " +
+                    $"activeSelf={gameObject.activeSelf}");
+            }
+
             DetectHit();
             UpdateFloatingText();
         }
 
-        private void OnDestroy()
-        {
-            // 씬 루트에 생성한 오브젝트 수동 정리
-            if (hpBarGroup != null)
-                Destroy(hpBarGroup.gameObject);
-            if (targetArrow != null)
-                Destroy(targetArrow.gameObject);
-        }
-
         // ============================================================
-        //  HP 바 생성 (코드 전용, GUI 작업 없음)
+        //  OnGUI — 플레이 모드 전용 렌더링 (GameObject 생성 없음)
         // ============================================================
 
-        private void CreateHPBar()
+        private void OnGUI()
         {
-            // 그룹 부모 — 부모 스케일 영향 방지 위해 씬 루트에 생성
-            var groupObj = new GameObject($"HPBar_{gameObject.name}");
-            hpBarGroup = groupObj.transform;
-            // 씬 루트에 두고 Update에서 위치만 따라가게 함
-            hpBarGroup.position = transform.position + new Vector3(0, barOffsetY, 0);
-            hpBarGroup.localScale = Vector3.one;
+            _onguiLogged = true; // OnGUI 호출 확인용
 
-            // 배경 바
-            var bgObj = new GameObject("HPBar_BG");
-            bgObj.transform.SetParent(hpBarGroup);
-            bgObj.transform.localPosition = Vector3.zero;
-            bgObj.transform.localScale = new Vector3(barWidth, barHeight, 1f);
-            hpBarBg = bgObj.AddComponent<SpriteRenderer>();
-            hpBarBg.sprite = GetWhiteSprite();
-            hpBarBg.color = barBgColor;
-            hpBarBg.sortingOrder = 90;
-
-            // 채움 바
-            var fillObj = new GameObject("HPBar_Fill");
-            fillObj.transform.SetParent(hpBarGroup);
-            fillObj.transform.localPosition = Vector3.zero;
-            fillObj.transform.localScale = new Vector3(barWidth, barHeight * 0.8f, 1f);
-            hpBarFill = fillObj.AddComponent<SpriteRenderer>();
-            hpBarFill.sprite = GetWhiteSprite();
-            hpBarFill.color = barFullColor;
-            hpBarFill.sortingOrder = 91;
-        }
-
-        private void UpdateHPBar()
-        {
-            if (enemyTarget == null || hpBarFill == null || hpBarGroup == null) return;
-
-            // HP 바 위치를 적 머리 위로 따라감 (부모 스케일 무관)
-            hpBarGroup.position = transform.position + new Vector3(0, barOffsetY, 0);
-
-            float targetRatio = enemyTarget.HPRatio;
-
-            // 부드러운 HP 보간
-            displayedHP = Mathf.Lerp(displayedHP, targetRatio, Time.deltaTime * 10f);
-
-            // 스케일 조정 (왼쪽 정렬)
-            float fillW = barWidth * displayedHP;
-            hpBarFill.transform.localScale = new Vector3(fillW, barHeight * 0.8f, 1f);
-
-            // 왼쪽 정렬: 중심 이동
-            float offset = (barWidth - fillW) * 0.5f;
-            hpBarFill.transform.localPosition = new Vector3(-offset, 0, 0);
-
-            // 색상: HP 비율에 따라 초록→빨강
-            hpBarFill.color = Color.Lerp(barLowColor, barFullColor, displayedHP);
-
-            // 사망 시 HP 바 숨김
-            if (!enemyTarget.IsTargetable)
+            if (!Application.isPlaying) return;
+            if (Camera.main == null)
             {
-                hpBarGroup.gameObject.SetActive(false);
-            }
-        }
-
-        // ============================================================
-        //  타겟 인디케이터 (▼ 화살표)
-        // ============================================================
-
-        private void CreateTargetArrow()
-        {
-            var arrowObj = new GameObject($"TargetArrow_{gameObject.name}");
-            // 씬 루트에 배치 (부모 스케일 영향 방지)
-            arrowObj.transform.position = transform.position + new Vector3(0, barOffsetY + 0.5f, 0);
-            arrowObj.transform.localScale = new Vector3(arrowSize, arrowSize, 1f);
-            arrowObj.transform.localRotation = Quaternion.Euler(0, 0, 180f); // ▼ 뒤집기
-
-            targetArrow = arrowObj.AddComponent<SpriteRenderer>();
-            targetArrow.sprite = CreateDiamondSprite();
-            targetArrow.color = targetArrowColor;
-            targetArrow.sortingOrder = 100; // 최상위 렌더링
-            targetArrow.gameObject.SetActive(false);
-        }
-
-        private void UpdateTargetArrow()
-        {
-            if (targetArrow == null) return;
-
-            // playerFSM 지연 검색
-            if (playerFSM == null)
-            {
-                playerFSM = FindAnyObjectByType<PlayerCombatFSM>();
-                if (playerFSM == null) return;
+                if (!_diagLogged) { Debug.LogWarning($"[EnemyCombatUI] OnGUI 중단 — Camera.main == null ({gameObject.name})"); _diagLogged = true; }
+                return;
             }
 
-            var currentTarget = playerFSM.TargetSelector.CurrentTarget;
-            bool isTarget = currentTarget != null &&
-                            currentTarget.GetTransform() == transform;
-
-            targetArrow.gameObject.SetActive(isTarget);
-
-            if (isTarget)
+            // 1회 진단 로그
+            if (!_diagLogged)
             {
-                // 위아래 흔들리는 애니메이션
-                float bob = Mathf.Sin(Time.time * arrowBobSpeed) * arrowBobAmount;
-                // 월드 좌표로 직접 배치 (부모 스케일 영향 제거)
-                targetArrow.transform.position = transform.position +
-                    new Vector3(0, barOffsetY + 0.5f + bob, 0);
+                _diagLogged = true;
+                Debug.Log($"[EnemyCombatUI][DIAG] {gameObject.name} | " +
+                    $"enemyTarget={(enemyTarget != null ? $"OK (HP={enemyTarget.CurrentHP}, Targetable={enemyTarget.IsTargetable})" : "NULL")} | " +
+                    $"aiController={(aiController != null ? "OK" : "NULL")} | " +
+                    $"AttackCoord={(AttackCoordinator.Instance != null ? "OK" : "NULL")} | " +
+                    $"barOffsetY={barOffsetY} barWidth={barWidth} barHeight={barHeight} | " +
+                    $"hpBarBgColor={hpBarBgColor} hpFullColor={hpFullColor} hpLowColor={hpLowColor} | " +
+                    $"Camera={Camera.main.name} ortho={Camera.main.orthographic} orthoSize={Camera.main.orthographicSize}");
+
+                // WorldToGUI 변환 테스트
+                Vector3 testWorld = transform.position + Vector3.up * barOffsetY;
+                bool guiOk = WorldToGUI(testWorld, out Vector2 testGui);
+                float testScale = WorldToPixelScale();
+                Debug.Log($"[EnemyCombatUI][DIAG] WorldToGUI 테스트 — worldPos={testWorld} → guiPos={testGui} ok={guiOk} | pixelScale={testScale} | pw={barWidth * testScale:F1} ph={barHeight * testScale:F1}");
             }
+
+            DrawHPBar();
+            DrawTokenMarker();
+            DrawHitGaugeBar();
+            DrawFloatingDamage();
+            DrawTelegraphIndicator();
+            DrawExecutionIndicator();
+            DrawGroggyEffect();
+        }
+
+        // ─── 좌표 변환 헬퍼 ───
+
+        /// <summary>월드 좌표 → GUI 좌표 변환. 카메라 뒤면 false.</summary>
+        private bool WorldToGUI(Vector3 worldPos, out Vector2 guiPos)
+        {
+            Vector3 sp = Camera.main.WorldToScreenPoint(worldPos);
+            if (sp.z < 0) { guiPos = Vector2.zero; return false; }
+            guiPos = new Vector2(sp.x, Screen.height - sp.y);
+            return true;
+        }
+
+        /// <summary>월드 단위 → 픽셀 스케일 (orthographic 카메라 전용).</summary>
+        private float WorldToPixelScale()
+        {
+            if (Camera.main.orthographic)
+                return Screen.height / (Camera.main.orthographicSize * 2f);
+            // perspective 폴백: 대략적인 스케일
+            float dist = (Camera.main.transform.position - transform.position).magnitude;
+            return Screen.height / (2f * dist * Mathf.Tan(Camera.main.fieldOfView * 0.5f * Mathf.Deg2Rad));
+        }
+
+        /// <summary>OnGUI용 바 그리기 공용 헬퍼 (배경 + 채움, 왼쪽 정렬).</summary>
+        private void DrawBar(Vector2 center, float pixelW, float pixelH, float ratio, Color bgColor, Color fillColor)
+        {
+            // 배경
+            Rect bgRect = new Rect(center.x - pixelW * 0.5f, center.y - pixelH * 0.5f, pixelW, pixelH);
+            GUI.color = bgColor;
+            GUI.DrawTexture(bgRect, WhiteTexture);
+
+            // 채움 (왼쪽 정렬)
+            float fillW = pixelW * Mathf.Clamp01(ratio);
+            if (fillW > 0.5f)
+            {
+                Rect fillRect = new Rect(bgRect.x, bgRect.y, fillW, pixelH);
+                GUI.color = fillColor;
+                GUI.DrawTexture(fillRect, WhiteTexture);
+            }
+
+            GUI.color = Color.white;
+        }
+
+        // ─── HP 바 ───
+
+        private void DrawHPBar()
+        {
+            if (enemyTarget == null || !enemyTarget.IsTargetable) return;
+
+            float hpRatio = enemyTarget.HPRatio;
+
+            Vector3 worldPos = transform.position + Vector3.up * barOffsetY;
+            if (!WorldToGUI(worldPos, out Vector2 guiPos)) return;
+
+            float scale = WorldToPixelScale();
+            float pw = barWidth * scale;
+            float ph = Mathf.Max(barHeight * scale, 4f); // 최소 4px
+            Color fillColor = Color.Lerp(hpLowColor, hpFullColor, hpRatio);
+
+            DrawBar(guiPos, pw, ph, hpRatio, hpBarBgColor, fillColor);
+        }
+
+        // ─── 토큰 마커 ◆ ───
+
+        private void DrawTokenMarker()
+        {
+            if (aiController == null) return;
+            if (AttackCoordinator.Instance == null) return;
+            if (!AttackCoordinator.Instance.IsTokenHolder(aiController)) return;
+
+            Vector3 worldPos = transform.position + Vector3.up * (barOffsetY + tokenOffsetY);
+            if (!WorldToGUI(worldPos, out Vector2 guiPos)) return;
+
+            if (tokenStyle == null)
+            {
+                tokenStyle = new GUIStyle(GUI.skin.label);
+                tokenStyle.fontSize = 22;
+                tokenStyle.fontStyle = FontStyle.Bold;
+                tokenStyle.alignment = TextAnchor.MiddleCenter;
+            }
+            tokenStyle.normal.textColor = tokenColor;
+            GUI.Label(new Rect(guiPos.x - 15, guiPos.y - 15, 30, 30), "◆", tokenStyle);
+        }
+
+        // ─── 히트 게이지 바 ───
+
+        private void DrawHitGaugeBar()
+        {
+            if (aiController == null) return;
+            if (AttackCoordinator.Instance == null) return;
+            if (!AttackCoordinator.Instance.IsTokenHolder(aiController)) return;
+
+            float gaugeRatio = AttackCoordinator.Instance.CurrentHolderGaugeRatio;
+
+            Vector3 worldPos = transform.position + Vector3.up * (barOffsetY + gaugeOffsetY);
+            if (!WorldToGUI(worldPos, out Vector2 guiPos)) return;
+
+            float scale = WorldToPixelScale();
+            float pw = gaugeWidth * scale;
+            float ph = Mathf.Max(gaugeHeight * scale, 3f); // 최소 3px
+
+            Color fillColor = Color.Lerp(gaugeLowColor, gaugeHighColor, gaugeRatio);
+            DrawBar(guiPos, pw, ph, gaugeRatio, gaugeBgColor, fillColor);
         }
 
         // ============================================================
-        //  히트 이펙트 (스케일 펀치)
+        //  히트 감지 (플로팅 데미지 텍스트용)
         // ============================================================
 
-        /// <summary>DummyEnemyTarget에서 HP 변화 감지</summary>
         private void DetectHit()
         {
             if (enemyTarget == null) return;
-
             float curHP = enemyTarget.CurrentHP;
             if (curHP < lastHP)
             {
@@ -225,33 +287,14 @@ namespace FreeFlowHero.Combat.Enemy
 
         private void OnEnemyHit(float damage)
         {
-            // 스케일 펀치 시작
-            hitScaleTimer = hitScaleDuration;
-
-            // 플로팅 텍스트 생성
             floatingText = $"-{damage:F0}";
             floatingTextTimer = 0.8f;
             floatingTextWorldPos = transform.position + Vector3.up * (barOffsetY + 0.6f);
             floatingTextColor = new Color(1f, 1f, 0.2f);
         }
 
-        private void UpdateHitScale()
-        {
-            if (hitScaleTimer <= 0f) return;
-
-            hitScaleTimer -= Time.deltaTime;
-            float t = hitScaleTimer / hitScaleDuration; // 1→0
-            float scale = Mathf.Lerp(1f, hitScalePunch, t);
-
-            if (hpBarGroup != null)
-                hpBarGroup.localScale = new Vector3(scale, scale, 1f);
-
-            if (hitScaleTimer <= 0f && hpBarGroup != null)
-                hpBarGroup.localScale = Vector3.one;
-        }
-
         // ============================================================
-        //  플로팅 텍스트 (OnGUI — 월드좌표 기반)
+        //  플로팅 텍스트
         // ============================================================
 
         private void UpdateFloatingText()
@@ -259,20 +302,13 @@ namespace FreeFlowHero.Combat.Enemy
             if (floatingTextTimer > 0f)
             {
                 floatingTextTimer -= Time.deltaTime;
-                // 위로 떠오르는 효과
                 floatingTextWorldPos += Vector3.up * Time.deltaTime * 1.5f;
             }
         }
 
-        private void OnGUI()
-        {
-            if (Camera.main == null) return;
-
-            DrawFloatingDamage();
-            DrawTelegraphIndicator();
-            DrawExecutionIndicator();
-            DrawGroggyEffect();
-        }
+        // ============================================================
+        //  기존 OnGUI 인디케이터 (텔레그래프/처형/그로기/플로팅 데미지)
+        // ============================================================
 
         private void DrawFloatingDamage()
         {
@@ -302,7 +338,6 @@ namespace FreeFlowHero.Combat.Enemy
                 floatingText, hitNumberStyle);
         }
 
-        /// <summary>텔레그래프 중 "RB" 또는 "Shift" 인디케이터 표시</summary>
         private void DrawTelegraphIndicator()
         {
             if (aiController == null || !aiController.IsTelegraphing) return;
@@ -316,7 +351,6 @@ namespace FreeFlowHero.Combat.Enemy
                 telegraphStyle.alignment = TextAnchor.MiddleCenter;
             }
 
-            // 카테고리에 따라 텍스트/색상 결정
             string label;
             Color bgColor;
             if (aiController.CurrentAttackCategory == AttackCategory.Ranged)
@@ -330,28 +364,23 @@ namespace FreeFlowHero.Combat.Enemy
                 bgColor = new Color(1f, 0.85f, 0.1f, 0.95f);
             }
 
-            // 월드→스크린 (머리 위)
             Vector3 worldPos = transform.position + new Vector3(0, barOffsetY + 1.0f, 0);
-            // 살짝 bob
             worldPos.y += Mathf.Sin(Time.time * 5f) * 0.08f;
             Vector3 sp = Camera.main.WorldToScreenPoint(worldPos);
             if (sp.z < 0) return;
             float guiY = Screen.height - sp.y;
 
-            // 배경 박스 + 텍스트
             GUI.backgroundColor = bgColor;
             telegraphStyle.normal.textColor = Color.black;
             GUI.Box(new Rect(sp.x - 30, guiY - 16, 60, 32), label, telegraphStyle);
             GUI.backgroundColor = Color.white;
         }
 
-        /// <summary>처형 가능 시 빨간 "F" 인디케이터 표시</summary>
         private void DrawExecutionIndicator()
         {
             if (enemyTarget == null || !enemyTarget.IsTargetable) return;
             if (playerFSM == null) return;
 
-            // 처형 가능 여부 체크
             float hpRatio = enemyTarget.HPRatio;
             int comboCount = playerFSM.Context != null ? playerFSM.Context.comboCount : 0;
             float threshold = comboCount >= CombatConstants.ExecutionHighComboThreshold
@@ -360,7 +389,6 @@ namespace FreeFlowHero.Combat.Enemy
 
             if (hpRatio > threshold || hpRatio <= 0f) return;
 
-            // 거리 체크
             float dist = Vector2.Distance(
                 (Vector2)transform.position,
                 (Vector2)playerFSM.transform.position);
@@ -374,27 +402,22 @@ namespace FreeFlowHero.Combat.Enemy
                 executionStyle.alignment = TextAnchor.MiddleCenter;
             }
 
-            // 월드→스크린 (머리 위, 텔레그래프보다 약간 아래)
             Vector3 worldPos = transform.position + new Vector3(0, barOffsetY + 0.8f, 0);
             worldPos.y += Mathf.Sin(Time.time * 3f) * 0.1f;
             Vector3 sp = Camera.main.WorldToScreenPoint(worldPos);
             if (sp.z < 0) return;
             float guiY = Screen.height - sp.y;
 
-            // 빨간 배경 + "F" 텍스트
             GUI.backgroundColor = new Color(0.85f, 0.1f, 0.1f, 0.95f);
             executionStyle.normal.textColor = Color.white;
             GUI.Box(new Rect(sp.x - 20, guiY - 16, 40, 32), "F", executionStyle);
             GUI.backgroundColor = Color.white;
         }
 
-        /// <summary>Hard 그로기 시 머리 위 별 이펙트 표시</summary>
         private void DrawGroggyEffect()
         {
             if (aiController == null) return;
             if (!enemyTarget.IsTargetable) return;
-
-            // Groggy 상태인지 확인 (AIState는 internal이므로 공개 프로퍼티 필요)
             if (!aiController.IsGroggyActive) return;
             if (aiController.CurrentGroggyType != Core.GroggyType.Hard) return;
 
@@ -406,14 +429,13 @@ namespace FreeFlowHero.Combat.Enemy
                 groggyStyle.alignment = TextAnchor.MiddleCenter;
             }
 
-            // 별 3개가 원형으로 회전
             Vector3 worldPos = transform.position + new Vector3(0, barOffsetY + 1.2f, 0);
             Vector3 sp = Camera.main.WorldToScreenPoint(worldPos);
             if (sp.z < 0) return;
             float guiY = Screen.height - sp.y;
 
-            float time = Time.time * 3f; // 회전 속도
-            groggyStyle.normal.textColor = new Color(1f, 1f, 0.2f); // 노란 별
+            float time = Time.time * 3f;
+            groggyStyle.normal.textColor = new Color(1f, 1f, 0.2f);
 
             for (int i = 0; i < 3; i++)
             {
@@ -422,58 +444,6 @@ namespace FreeFlowHero.Combat.Enemy
                 float oy = Mathf.Sin(angle) * 10f;
                 GUI.Label(new Rect(sp.x + ox - 10, guiY + oy - 12, 20, 24), "★", groggyStyle);
             }
-        }
-
-        // ============================================================
-        //  스프라이트 유틸
-        // ============================================================
-
-        /// <summary>런타임에서 1x1 흰색 스프라이트를 생성/캐시한다.</summary>
-        private static Sprite cachedWhiteSprite;
-        private static Sprite GetWhiteSprite()
-        {
-            if (cachedWhiteSprite != null) return cachedWhiteSprite;
-
-            Texture2D tex = new Texture2D(4, 4);
-            Color[] colors = new Color[16];
-            for (int i = 0; i < 16; i++) colors[i] = Color.white;
-            tex.SetPixels(colors);
-            tex.Apply();
-            tex.filterMode = FilterMode.Point;
-
-            cachedWhiteSprite = Sprite.Create(tex,
-                new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4f);
-            return cachedWhiteSprite;
-        }
-
-        /// <summary>런타임에서 다이아몬드(화살표) 스프라이트 생성</summary>
-        private static Sprite cachedDiamondSprite;
-        private static Sprite CreateDiamondSprite()
-        {
-            if (cachedDiamondSprite != null) return cachedDiamondSprite;
-
-            int size = 16;
-            Texture2D tex = new Texture2D(size, size);
-            Color clear = new Color(0, 0, 0, 0);
-
-            // 다이아몬드 형태 (▼ 화살표 역할)
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    int cx = size / 2;
-                    int cy = size / 2;
-                    float dist = Mathf.Abs(x - cx) + Mathf.Abs(y - cy);
-                    tex.SetPixel(x, y, dist <= size / 2 ? Color.white : clear);
-                }
-            }
-
-            tex.Apply();
-            tex.filterMode = FilterMode.Point;
-
-            cachedDiamondSprite = Sprite.Create(tex,
-                new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), (float)size);
-            return cachedDiamondSprite;
         }
     }
 }

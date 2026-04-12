@@ -722,11 +722,11 @@ namespace FreeFlowHero.Combat.Player
         /// </summary>
         private void ResolveNextComboAttack(InputData input)
         {
-            // 타겟 재선택 (방향 입력 없으면 현재 facing 사용)
+            // 타겟 재선택
+            // ★ 방향 입력이 없으면 0을 그대로 전달 → TargetSelector가 순수 거리 기반으로 가장 가까운 적 유지.
+            //   facing으로 강제 대체하면 "입력 없음" 의도가 소실되어 직전 타겟 페널티가 잘못 적용됨.
             Vector2 playerPos = GetPos();
             float inputDir = (input != null) ? input.Direction.x : 0f;
-            if (Mathf.Approximately(inputDir, 0f))
-                inputDir = context.playerTransform.localScale.x >= 0 ? 1f : -1f;
 
             var target = fsm.TargetSelector.SelectTarget(
                 playerPos, context.activeEnemies, inputDir);
@@ -747,14 +747,14 @@ namespace FreeFlowHero.Combat.Player
         /// <summary>WARP 노티파이로 인라인 워핑 시작</summary>
         private void StartInlineWarp(ActionNotify warpNotify)
         {
-            // 자동 타겟 재선택 (콤보 중에는 현재 facing 유지 → 같은 적 계속 공격)
-            // "가까운 적 우선"은 Idle→Strike 첫 진입 시만 적용 (IdleState.ResolveAttack)
+            // 자동 타겟 재선택
+            // ★ 방향 입력이 없는 상태로 재선택 → 순수 거리 기반 = 가장 가까운 적 유지.
+            //   직전 타겟 페널티는 방향 입력이 있을 때만 적용되므로, 연타 시 근접 타겟 고정됨.
             if (warpNotify.warpAutoTarget)
             {
                 Vector2 playerPos = GetPos();
-                float inputDir = context.playerTransform.localScale.x >= 0 ? 1f : -1f;
                 var target = fsm.TargetSelector.SelectTarget(
-                    playerPos, context.activeEnemies, inputDir);
+                    playerPos, context.activeEnemies, inputDir: 0f);
                 if (target != null)
                     context.currentTarget = target.GetTransform();
             }

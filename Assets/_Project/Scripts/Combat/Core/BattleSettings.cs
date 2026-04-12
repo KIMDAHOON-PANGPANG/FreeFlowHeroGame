@@ -172,6 +172,36 @@ namespace FreeFlowHero.Combat.Core
         public float breathingTime = CombatConstants.BreathingTime;
 
         // ════════════════════════════════════════════
+        //  그룹 AI: 토큰 히트 게이지
+        // ════════════════════════════════════════════
+
+        [Header("그룹 AI — 토큰 히트 게이지")]
+
+        [Tooltip("토큰 보유자가 맞는 히트 게이지 최대치. 이 값을 채우면 사각지대 적으로 토큰 이전. 1000 기준으로 비율 관리.")]
+        [Range(100f, 5000f)]
+        public float tokenHolderGaugeMax = CombatConstants.TokenHolderGaugeMax;
+
+        [Tooltip("일반 히트 1회당 게이지 충전량. 기본 250이면 4히트에 가득 차서 토큰 이전. 값이 낮을수록 보유자가 더 오래 버팀 (REPLACED 느낌).")]
+        [Range(50f, 1000f)]
+        public float tokenHolderGaugeFillPerHit = CombatConstants.TokenHolderGaugeFillPerHit;
+
+        [Tooltip("마지막 피격 후 감쇠가 시작되기까지의 대기 시간 (초). 이 시간 안에 새 히트가 들어오면 게이지 유지/증가.")]
+        [Range(0f, 3f)]
+        public float tokenHolderGaugeDecayDelay = CombatConstants.TokenHolderGaugeDecayDelay;
+
+        [Tooltip("콤보 끊긴 후 게이지 초당 감쇠량. 400이면 2.5초 만에 만충된 게이지가 0이 됨. '멘탈 회복' 연출.")]
+        [Range(0f, 2000f)]
+        public float tokenHolderGaugeDecayPerSecond = CombatConstants.TokenHolderGaugeDecayPerSecond;
+
+        [Tooltip("PC 사각지대(뒷쪽) 적의 거리 할인율. 0.6이면 뒷쪽 적의 유효거리가 실제의 60%로 계산되어 우선 선택됨. 1이면 방향 무시.")]
+        [Range(0.1f, 1.0f)]
+        public float backsideDistanceDiscount = CombatConstants.BacksideDistanceDiscount;
+
+        [Tooltip("토큰 연속 이전 방지 최소 간격 (초). 안전장치.")]
+        [Range(0.05f, 1f)]
+        public float tokenTransferMinInterval = CombatConstants.TokenTransferMinInterval;
+
+        // ════════════════════════════════════════════
         //  처형 (Execution)
         // ════════════════════════════════════════════
 
@@ -343,6 +373,13 @@ namespace FreeFlowHero.Combat.Core
             knockdownHeavyDownTime = CombatConstants.KnockdownHeavyDownTime;
             flinchClipPath = CombatConstants.FlinchClipPath;
             knockdownClipPath = CombatConstants.KnockdownClipPath;
+            // 그룹 AI 토큰 게이지
+            tokenHolderGaugeMax = CombatConstants.TokenHolderGaugeMax;
+            tokenHolderGaugeFillPerHit = CombatConstants.TokenHolderGaugeFillPerHit;
+            tokenHolderGaugeDecayDelay = CombatConstants.TokenHolderGaugeDecayDelay;
+            tokenHolderGaugeDecayPerSecond = CombatConstants.TokenHolderGaugeDecayPerSecond;
+            backsideDistanceDiscount = CombatConstants.BacksideDistanceDiscount;
+            tokenTransferMinInterval = CombatConstants.TokenTransferMinInterval;
         }
 
         // ════════════════════════════════════════════
@@ -372,6 +409,32 @@ namespace FreeFlowHero.Combat.Core
         /// <summary>호흡 시간.</summary>
         public static float GetBreathingTime()
             => IsLoaded ? _instance.breathingTime : CombatConstants.BreathingTime;
+
+        // ─── 그룹 AI 토큰 게이지 접근자 ───
+
+        /// <summary>토큰 히트 게이지 최대치 (기본 1000).</summary>
+        public static float GetTokenHolderGaugeMax()
+            => IsLoaded ? _instance.tokenHolderGaugeMax : CombatConstants.TokenHolderGaugeMax;
+
+        /// <summary>히트 1회당 게이지 충전량 (기본 250).</summary>
+        public static float GetTokenHolderGaugeFillPerHit()
+            => IsLoaded ? _instance.tokenHolderGaugeFillPerHit : CombatConstants.TokenHolderGaugeFillPerHit;
+
+        /// <summary>게이지 감쇠 시작 대기 시간 (초).</summary>
+        public static float GetTokenHolderGaugeDecayDelay()
+            => IsLoaded ? _instance.tokenHolderGaugeDecayDelay : CombatConstants.TokenHolderGaugeDecayDelay;
+
+        /// <summary>게이지 초당 감쇠량.</summary>
+        public static float GetTokenHolderGaugeDecayPerSecond()
+            => IsLoaded ? _instance.tokenHolderGaugeDecayPerSecond : CombatConstants.TokenHolderGaugeDecayPerSecond;
+
+        /// <summary>뒷쪽 적 거리 할인율.</summary>
+        public static float GetBacksideDistanceDiscount()
+            => IsLoaded ? _instance.backsideDistanceDiscount : CombatConstants.BacksideDistanceDiscount;
+
+        /// <summary>토큰 연속 이전 방지 간격.</summary>
+        public static float GetTokenTransferMinInterval()
+            => IsLoaded ? _instance.tokenTransferMinInterval : CombatConstants.TokenTransferMinInterval;
 
         /// <summary>처형 HP 임계치.</summary>
         public static float GetExecutionHPThreshold()

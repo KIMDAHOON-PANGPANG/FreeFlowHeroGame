@@ -143,8 +143,29 @@ namespace FreeFlowHero.Editor
             // TelegraphOutline (텔레그래프 아웃라인 효과)
             enemy.AddComponent<TelegraphOutline>();
 
-            // EnemyCombatUI (HP 바 + 타겟 인디케이터 + 히트 넘버)
-            enemy.AddComponent<EnemyCombatUI>();
+            // EnemyCombatUI (HP 바 + 토큰 마커 + 히트 게이지 + 플로팅 데미지)
+            var combatUI = enemy.AddComponent<EnemyCombatUI>();
+            combatUI.enabled = true; // 명시적 활성화
+            var uiSO = new SerializedObject(combatUI);
+            uiSO.Update();
+            // 위치/크기 기본값 명시
+            uiSO.FindProperty("barOffsetY").floatValue = 4.0f;
+            uiSO.FindProperty("barWidth").floatValue = 1.5f;
+            uiSO.FindProperty("barHeight").floatValue = 0.15f;
+            uiSO.FindProperty("tokenOffsetY").floatValue = 0.3f;
+            uiSO.FindProperty("tokenSize").floatValue = 0.25f;
+            uiSO.FindProperty("gaugeOffsetY").floatValue = -0.25f;
+            uiSO.FindProperty("gaugeWidth").floatValue = 1.2f;
+            uiSO.FindProperty("gaugeHeight").floatValue = 0.1f;
+            // 컬러 기본값 명시
+            uiSO.FindProperty("hpBarBgColor").colorValue = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+            uiSO.FindProperty("hpFullColor").colorValue = Color.green;
+            uiSO.FindProperty("hpLowColor").colorValue = Color.red;
+            uiSO.FindProperty("tokenColor").colorValue = new Color(1f, 0.84f, 0f);
+            uiSO.FindProperty("gaugeBgColor").colorValue = new Color(0.15f, 0.15f, 0.15f, 0.9f);
+            uiSO.FindProperty("gaugeLowColor").colorValue = new Color(0.2f, 0.8f, 0.2f);
+            uiSO.FindProperty("gaugeHighColor").colorValue = Color.red;
+            uiSO.ApplyModifiedPropertiesWithoutUndo();
 
             // EnemyAIController (기본 AI: 순찰/추적/텔레그래프/공격)
             enemy.AddComponent<EnemyAIController>();

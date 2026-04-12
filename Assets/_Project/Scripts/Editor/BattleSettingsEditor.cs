@@ -89,6 +89,7 @@ namespace FreeFlowHero.Editor
         private bool foldWarp = true;
         private bool foldTelegraph = true;
         private bool foldAttackTurn = true;
+        private bool foldTokenGauge = true;
         private bool foldExecution = true;
         private bool foldHuxley = true;
         private bool foldComboBonus = true;
@@ -263,6 +264,43 @@ namespace FreeFlowHero.Editor
                 Tip("플레이어를 동시에 공격할 수 있는 최대 적 수.\n높을수록 난이도 상승. (기본: 2)");
                 bs.breathingTime = EditorGUILayout.Slider("Breathing Time (초)", bs.breathingTime, 0.1f, 2.0f);
                 Tip("연속 공격 사이 최소 간격.\n플레이어에게 대응할 '숨 쉴 틈'을 준다. (기본: 0.5초)");
+                EditorGUILayout.EndVertical();
+            }
+
+            EditorGUILayout.Space(4);
+
+            // ════════════ 그룹 AI — 토큰 히트 게이지 ════════════
+            foldTokenGauge = EditorGUILayout.Foldout(foldTokenGauge, "그룹 AI — 토큰 히트 게이지", true, headerStyle);
+            if (foldTokenGauge)
+            {
+                EditorGUILayout.BeginVertical(boxStyle);
+                bs.tokenHolderGaugeMax = EditorGUILayout.Slider("Gauge Max", bs.tokenHolderGaugeMax, 100f, 5000f);
+                Tip("토큰 보유자 히트 게이지 최대치.\n이 값에 도달하면 사각지대 적에게 토큰 이전.\n1000 기준으로 비율 관리. (기본: 1000)");
+
+                bs.tokenHolderGaugeFillPerHit = EditorGUILayout.Slider("Fill Per Hit", bs.tokenHolderGaugeFillPerHit, 50f, 1000f);
+                Tip("일반 히트 1회당 충전량.\n250이면 4히트에 만충 (기본값, REPLACED 느낌).\n낮을수록 보유자가 더 오래 버팀.");
+                int hitsToFill = bs.tokenHolderGaugeFillPerHit > 0f
+                    ? Mathf.CeilToInt(bs.tokenHolderGaugeMax / bs.tokenHolderGaugeFillPerHit)
+                    : 999;
+                EditorGUILayout.LabelField($"= {hitsToFill}히트 만에 토큰 이전", EditorStyles.miniLabel);
+
+                EditorGUILayout.Space(4);
+                bs.tokenHolderGaugeDecayDelay = EditorGUILayout.Slider("Decay Delay (초)", bs.tokenHolderGaugeDecayDelay, 0f, 3f);
+                Tip("마지막 피격 후 이 시간 경과하면 게이지 감쇠 시작.\n짧게 하면 콤보 살짝만 끊겨도 빠르게 회복. (기본: 1.2초)");
+
+                bs.tokenHolderGaugeDecayPerSecond = EditorGUILayout.Slider("Decay Per Second", bs.tokenHolderGaugeDecayPerSecond, 0f, 2000f);
+                Tip("초당 감쇠량.\n400이면 만충 게이지(1000)가 2.5초에 0이 됨.\n'멘탈 회복' 연출. 0이면 감쇠 없음.");
+                float secondsToEmpty = bs.tokenHolderGaugeDecayPerSecond > 0f
+                    ? (bs.tokenHolderGaugeMax / bs.tokenHolderGaugeDecayPerSecond)
+                    : 99f;
+                EditorGUILayout.LabelField($"만충 → 0 까지 {secondsToEmpty:F1}초", EditorStyles.miniLabel);
+
+                EditorGUILayout.Space(4);
+                bs.backsideDistanceDiscount = EditorGUILayout.Slider("Backside Distance Discount", bs.backsideDistanceDiscount, 0.1f, 1.0f);
+                Tip("PC 사각지대(뒷쪽) 적의 거리 할인율.\n0.6이면 뒷쪽 적의 유효거리가 실제의 60%로 계산되어 우선 선택.\n1이면 방향 무시 (순수 거리 우선). (기본: 0.6)");
+
+                bs.tokenTransferMinInterval = EditorGUILayout.Slider("Transfer Min Interval (초)", bs.tokenTransferMinInterval, 0.05f, 1f);
+                Tip("토큰 연속 이전 방지 간격.\n같은 프레임 이중 이전 방지용 안전장치. (기본: 0.1초)");
                 EditorGUILayout.EndVertical();
             }
 

@@ -36,6 +36,16 @@ namespace FreeFlowHero.Combat.Core
         public const int MaxSimultaneousAttackers = 2;
         public const float BreathingTime = 0.5f;           // 연속 공격 사이 최소 간격
 
+        // ─── 그룹 AI: 토큰 히트 게이지 ───
+        // REPLACED 스타일: 토큰 보유자가 일정량 맞으면 사각지대 적으로 토큰 이전.
+        // 게이지 방식이라 공격별 가중치 / 자연 감쇠 / 시각 바 표시에 유리.
+        public const float TokenHolderGaugeMax = 1000f;         // 이전 임계치
+        public const float TokenHolderGaugeFillPerHit = 250f;   // 히트당 충전량 (4히트 = 1000)
+        public const float TokenHolderGaugeDecayPerSecond = 400f; // 콤보 끊긴 후 초당 감쇠량
+        public const float TokenHolderGaugeDecayDelay = 1.2f;   // 마지막 피격 후 이 시간 지나야 감쇠 시작
+        public const float BacksideDistanceDiscount = 0.6f;     // 뒷쪽 적 우선도 (유효거리 = 실거리 × 이값)
+        public const float TokenTransferMinInterval = 0.1f;     // 연속 이전 방지
+
         // ─── 가드 ───
         public const float GuardDuration = 1.0f;            // 가드 유지 시간 (초)
         public const int GuardCounterComboBonus = 2;        // 가드 반격 콤보 보너스

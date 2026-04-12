@@ -73,8 +73,10 @@ namespace FreeFlowHero.Combat.Player
                     score -= MaxAutoRange * DirectionWeight;
                 }
 
-                // 직전 타겟 페널티 (다른 적이 있을 때만 적용)
-                if (aliveCount > 1 && enemy == LastHitTarget)
+                // 직전 타겟 페널티 (★ 방향 입력이 있을 때만 적용)
+                //   입력 없음(0) → 순수 거리 기반 = 가까운 적 유지 (조작감 우선)
+                //   입력 있음   → 프리플로우: 적 사이를 의도적으로 넘나드는 흐름
+                if (aliveCount > 1 && enemy == LastHitTarget && inputDir != 0f)
                 {
                     score += LastTargetPenalty;
                 }

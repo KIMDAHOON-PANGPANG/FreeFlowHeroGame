@@ -149,25 +149,6 @@ namespace FreeFlowHero.Combat.Enemy
             currentHP = maxHP;
         }
 
-#if UNITY_EDITOR
-        private void OnDrawGizmosSelected()
-        {
-            // HP 바 시각화
-            Vector3 pos = transform.position + Vector3.up * 2.2f;
-            float width = 1f;
-            float height = 0.1f;
-
-            // 배경 (검정)
-            Gizmos.color = Color.black;
-            Gizmos.DrawCube(pos, new Vector3(width, height, 0));
-
-            // HP (빨강→초록)
-            float ratio = maxHP > 0 ? currentHP / maxHP : 0f;
-            Gizmos.color = Color.Lerp(Color.red, Color.green, ratio);
-            Gizmos.DrawCube(
-                pos + Vector3.left * (width * (1 - ratio) * 0.5f),
-                new Vector3(width * ratio, height, 0));
-        }
-#endif
+        // OnDrawGizmosSelected HP 바 제거됨 — EnemyCombatUIEditor.OnSceneGUI()에서 Handles로 대체
     }
 }

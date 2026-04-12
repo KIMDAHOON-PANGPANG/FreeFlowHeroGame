@@ -117,6 +117,56 @@ namespace FreeFlowHero.Combat.Enemy
         public AttackCategory CurrentAttackCategory => currentAttackCategory;
         private AttackCategory currentAttackCategory = AttackCategory.Melee;
 
+        // ─── 그룹 AI / 토큰 시스템용 공개 접근자 ───
+        /// <summary>DummyEnemyTarget 참조 (토큰 시스템의 피격 대상 비교용)</summary>
+        public DummyEnemyTarget EnemyTarget => enemyTarget;
+
+        /// <summary>플레이어 Transform 참조 (AttackCoordinator의 거리 계산용)</summary>
+        public Transform PlayerRef => playerTransform;
+
+        /// <summary>
+        /// 이 적이 새 토큰을 받을 자격이 있는지 여부.
+        /// 피격/그로기/다운/사망 상태에서는 false.
+        /// </summary>
+        public bool IsTokenEligible()
+        {
+            if (enemyTarget == null || !enemyTarget.IsTargetable) return false;
+            switch (currentState)
+            {
+                case AIState.HitStun:
+                case AIState.Groggy:
+                case AIState.Knockdown:
+                case AIState.Down:
+                case AIState.GetUp:
+                case AIState.Dead:
+                    return false;
+                default:
+                    return true;
+            }
+        }
+
+        /// <summary>
+        /// 행동 불능 상태(Groggy/Knockdown/Down/Dead) 진입 시 호출.
+        /// 토큰 보유자이면 즉시 다음 적으로 이전 (호흡 시간 없음).
+        /// 비보유자이면 포메이션 슬롯만 해제.
+        /// ★ HitStun(짧은 경직)에서는 호출하지 않음 — 게이지 누적 로직이 처리.
+        /// </summary>
+        private void NotifyIncapacitated(TokenTransferReason reason)
+        {
+            var coord = AttackCoordinator.Instance;
+            if (coord == null) return;
+
+            if (coord.IsTokenHolder(this))
+            {
+                coord.ForceTransferToken(this, reason);
+            }
+            else
+            {
+                // 비보유자: 포메이션 슬롯 해제 (행동 불능이니 도열 빠짐)
+                coord.ReleaseSlot(this);
+            }
+        }
+
         // ─── 시각 피드백 ───
         private static readonly Color TelegraphRedColor = new Color(1f, 0.2f, 0.2f, 1f);
         private static readonly Color TelegraphYellowColor = new Color(1f, 0.9f, 0.1f, 1f);
@@ -208,7 +258,16 @@ namespace FreeFlowHero.Combat.Enemy
             // 초기 바닥 스냅 (스폰 Y가 지면보다 높을 경우)
             SnapEnemyToGround();
 
+            // 그룹 AI 등록부에 자신을 등록 (토큰 시스템)
+            AttackCoordinator.Instance?.RegisterEnemy(this);
+
             TransitionTo(AIState.Patrol);
+        }
+
+        private void OnDestroy()
+        {
+            // 그룹 AI 등록부에서 해제
+            AttackCoordinator.Instance?.UnregisterEnemy(this);
         }
 
         // [DEBUG] 메쉬 로컬 위치 추적 쿨다운
@@ -394,8 +453,9 @@ namespace FreeFlowHero.Combat.Enemy
                     currentTelegraph = TelegraphType.None;
                     telegraphOutline?.DisableOutline();
                     RestoreColor();
-                    // 텔레그래프 중 피격 등으로 중단 시 슬롯 반환
-                    if (AttackCoordinator.Instance != null)
+                    // ★ 공격 사이클 내부 정상 전환(Telegraph→Attack)에서는 토큰 유지
+                    //    피격 등으로 비정상 중단된 경우에만 슬롯 반환
+                    if (newState != AIState.Attack && AttackCoordinator.Instance != null)
                         AttackCoordinator.Instance.ReleaseAttackSlot(this);
                     break;
                 case AIState.HitStun:
@@ -408,12 +468,16 @@ namespace FreeFlowHero.Combat.Enemy
                     break;
                 case AIState.Attack:
                     RestoreColor();
-                    // 공격 중 강제 전환 시 슬롯 반환
-                    if (AttackCoordinator.Instance != null)
+                    // ★ 공격 사이클 내부 정상 전환(Attack→PostAttack)에서는 토큰 유지
+                    //    피격 등으로 비정상 중단된 경우에만 슬롯 반환
+                    if (newState != AIState.PostAttack && AttackCoordinator.Instance != null)
                         AttackCoordinator.Instance.ReleaseAttackSlot(this);
                     break;
                 case AIState.PostAttack:
-                    // PostAttack 중 피격 등으로 중단 시 정리
+                    // ★ PostAttack 종료 시 최종 슬롯 반환 (Chase/Patrol/기타로 복귀)
+                    //    이 시점까지 토큰을 유지하므로 공격 마무리 자세의 적을 때려도 Transfer 발동
+                    if (AttackCoordinator.Instance != null)
+                        AttackCoordinator.Instance.ReleaseAttackSlot(this);
                     break;
             }
 
@@ -543,9 +607,9 @@ namespace FreeFlowHero.Combat.Enemy
                     telegraphOutline?.DisableOutline();
                     if (spriteRenderer != null)
                         spriteRenderer.color = HitStunColor;
-                    // 공격 슬롯 반환 (그로기 중 공격 불가)
-                    if (AttackCoordinator.Instance != null)
-                        AttackCoordinator.Instance.ReleaseAttackSlot(this);
+                    // ★ Step 7: 토큰 보유자가 그로기 → 즉시 다른 적으로 토큰 이전 (호흡 시간 없음)
+                    //   비보유자는 슬롯만 해제 (행동 불능이니 포메이션 해제)
+                    NotifyIncapacitated(TokenTransferReason.HolderStunned);
                     // Flinch 모션 재활용 (그로기 포즈)
                     SafeSetTrigger("Flinch");
                     break;
@@ -557,6 +621,8 @@ namespace FreeFlowHero.Combat.Enemy
                     currentTelegraph = TelegraphType.None;
                     if (spriteRenderer != null)
                         spriteRenderer.color = HitStunColor;
+                    // ★ Step 7: 넉다운 = 장시간 행동 불능 → 즉시 토큰 이전
+                    NotifyIncapacitated(TokenTransferReason.HolderStunned);
 
                     // ★ Knockdown 트리거 제거: HitReactionHandler.PlayKnockdownAnim()이 이미 설정함.
                     //   여기서 중복 SetTrigger 하면 모션이 2번 재생되는 버그 발생.
@@ -568,6 +634,8 @@ namespace FreeFlowHero.Combat.Enemy
                     SafeSetFloat("Speed", 0f);
                     if (spriteRenderer != null)
                         spriteRenderer.color = HitStunColor;
+                    // ★ Step 7: 다운 = 행동 불능 → 토큰 이전 (Knockdown→Down 연속 시 중복 안전)
+                    NotifyIncapacitated(TokenTransferReason.HolderStunned);
                     // ★ Play로 직접 진입 — normalizedTime=1.0으로 누운 포즈(마지막 프레임) 고정
                     //   SafeSetTrigger("Down") 사용 시 Knock_A가 처음부터 재생되어 모션 2번 연출 버그 발생
                     SafePlayState("Down", 1.0f);
@@ -583,6 +651,8 @@ namespace FreeFlowHero.Combat.Enemy
                 case AIState.Dead:
                     isTelegraphing = false;
                     SafeSetFloat("Speed", 0f);
+                    // ★ Step 7: 사망 시 즉시 토큰 이전 (OnEnemyDeath 이벤트보다 먼저 처리)
+                    NotifyIncapacitated(TokenTransferReason.HolderDied);
 
                     // 콜라이더 비활성화 (사망 후 히트 판정에 안 잡히도록)
                     if (cachedCapsule != null)
@@ -657,16 +727,57 @@ namespace FreeFlowHero.Combat.Enemy
                 return;
             }
 
-            // 공격 범위 안 + 쿨다운 완료 → AttackCoordinator에 슬롯 요청 → 텔레그래프
+            bool isHolder = AttackCoordinator.Instance != null
+                         && AttackCoordinator.Instance.IsTokenHolder(this);
+
+            // ★ 토큰 보유자: holderEngageDistance(기본 0.9)까지 바짝 접근 후 Telegraph
+            if (isHolder)
+            {
+                float engageDist = AttackCoordinator.Instance.HolderEngageDistance;
+                FaceDirection(dir);
+
+                if (dist > engageDist)
+                {
+                    // 아직 멀다 → 전력 접근
+                    MoveHorizontal(dir * chaseSpeed * Time.deltaTime);
+                    SafeSetFloat("Speed", chaseSpeed);
+                }
+                else if (cooldownTimer <= 0f)
+                {
+                    // 바짝 붙었고 쿨다운 OK → Telegraph (이미 activeAttackers에 있어서 RequestAttackSlot은 true 반환)
+                    if (AttackCoordinator.Instance.RequestAttackSlot(this))
+                        TransitionTo(AIState.Telegraph);
+                }
+                else
+                {
+                    // 쿨다운 중이면 제자리 대기
+                    SafeSetFloat("Speed", 0f);
+                }
+                return;
+            }
+
+            // 비토큰 적: 공격 범위 안 + 쿨다운 완료 → 토큰 시도
+            //   성공하면 다음 프레임부터 isHolder 분기에서 engageDistance까지 추가 접근
             if (dist <= attackRange && cooldownTimer <= 0f)
             {
-                // AttackCoordinator가 있으면 슬롯 요청, 없으면 바로 진행
-                if (AttackCoordinator.Instance == null
-                    || AttackCoordinator.Instance.RequestAttackSlot(this))
+                if (AttackCoordinator.Instance == null)
                 {
                     TransitionTo(AIState.Telegraph);
+                    return;
                 }
-                // else: 슬롯 거부됨 → 대기열에 등록됨, 다음 프레임에 재시도
+                if (AttackCoordinator.Instance.RequestAttackSlot(this))
+                {
+                    // 토큰 획득 성공 → return해서 다음 프레임 isHolder 경로로 진입
+                    return;
+                }
+                // 슬롯 거부됨 → 아래 분기로 낙하
+            }
+
+            // ★ 그룹 AI: 토큰 못 받은 비토큰 적은 Surround 포메이션 슬롯으로 이동
+            //   (Step 6 + 6.5: AttackCoordinator가 좌/우 사이드와 rank를 자동 분산)
+            if (AttackCoordinator.Instance != null)
+            {
+                UpdateSurround();
                 return;
             }
 
@@ -699,6 +810,56 @@ namespace FreeFlowHero.Combat.Enemy
                 MoveHorizontal(dir * chaseSpeed * 0.5f * Time.deltaTime);
                 SafeSetFloat("Speed", chaseSpeed * 0.5f);
             }
+        }
+
+        // ────────────────────────────
+        //  그룹 AI — 비토큰 적 행동 (Godot ThreatLineManager 방식 이식)
+        //  - AttackCoordinator가 고정 8슬롯 중 최근접 빈 슬롯을 영구 배정
+        //  - 각 적은 배정된 슬롯 월드 X로 이동 (매 프레임 목표가 흔들리지 않음)
+        //  - 이동 시 rb.position 직접 대입으로 PC/적 충돌 우회 (REPLACED의 "구르기 관통" 느낌)
+        // ────────────────────────────
+
+        /// <summary>
+        /// 서라운드: 비토큰 적이 AttackCoordinator가 배정한 슬롯 X로 이동.
+        /// 슬롯은 최초 1회 배정 후 영구 소유(해제 조건: 토큰 부여/사망) → 떨림/겹침 원천 차단.
+        /// </summary>
+        private void UpdateSurround()
+        {
+            var coord = AttackCoordinator.Instance;
+            if (coord == null) return;
+
+            float selfX = transform.position.x;
+            float playerX = playerTransform.position.x;
+            float dirToPlayer = Mathf.Sign(playerX - selfX);
+            if (dirToPlayer == 0f) dirToPlayer = 1f;
+
+            // 배정된 슬롯의 월드 X 좌표 (미배정이면 최근접 빈 슬롯 자동 배정)
+            float targetX = coord.GetDesiredX(this, playerX);
+
+            float dx = targetX - selfX;
+            float absDx = Mathf.Abs(dx);
+
+            // 플레이어 응시 (시각적 자세)
+            FaceDirection(dirToPlayer);
+
+            if (absDx < 0.1f)
+            {
+                // 도착 → 정지
+                SafeSetFloat("Speed", 0f);
+                return;
+            }
+
+            // 이동 (충돌 무시 직접 이동으로 PC/적 관통 허용)
+            float speed = coord.SurroundApproachSpeed;
+            float moveDir = Mathf.Sign(dx);
+            float newX = selfX + moveDir * speed * Time.deltaTime;
+
+            // 오버슈트 방지
+            if (Mathf.Sign(targetX - newX) != moveDir)
+                newX = targetX;
+
+            rb.position = new Vector2(newX, rb.position.y);
+            SafeSetFloat("Speed", speed);
         }
 
         private void UpdateTelegraph()
@@ -745,9 +906,8 @@ namespace FreeFlowHero.Combat.Enemy
             {
                 isCollisionActive = false;
                 activeCollisionNotify = null;
-                // 공격 슬롯 반환
-                if (AttackCoordinator.Instance != null)
-                    AttackCoordinator.Instance.ReleaseAttackSlot(this);
+                // ★ 슬롯 반환은 PostAttack → Chase 전환 시 TransitionTo에서 처리.
+                //   여기서 반환하면 PostAttack 중 토큰이 null이 되어 Transfer가 발동하지 않음.
                 TransitionTo(AIState.PostAttack);
             }
         }

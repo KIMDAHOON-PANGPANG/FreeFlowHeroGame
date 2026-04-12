@@ -205,9 +205,11 @@ namespace FreeFlowHero.Editor
                     // 레이어 강제 할당
                     SetLayerRecursiveByName(enemy, "Enemy", "Hitbox", "Hurtbox");
 
-                    // EnemyCombatUI 자동 부착 (기존 프리팹에 없으면 추가)
-                    if (enemy.GetComponent<FreeFlowHero.Combat.Enemy.EnemyCombatUI>() == null)
-                        enemy.AddComponent<FreeFlowHero.Combat.Enemy.EnemyCombatUI>();
+                    // EnemyCombatUI 자동 부착 + 강제 활성화
+                    var combatUI = enemy.GetComponent<FreeFlowHero.Combat.Enemy.EnemyCombatUI>();
+                    if (combatUI == null)
+                        combatUI = enemy.AddComponent<FreeFlowHero.Combat.Enemy.EnemyCombatUI>();
+                    combatUI.enabled = true;
 
                     // EnemyAIController 자동 부착 (기존 프리팹에 없으면 추가)
                     if (enemy.GetComponent<FreeFlowHero.Combat.Enemy.EnemyAIController>() == null)
